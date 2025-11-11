@@ -102,13 +102,15 @@ struct RootView: View {
                                 },
                                 onLoginClick: {
                                     if !authPath.isEmpty { authPath.removeLast() }
-                                }
+                                },
+                                authStore: authStore
                             )
                         case .resetPassword:
                             ResetPasswordPage(
                                 onBackToLogin: {
                                     if !authPath.isEmpty { authPath.removeLast() }
-                                }
+                                },
+                                authStore: authStore
                             )
                         default:
                             EmptyView()
@@ -129,4 +131,3 @@ struct RootView: View {
         }
     }
 }
-

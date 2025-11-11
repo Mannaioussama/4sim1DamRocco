@@ -71,6 +71,9 @@ class CoachOnboardingViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
+    // For simulation only: toggle to test success/failure paths without triggering compiler warnings.
+    private var simulateAPISubmissionSuccess: Bool = true
+    
     // MARK: - Computed Properties
     
     var isApplicationStep: Bool {
@@ -332,7 +335,7 @@ class CoachOnboardingViewModel: ObservableObject {
             guard let self = self else { return }
             
             // Simulate success (replace with actual API call)
-            let success = true
+            let success = self.simulateAPISubmissionSuccess
             
             if success {
                 withAnimation {

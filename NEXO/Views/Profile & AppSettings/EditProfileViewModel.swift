@@ -63,6 +63,11 @@ class EditProfileViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
+    // MARK: - Simulation Controls
+    
+    // Toggle this in previews/tests to simulate API success/failure without triggering compiler warnings.
+    var simulateNetworkSuccess: Bool = true
+    
     // MARK: - Computed Properties
     
     var bioCharacterCount: Int {
@@ -298,8 +303,8 @@ class EditProfileViewModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
             guard let self = self else { return }
             
-            // Simulate success (replace with actual API call)
-            let success = true
+            // Simulate success/failure based on a configurable flag
+            let success = self.simulateNetworkSuccess
             
             if success {
                 self.successMessage = "Profile updated successfully!"
@@ -330,7 +335,7 @@ class EditProfileViewModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self = self else { return }
             
-            let success = true
+            let success = self.simulateNetworkSuccess
             
             if success {
                 self.showVerificationSent = true

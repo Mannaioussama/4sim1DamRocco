@@ -7,46 +7,16 @@
 
 import SwiftUI
 
-// MARK: - Data Model
-struct RoomActivity: Identifiable {
-    let id: String
-    let sportType: String
-    let title: String
-    let description: String
-    let location: String
-    let date: String
-    let time: String
-    let hostName: String
-    let hostAvatar: String
-    let spotsTotal: Int
-    let spotsTaken: Int
-    let level: String
-}
-
-// MARK: - Activity Room View
 struct ActivityRoomView: View {
     @EnvironmentObject private var theme: Theme
+    @StateObject private var viewModel: ActivityRoomViewModel
 
-    let activity: RoomActivity
     let onBack: () -> Void
-
-    @State private var selectedTab = "chat"
-    @State private var message: String = ""
-    @State private var messages: [ChatMessage] = [
-        ChatMessage(id: "1", sender: "Host", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Host", text: "Hey everyone! Looking forward to this session. Please arrive 5 minutes early.", time: "10:30 AM"),
-        ChatMessage(id: "2", sender: "Alex Thompson", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex", text: "Sounds great! What should I bring?", time: "10:45 AM")
-    ]
-
-    var participants: [Participant] {
-        [
-            Participant(id: "1", name: activity.hostName, avatar: activity.hostAvatar, status: "Host"),
-            Participant(id: "2", name: "Alex Thompson", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex", status: "Joined"),
-            Participant(id: "3", name: "Emma Davis", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma", status: "Joined"),
-            Participant(id: "4", name: "Mike Johnson", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike", status: "Joined")
-        ]
+    
+    init(activity: RoomActivity, onBack: @escaping () -> Void) {
+        _viewModel = StateObject(wrappedValue: ActivityRoomViewModel(activity: activity))
+        self.onBack = onBack
     }
-
-    var spotsLeft: Int { activity.spotsTotal - activity.spotsTaken }
 
     var body: some View {
         ZStack {
@@ -60,21 +30,21 @@ struct ActivityRoomView: View {
                         tabBar
 
                         Group {
-                            if selectedTab == "chat" {
+                            if viewModel.isChatTab {
                                 chatMessagesList
-                            } else if selectedTab == "participants" {
+                            } else if viewModel.isParticipantsTab {
                                 participantsTab
-                            } else if selectedTab == "ai" {
+                            } else if viewModel.isAITab {
                                 aiTipsTab
-                            } else if selectedTab == "info" {
+                            } else if viewModel.isInfoTab {
                                 infoTab
                             }
                         }
                     }
-                    .padding(.bottom, selectedTab == "chat" ? 180 : 100)
+                    .padding(.bottom, viewModel.isChatTab ? 180 : 100)
                 }
 
-                if selectedTab == "chat" {
+                if viewModel.isChatTab {
                     messageInputBar
                         .ignoresSafeArea(.keyboard, edges: .bottom)
                 }
@@ -97,16 +67,18 @@ struct ActivityRoomView: View {
             }
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 2) {
-                    Text("\(activity.sportType) Session")
+                    Text(viewModel.navigationTitle)
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
-                    Text("Hosted by \(activity.hostName)")
+                    Text(viewModel.navigationSubtitle)
                         .font(.system(size: 12))
                         .foregroundColor(theme.colors.textSecondary)
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {}) {
+                Button(action: {
+                    viewModel.shareActivity()
+                }) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
@@ -120,12 +92,33 @@ struct ActivityRoomView: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(theme.colors.barMaterial, for: .navigationBar)
+        .alert("Leave Activity", isPresented: $viewModel.showLeaveConfirmation) {
+            Button("Cancel", role: .cancel) {
+                viewModel.cancelLeave()
+            }
+            Button("Leave", role: .destructive) {
+                handleLeave()
+            }
+        } message: {
+            Text("Are you sure you want to leave this activity?")
+        }
+        .alert("Complete Activity", isPresented: $viewModel.showCompleteConfirmation) {
+            Button("Cancel", role: .cancel) {
+                viewModel.cancelComplete()
+            }
+            Button("Complete") {
+                handleComplete()
+            }
+        } message: {
+            Text("Mark this activity as complete?")
+        }
+        .onAppear {
+            viewModel.trackScreenView()
+        }
     }
-}
-
-// MARK: - Subviews & Adapted Orbs
-extension ActivityRoomView {
-    // MARK: Themed Orbs Background
+    
+    // MARK: - Background Orbs
+    
     private var backgroundOrbs: some View {
         ZStack {
             Circle()
@@ -135,14 +128,13 @@ extension ActivityRoomView {
                             theme.colors.accentPurple.opacity(theme.isDarkMode ? 0.14 : 0.3),
                             theme.colors.accentPink.opacity(theme.isDarkMode ? 0.11 : 0.2)
                         ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                        startPoint: .topLeading, endPoint: .bottomTrailing
                     )
                 )
                 .frame(width: 288, height: 288)
                 .blur(radius: 120)
                 .offset(x: -100, y: -200)
-
+            
             Circle()
                 .fill(
                     LinearGradient(
@@ -150,14 +142,13 @@ extension ActivityRoomView {
                             theme.colors.accentPurple.opacity(theme.isDarkMode ? 0.08 : 0.18),
                             theme.colors.accentPurpleLight.opacity(theme.isDarkMode ? 0.08 : 0.15)
                         ],
-                        startPoint: .bottomLeading,
-                        endPoint: .topTrailing
+                        startPoint: .bottomLeading, endPoint: .topTrailing
                     )
                 )
                 .frame(width: 384, height: 384)
                 .blur(radius: 120)
                 .offset(x: 150, y: 500)
-
+            
             Circle()
                 .fill(
                     LinearGradient(
@@ -165,8 +156,7 @@ extension ActivityRoomView {
                             theme.colors.accentPink.opacity(theme.isDarkMode ? 0.10 : 0.17),
                             theme.colors.accentPurple.opacity(theme.isDarkMode ? 0.06 : 0.1)
                         ],
-                        startPoint: .top,
-                        endPoint: .bottom
+                        startPoint: .top, endPoint: .bottom
                     )
                 )
                 .frame(width: 256, height: 256)
@@ -175,8 +165,9 @@ extension ActivityRoomView {
         }
         .allowsHitTesting(false)
     }
-
-    // MARK: Activity Info Banner
+    
+    // MARK: - Activity Info Banner
+    
     private var activityInfoBanner: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 12) {
@@ -184,14 +175,14 @@ extension ActivityRoomView {
                     HStack(spacing: 8) {
                         Image(systemName: "clock")
                             .font(.system(size: 16))
-                        Text("Starts in 2 hours")
+                        Text(viewModel.startTimeMessage)
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundColor(.white)
-
+                    
                     Spacer()
-
-                    Text("\(spotsLeft) spots left")
+                    
+                    Text(viewModel.spotsLeftMessage)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 10)
@@ -204,18 +195,20 @@ extension ActivityRoomView {
                         .cornerRadius(12)
                 }
                 .padding(.bottom, 8)
-
+                
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "mappin")
                         .font(.system(size: 16))
                         .foregroundColor(.white)
                         .frame(width: 20)
-
+                    
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(activity.location)
+                        Text(viewModel.activity.location)
                             .font(.system(size: 13))
                             .foregroundColor(.white.opacity(0.95))
-                        Button(action: {}) {
+                        Button(action: {
+                            viewModel.getDirections()
+                        }) {
                             Text("Get Directions")
                                 .font(.system(size: 12))
                                 .foregroundColor(.white.opacity(0.9))
@@ -227,12 +220,8 @@ extension ActivityRoomView {
             .padding(12)
             .background(
                 LinearGradient(
-                    colors: [
-                        theme.colors.accentPurple,
-                        theme.colors.accentPink
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                    colors: [theme.colors.accentPurple, theme.colors.accentPink],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
                 )
             )
             .cornerRadius(16)
@@ -242,21 +231,25 @@ extension ActivityRoomView {
         }
         .padding(.top, 12)
     }
-
-    // MARK: Tab Bar
+    
+    // MARK: - Tab Bar
+    
     private var tabBar: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                ForEach(["chat", "participants", "ai", "info"], id: \.self) { tab in
-                    Button(action: { selectedTab = tab }) {
-                        Text(tabLabel(for: tab))
+                ForEach(ActivityTab.allCases, id: \.self) { tab in
+                    Button(action: {
+                        viewModel.selectTab(tab)
+                        viewModel.trackTabChanged(tab)
+                    }) {
+                        Text(tab.label)
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(selectedTab == tab ? theme.colors.accentPurple : theme.colors.textSecondary)
+                            .foregroundColor(viewModel.isTabSelected(tab) ? theme.colors.accentPurple : theme.colors.textSecondary)
                             .frame(maxWidth: .infinity)
                             .padding(.bottom, 12)
                             .overlay(
                                 Rectangle()
-                                    .fill(selectedTab == tab ? theme.colors.accentPurple : Color.clear)
+                                    .fill(viewModel.isTabSelected(tab) ? theme.colors.accentPurple : Color.clear)
                                     .frame(height: 2),
                                 alignment: .bottom
                             )
@@ -277,23 +270,15 @@ extension ActivityRoomView {
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
     }
-
-    private func tabLabel(for value: String) -> String {
-        switch value {
-        case "chat": return "Chat"
-        case "participants": return "People"
-        case "ai": return "AI Tips"
-        case "info": return "Info"
-        default: return ""
-        }
-    }
-
-    // MARK: Chat Messages List
+    
+    // Continuing in next part...
+    // MARK: - Chat Messages List
+    
     private var chatMessagesList: some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
-                    ForEach(messages) { msg in
+                    ForEach(viewModel.messages) { msg in
                         HStack(alignment: .top, spacing: 12) {
                             AsyncImage(url: URL(string: msg.avatar)) { img in
                                 img.resizable().scaledToFill()
@@ -310,7 +295,7 @@ extension ActivityRoomView {
                             .clipShape(Circle())
                             .overlay(Circle().stroke(theme.colors.cardStroke, lineWidth: 2))
                             .shadow(color: .black.opacity(0.09), radius: 2, x: 0, y: 1)
-
+                            
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack(spacing: 8) {
                                     Text(msg.sender)
@@ -320,7 +305,7 @@ extension ActivityRoomView {
                                         .font(.system(size: 11))
                                         .foregroundColor(theme.colors.textSecondary)
                                 }
-
+                                
                                 Text(msg.text)
                                     .font(.system(size: 13))
                                     .foregroundColor(theme.colors.textPrimary)
@@ -343,11 +328,12 @@ extension ActivityRoomView {
             }
         }
     }
-
-    // MARK: Message Input Bar
+    
+    // MARK: - Message Input Bar
+    
     private var messageInputBar: some View {
         HStack(spacing: 8) {
-            TextField("Type a message...", text: $message)
+            TextField("Type a message...", text: $viewModel.message)
                 .font(.system(size: 13))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -358,25 +344,25 @@ extension ActivityRoomView {
                         .stroke(theme.colors.cardStroke, lineWidth: 1)
                 )
                 .cornerRadius(24)
-
-            Button(action: sendMessage) {
+            
+            Button(action: {
+                viewModel.sendMessage()
+            }) {
                 Image(systemName: "paperplane.fill")
                     .font(.system(size: 16))
                     .foregroundColor(.white)
                     .frame(width: 44, height: 44)
                     .background(
                         LinearGradient(
-                            colors: [
-                                theme.colors.accentOrange,
-                                theme.colors.accentOrangeFill
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                            colors: [theme.colors.accentOrange, theme.colors.accentOrangeFill],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     )
                     .clipShape(Circle())
                     .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 2)
             }
+            .disabled(!viewModel.canSendMessage)
+            .opacity(viewModel.canSendMessage ? 1.0 : 0.6)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
@@ -389,25 +375,13 @@ extension ActivityRoomView {
             alignment: .top
         )
     }
-
-    private func sendMessage() {
-        guard !message.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        let newMessage = ChatMessage(
-            id: UUID().uuidString,
-            sender: "You",
-            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=You",
-            text: message,
-            time: DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
-        )
-        messages.append(newMessage)
-        message = ""
-    }
-
-    // MARK: Participants Tab
+    
+    // MARK: - Participants Tab
+    
     private var participantsTab: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
-                ForEach(participants) { person in
+                ForEach(viewModel.participants) { person in
                     HStack(spacing: 12) {
                         AsyncImage(url: URL(string: person.avatar)) { img in
                             img.resizable().scaledToFill()
@@ -415,7 +389,7 @@ extension ActivityRoomView {
                             Circle()
                                 .fill(theme.colors.accentPurple)
                                 .overlay(
-                                    Text(String(person.name.prefix(1)))
+                                    Text(viewModel.getParticipantInitial(person))
                                         .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.white)
                                 )
@@ -424,7 +398,7 @@ extension ActivityRoomView {
                         .clipShape(Circle())
                         .overlay(Circle().stroke(theme.colors.cardStroke, lineWidth: 2))
                         .shadow(color: .black.opacity(0.09), radius: 2, x: 0, y: 1)
-
+                        
                         VStack(alignment: .leading, spacing: 2) {
                             Text(person.name)
                                 .font(.system(size: 14, weight: .medium))
@@ -433,10 +407,10 @@ extension ActivityRoomView {
                                 .font(.system(size: 12))
                                 .foregroundColor(theme.colors.textSecondary)
                         }
-
+                        
                         Spacer()
-
-                        if person.status == "Host" {
+                        
+                        if viewModel.isHost(person) {
                             Text("Host")
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.white)
@@ -444,17 +418,15 @@ extension ActivityRoomView {
                                 .padding(.vertical, 6)
                                 .background(
                                     LinearGradient(
-                                        colors: [
-                                            theme.colors.accentGreen,
-                                            theme.colors.accentGreenFill
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
+                                        colors: [theme.colors.accentGreen, theme.colors.accentGreenFill],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
                                     )
                                 )
                                 .cornerRadius(12)
                         } else {
-                            Button(action: {}) {
+                            Button(action: {
+                                viewModel.messageParticipant(person)
+                            }) {
                                 Text("Message")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(theme.colors.textPrimary)
@@ -485,57 +457,51 @@ extension ActivityRoomView {
             .padding(.top, 16)
         }
     }
-
-    // MARK: AI Tips Tab
+    
+    // MARK: - AI Tips Tab
+    
     private var aiTipsTab: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 8) {
-                // Shared dark-mode glass base + subtle tints for every card
-
-                // Motivational Quote
                 AITipCard(
                     icon: "sparkles",
                     iconColor: theme.colors.accentPurple,
                     iconBackground: .gradient(
                         LinearGradient(
                             colors: [
-                                theme.colors.accentPurple.opacity(theme.colors.isDarkMode ? 0.16 : 0.20),
-                                theme.colors.accentPink.opacity(theme.colors.isDarkMode ? 0.14 : 0.18)
+                                theme.colors.accentPurple.opacity(theme.isDarkMode ? 0.16 : 0.20),
+                                theme.colors.accentPink.opacity(theme.isDarkMode ? 0.14 : 0.18)
                             ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                            startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     ),
                     title: "\"Progress starts with small steps\"",
                     description: "Stay consistent and you'll reach your goals! 💪",
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
-
-                // Weather Info
+                
                 AITipCard(
                     icon: "sun.max.fill",
                     iconColor: theme.colors.accentOrange,
                     iconBackground: .color(theme.colors.accentOrangeGlow.opacity(theme.isDarkMode ? 0.12 : 0.18)),
                     title: "Perfect weather conditions",
                     description: "72°F, sunny — ideal for outdoor activity",
-                    extraInfo: "💡 Great conditions for \(activity.sportType). Remember to bring sunscreen!",
+                    extraInfo: "💡 Great conditions for \(viewModel.activity.sportType). Remember to bring sunscreen!",
                     extraInfoBackground: theme.colors.accentOrangeGlow.opacity(theme.isDarkMode ? 0.10 : 0.16),
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
-
-                // Optimal Group Size
+                
                 AITipCard(
                     icon: "person.3.fill",
                     iconColor: theme.colors.accentGreen,
                     iconBackground: .color(theme.colors.accentGreenGlow.opacity(theme.isDarkMode ? 0.12 : 0.18)),
                     title: "Optimal group size",
-                    description: "\(activity.spotsTaken) participants — perfect for engagement",
+                    description: "\(viewModel.activity.spotsTaken) participants — perfect for engagement",
                     extraInfo: "✓ Not too crowded — you'll get personalized attention",
                     extraInfoBackground: theme.colors.accentGreenGlow.opacity(theme.isDarkMode ? 0.10 : 0.14),
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
-
-                // Timing Suggestion
+                
                 AITipCard(
                     icon: "clock",
                     iconColor: theme.colors.accentOrange,
@@ -544,8 +510,7 @@ extension ActivityRoomView {
                     description: "Arrive 10 minutes early for warm-up",
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
-
-                // Safety Tips
+                
                 AITipCard(
                     icon: "exclamationmark.triangle.fill",
                     iconColor: Color(hex: "#CA8A04"),
@@ -558,19 +523,14 @@ extension ActivityRoomView {
                     ],
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
-
-                // AI Recommendation
+                
                 AITipCard(
                     icon: "hand.thumbsup.fill",
                     iconColor: .white,
                     iconBackground: .gradient(
                         LinearGradient(
-                            colors: [
-                                theme.colors.accentPurple,
-                                theme.colors.accentPink
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                            colors: [theme.colors.accentPurple, theme.colors.accentPink],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     ),
                     title: "AI says this is a great match!",
@@ -582,17 +542,17 @@ extension ActivityRoomView {
             .padding(.top, 12)
         }
     }
-
-    // MARK: Info Tab
+    
+    // MARK: - Info Tab
+    
     private var infoTab: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
-                // About
                 VStack(alignment: .leading, spacing: 8) {
                     Text("About")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
-                    Text(activity.description.isEmpty ? activity.title : activity.description)
+                    Text(viewModel.activity.description.isEmpty ? viewModel.activity.title : viewModel.activity.description)
                         .font(.system(size: 13))
                         .foregroundColor(theme.colors.textSecondary)
                 }
@@ -606,35 +566,34 @@ extension ActivityRoomView {
                 )
                 .cornerRadius(16)
                 .shadow(color: .black.opacity(0.07), radius: 4, x: 0, y: 2)
-
-                // Details
+                
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Details")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
                         .padding(.bottom, 4)
-
+                    
                     VStack(spacing: 12) {
                         InfoDetailRow(
                             icon: "clock",
                             iconColor: theme.colors.accentPurple,
                             iconBackground: theme.colors.accentPurpleGlow.opacity(0.18),
                             label: "Date & Time",
-                            value: "\(activity.date) at \(activity.time)"
+                            value: "\(viewModel.activity.date) at \(viewModel.activity.time)"
                         )
                         InfoDetailRow(
                             icon: "mappin",
                             iconColor: theme.colors.accentPink,
                             iconBackground: theme.colors.accentPink.opacity(0.13),
                             label: "Location",
-                            value: activity.location
+                            value: viewModel.activity.location
                         )
                         InfoDetailRow(
                             icon: "person.2",
                             iconColor: theme.colors.accentPurple,
                             iconBackground: theme.colors.accentPurpleGlow.opacity(0.17),
                             label: "Participants",
-                            value: "\(activity.spotsTaken) / \(activity.spotsTotal)"
+                            value: "\(viewModel.activity.spotsTaken) / \(viewModel.activity.spotsTotal)"
                         )
                     }
                 }
@@ -648,26 +607,21 @@ extension ActivityRoomView {
                 )
                 .cornerRadius(16)
                 .shadow(color: .black.opacity(0.07), radius: 4, x: 0, y: 2)
-
-                // Skill Level
+                
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Skill Level")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
-
-                    Text(activity.level)
+                    
+                    Text(viewModel.activity.level)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
                             LinearGradient(
-                                colors: [
-                                    theme.colors.accentPurple,
-                                    theme.colors.accentPink
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
+                                colors: [theme.colors.accentPurple, theme.colors.accentPink],
+                                startPoint: .leading, endPoint: .trailing
                             )
                         )
                         .cornerRadius(12)
@@ -687,12 +641,15 @@ extension ActivityRoomView {
             .padding(.top, 16)
         }
     }
-
-    // MARK: Bottom Bar
+    
+    // MARK: - Bottom Bar
+    
     private var bottomBar: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                Button(action: {}) {
+                Button(action: {
+                    viewModel.showLeaveDialog()
+                }) {
                     HStack(spacing: 8) {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
                             .font(.system(size: 14))
@@ -710,8 +667,11 @@ extension ActivityRoomView {
                     )
                     .cornerRadius(24)
                 }
-
-                Button(action: {}) {
+                .disabled(viewModel.isLoading)
+                
+                Button(action: {
+                    viewModel.showCompleteDialog()
+                }) {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 14))
@@ -723,17 +683,14 @@ extension ActivityRoomView {
                     .frame(height: 48)
                     .background(
                         LinearGradient(
-                            colors: [
-                                theme.colors.accentOrange,
-                                theme.colors.accentOrangeFill
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                            colors: [theme.colors.accentOrange, theme.colors.accentOrangeFill],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     )
                     .cornerRadius(24)
                     .shadow(color: theme.colors.accentOrange.opacity(0.23), radius: 8, x: 0, y: 4)
                 }
+                .disabled(viewModel.isLoading)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
@@ -747,22 +704,26 @@ extension ActivityRoomView {
             )
         }
     }
-}
-
-// MARK: - Helper Models
-struct ChatMessage: Identifiable {
-    let id: String
-    let sender: String
-    let avatar: String
-    let text: String
-    let time: String
-}
-
-struct Participant: Identifiable {
-    let id: String
-    let name: String
-    let avatar: String
-    let status: String
+    
+    // MARK: - Actions
+    
+    private func handleLeave() {
+        viewModel.leaveActivity(
+            onSuccess: {
+                onBack()
+            },
+            onError: { _ in }
+        )
+    }
+    
+    private func handleComplete() {
+        viewModel.markComplete(
+            onSuccess: {
+                // Show success message
+            },
+            onError: { _ in }
+        )
+    }
 }
 
 // MARK: - AITipCard Fill Style
@@ -774,7 +735,7 @@ enum AIFillStyle {
 // MARK: - Reusable Components
 struct AITipCard: View {
     @EnvironmentObject private var theme: Theme
-
+    
     let icon: String
     var iconColor: Color = .purple
     var iconBackground: AIFillStyle = .color(Color.purple.opacity(0.1))
@@ -784,31 +745,28 @@ struct AITipCard: View {
     var extraInfo: String?
     var extraInfoBackground: Color?
     var backgroundColor: AIFillStyle = .color(Color.white.opacity(0.6))
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
-                // Icon
                 ZStack {
                     switch iconBackground {
-                    case .color(let c):
-                        Circle().fill(c)
-                    case .gradient(let g):
-                        Circle().fill(g)
+                    case .color(let c): Circle().fill(c)
+                    case .gradient(let g): Circle().fill(g)
                     }
                     Image(systemName: icon)
                         .font(.system(size: 16))
                         .foregroundColor(iconColor)
                 }
                 .frame(width: 40, height: 40)
-
+                
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-
+                    
                     if !description.isEmpty {
                         Text(description)
                             .font(.system(size: 12))
@@ -816,7 +774,7 @@ struct AITipCard: View {
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-
+                    
                     if !bulletPoints.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
                             ForEach(bulletPoints, id: \.self) { point in
@@ -836,7 +794,7 @@ struct AITipCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-
+            
             if let extraInfo = extraInfo {
                 Text(extraInfo)
                     .font(.system(size: 11))
@@ -872,13 +830,13 @@ struct AITipCard: View {
 
 struct InfoDetailRow: View {
     @EnvironmentObject private var theme: Theme
-
+    
     let icon: String
     let iconColor: Color
     let iconBackground: Color
     let label: String
     let value: String
-
+    
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             ZStack {
@@ -889,7 +847,7 @@ struct InfoDetailRow: View {
                     .foregroundColor(iconColor)
             }
             .frame(width: 36, height: 36)
-
+            
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.system(size: 11))
@@ -901,8 +859,6 @@ struct InfoDetailRow: View {
         }
     }
 }
-
-// NOTE: cornerRadius(_:corners:) and RoundedCorner are defined globally (e.g., in Splashscreenview.swift). Do not redeclare here.
 
 // MARK: - Preview
 struct ActivityRoomView_Previews: PreviewProvider {
@@ -926,25 +882,5 @@ struct ActivityRoomView_Previews: PreviewProvider {
         )
         .environmentObject(Theme())
         .preferredColorScheme(.dark)
-
-        ActivityRoomView(
-            activity: RoomActivity(
-                id: "2",
-                sportType: "Basketball",
-                title: "Evening Basketball",
-                description: "Competitive game at the gym.",
-                location: "Sports Complex",
-                date: "05/11/2025",
-                time: "7:00 PM",
-                hostName: "Jane Smith",
-                hostAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jane",
-                spotsTotal: 8,
-                spotsTaken: 4,
-                level: "Advanced"
-            ),
-            onBack: {}
-        )
-        .environmentObject(Theme())
-        .preferredColorScheme(.light)
     }
 }

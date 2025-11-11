@@ -52,12 +52,12 @@ struct ChatConversationView: View {
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
         // Keep VM and local focus state in sync (optional)
-        .onChange(of: isInputFocused) { newValue in
+        .onChange(of: isInputFocused) { _, newValue in
             if viewModel.isInputFocused != newValue {
                 viewModel.isInputFocused = newValue
             }
         }
-        .onChange(of: viewModel.isInputFocused) { newValue in
+        .onChange(of: viewModel.isInputFocused) { _, newValue in
             if isInputFocused != newValue {
                 isInputFocused = newValue
             }
@@ -142,7 +142,7 @@ struct ChatConversationView: View {
                     proxy.scrollTo(lastMessageId, anchor: .bottom)
                 }
             }
-            .onChange(of: viewModel.messages.count) { _ in
+            .onChange(of: viewModel.messages.count) { _, _ in
                 if let lastMessageId = viewModel.getLastMessageId() {
                     withAnimation {
                         proxy.scrollTo(lastMessageId, anchor: .bottom)

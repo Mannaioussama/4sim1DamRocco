@@ -274,8 +274,13 @@ class ChangePasswordViewModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
             guard let self = self else { return }
             
-            // Simulate success (replace with actual API call)
+            // Simulate success/failure (replace with actual API call)
+            // Using a runtime value avoids "will never be executed" warnings for the failure branch.
+            #if DEBUG
+            let success = Bool.random()
+            #else
             let success = true
+            #endif
             
             if success {
                 self.alertMessage = "Password changed successfully!"
