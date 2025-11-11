@@ -10,24 +10,7 @@ import SwiftUI
 struct CreateActivityView: View {
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject private var theme: Theme
-
-    @State private var showSuccess = false
-    @State private var sportType = ""
-    @State private var title = ""
-    @State private var description = ""
-    @State private var location = ""
-    @State private var date = Date()
-    @State private var time = Date()
-    @State private var participants = 5.0
-    @State private var level = ""
-    @State private var visibility = "public"
-
-    let sportCategories = [
-        ("⚽️", "Football"),
-        ("🏀", "Basketball"),
-        ("🏃‍♂️", "Running"),
-        ("🚴‍♀️", "Cycling")
-    ]
+    @StateObject private var viewModel = CreateActivityViewModel()
 
     var body: some View {
         ZStack {
@@ -42,25 +25,25 @@ struct CreateActivityView: View {
                         // Sport Type
                         fieldGroup(title: "Sport Type *") {
                             Menu {
-                                ForEach(sportCategories, id: \.1) { item in
+                                ForEach(viewModel.sportCategories, id: \.1) { item in
                                     let (icon, name) = item
                                     Button("\(icon) \(name)") {
-                                        sportType = name
+                                        viewModel.selectSport(name)
                                     }
                                 }
                             } label: {
                                 HStack(spacing: 12) {
-                                    if let selected = sportCategories.first(where: { $0.1 == sportType }) {
-                                        Text(selected.0)
+                                    if let emoji = viewModel.selectedSportEmoji {
+                                        Text(emoji)
                                             .font(.system(size: 18))
                                     } else {
                                         Image(systemName: "sportscourt.fill")
                                             .font(.system(size: 18))
                                             .foregroundColor(theme.colors.textSecondary)
                                     }
-                                    Text(sportType.isEmpty ? "Select a sport" : sportType)
+                                    Text(viewModel.sportType.isEmpty ? "Select a sport" : viewModel.sportType)
                                         .font(.system(size: 15))
-                                        .foregroundColor(sportType.isEmpty ? theme.colors.textSecondary : theme.colors.textPrimary)
+                                        .foregroundColor(viewModel.sportType.isEmpty ? theme.colors.textSecondary : theme.colors.textPrimary)
                                     Spacer()
                                     Image(systemName: "chevron.down")
                                         .font(.system(size: 14))
@@ -86,7 +69,7 @@ struct CreateActivityView: View {
                                 Image(systemName: "textformat")
                                     .font(.system(size: 20))
                                     .foregroundColor(theme.colors.textSecondary)
-                                TextField("e.g., Morning run at the park", text: $title)
+                                TextField("e.g., Morning run at the park", text: $viewModel.title)
                                     .font(.system(size: 15))
                                     .foregroundColor(theme.colors.textPrimary)
                             }
@@ -105,7 +88,7 @@ struct CreateActivityView: View {
                         // Description
                         fieldGroup(title: "Description") {
                             ZStack(alignment: .topLeading) {
-                                TextEditor(text: $description)
+                                TextEditor(text: $viewModel.description)
                                     .scrollContentBackground(.hidden)
                                     .frame(height: 120)
                                     .padding(12)
@@ -119,7 +102,7 @@ struct CreateActivityView: View {
                                     )
                                     .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: 4, x: 0, y: 2)
 
-                                if description.isEmpty {
+                                if viewModel.description.isEmpty {
                                     Text("Tell participants what to expect...")
                                         .foregroundColor(theme.colors.textSecondary.opacity(0.7))
                                         .font(.system(size: 15))
@@ -136,7 +119,7 @@ struct CreateActivityView: View {
                                 Image(systemName: "mappin.circle.fill")
                                     .font(.system(size: 20))
                                     .foregroundColor(theme.colors.textSecondary)
-                                TextField("Enter address or venue name", text: $location)
+                                TextField("Enter address or venue name", text: $viewModel.location)
                                     .font(.system(size: 15))
                                     .foregroundColor(theme.colors.textPrimary)
                             }
@@ -164,7 +147,7 @@ struct CreateActivityView: View {
                                     Image(systemName: "calendar")
                                         .font(.system(size: 20))
                                         .foregroundColor(theme.colors.textSecondary)
-                                    DatePicker("", selection: $date, displayedComponents: .date)
+                                    DatePicker("", selection: $viewModel.date, displayedComponents: .date)
                                         .labelsHidden()
                                         .font(.system(size: 15))
                                         .tint(theme.colors.accentPurple)
@@ -191,7 +174,7 @@ struct CreateActivityView: View {
                                     Image(systemName: "clock")
                                         .font(.system(size: 20))
                                         .foregroundColor(theme.colors.textSecondary)
-                                    DatePicker("", selection: $time, displayedComponents: .hourAndMinute)
+                                    DatePicker("", selection: $viewModel.time, displayedComponents: .hourAndMinute)
                                         .labelsHidden()
                                         .font(.system(size: 15))
                                         .tint(theme.colors.accentPurple)
@@ -215,12 +198,12 @@ struct CreateActivityView: View {
                                 Image(systemName: "person.2.fill")
                                     .font(.system(size: 18))
                                     .foregroundColor(theme.colors.textPrimary)
-                                Text("Number of Participants: \(Int(participants))")
+                                Text("Number of Participants: \(viewModel.participantsCount)")
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(theme.colors.textPrimary)
                             }
 
-                            Slider(value: $participants, in: 2...20, step: 1)
+                            Slider(value: $viewModel.participants, in: 2...20, step: 1)
                                 .tint(theme.colors.accentPurple)
 
                             HStack {
@@ -237,17 +220,17 @@ struct CreateActivityView: View {
                         // Skill Level
                         fieldGroup(title: "Skill Level *") {
                             Menu {
-                                ForEach(["Beginner", "Intermediate", "Advanced"], id: \.self) { lvl in
-                                    Button(action: { level = lvl }) {
+                                ForEach(viewModel.skillLevels, id: \.self) { lvl in
+                                    Button(action: { viewModel.selectLevel(lvl) }) {
                                         Text(lvl)
                                             .font(.system(size: 16))
                                     }
                                 }
                             } label: {
                                 HStack {
-                                    Text(level.isEmpty ? "Select skill level" : level)
+                                    Text(viewModel.level.isEmpty ? "Select skill level" : viewModel.level)
                                         .font(.system(size: 15))
-                                        .foregroundColor(level.isEmpty ? theme.colors.textSecondary : theme.colors.textPrimary)
+                                        .foregroundColor(viewModel.level.isEmpty ? theme.colors.textSecondary : theme.colors.textPrimary)
                                     Spacer()
                                     Image(systemName: "chevron.down")
                                         .font(.system(size: 14))
@@ -270,17 +253,17 @@ struct CreateActivityView: View {
                         // Visibility
                         fieldGroup(title: "Visibility") {
                             Menu {
-                                Button(action: { visibility = "public" }) {
+                                Button(action: { viewModel.setVisibility("public") }) {
                                     Text("Public - Anyone can join")
                                         .font(.system(size: 16))
                                 }
-                                Button(action: { visibility = "friends" }) {
+                                Button(action: { viewModel.setVisibility("friends") }) {
                                     Text("Friends Only")
                                         .font(.system(size: 16))
                                 }
                             } label: {
                                 HStack {
-                                    Text(visibility == "public" ? "Public - Anyone can join" : "Friends Only")
+                                    Text(viewModel.visibilityDisplayText)
                                         .font(.system(size: 15))
                                         .foregroundColor(theme.colors.textPrimary)
                                     Spacer()
@@ -319,7 +302,9 @@ struct CreateActivityView: View {
                                     )
                             }
 
-                            Button(action: { showSuccess = true }) {
+                            Button(action: {
+                                viewModel.createActivity()
+                            }) {
                                 Text("Create Room")
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(.white)
@@ -334,6 +319,8 @@ struct CreateActivityView: View {
                                     .cornerRadius(28)
                                     .shadow(color: theme.colors.accentGreenGlow.opacity(0.35), radius: 8, x: 0, y: 4)
                             }
+                            .disabled(!viewModel.isFormValid)
+                            .opacity(viewModel.isFormValid ? 1.0 : 0.6)
                         }
                         .padding(.top, 10)
                     }
@@ -368,9 +355,9 @@ struct CreateActivityView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(theme.colors.barMaterial, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
-        .sheet(isPresented: $showSuccess) {
+        .sheet(isPresented: $viewModel.showSuccess) {
             SuccessDialog {
-                showSuccess = false
+                viewModel.showSuccess = false
                 presentationMode.wrappedValue.dismiss()
             }
             .environmentObject(theme)
@@ -390,8 +377,7 @@ struct CreateActivityView: View {
     
     private var backgroundOrbs: some View {
         ZStack {
-            Circle(
-            )
+            Circle()
                 .fill(
                     LinearGradient(
                         colors: [

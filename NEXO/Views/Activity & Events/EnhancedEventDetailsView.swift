@@ -7,105 +7,32 @@
 
 import SwiftUI
 
-// MARK: - Data Models
-struct Coach {
-    let name: String
-    let avatar: String
-    let isVerified: Bool
-    let rating: Double
-    let totalReviews: Int
-    let bio: String
-    let certifications: [String]
-}
-
-struct EventParticipant: Identifiable {
-    let id: String
-    let name: String
-    let avatar: String
-}
-
-struct Review: Identifiable {
-    let id: String
-    let userName: String
-    let userAvatar: String
-    let rating: Int
-    let comment: String
-    let date: String
-}
-
-struct EnhancedEvent {
-    let id: String
-    let title: String
-    let sportIcon: String
-    let sportType: String
-    let date: String
-    let time: String
-    let duration: String
-    let location: String
-    let distance: String
-    let price: Double
-    let type: String
-    let level: String
-    let maxParticipants: Int
-    let currentParticipants: Int
-    let description: String
-    let requirements: [String]
-    let coach: Coach
-}
-
 // MARK: - Main View
 struct EnhancedEventDetailsView: View {
     @EnvironmentObject private var theme: Theme
+    @StateObject private var viewModel: EnhancedEventDetailsViewModel
 
     var onBack: () -> Void
     var onJoin: () -> Void
-    var onViewCoach: () -> Void
+    var onViewCoach: (_ coachId: String) -> Void
     var onMessage: () -> Void
-    var isCoachView: Bool = false
 
-    @State private var isSaved = false
-    @State private var selectedTab = "details"
-
-    private let event = EnhancedEvent(
-        id: "1",
-        title: "Morning HIIT Bootcamp",
-        sportIcon: "🏃",
-        sportType: "HIIT Training",
-        date: "Nov 5, 2025",
-        time: "7:00 AM",
-        duration: "60 min",
-        location: "Central Park - Main Field",
-        distance: "2.1 mi away",
-        price: 25,
-        type: "paid",
-        level: "Intermediate",
-        maxParticipants: 12,
-        currentParticipants: 8,
-        description: "High-intensity interval training session focused on building strength and endurance. Perfect for all fitness levels with modifications available. Bring water and a workout mat!",
-        requirements: ["Yoga mat", "Water bottle", "Athletic shoes"],
-        coach: Coach(
-            name: "Alex Thompson",
-            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-            isVerified: true,
-            rating: 4.8,
-            totalReviews: 124,
-            bio: "Certified personal trainer with 8+ years of experience",
-            certifications: ["NASM-CPT", "ACE"]
-        )
-    )
-
-    private let participants = [
-        EventParticipant(id: "1", name: "Sarah M.", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah"),
-        EventParticipant(id: "2", name: "Mike R.", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike"),
-        EventParticipant(id: "3", name: "Emma L.", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma"),
-        EventParticipant(id: "4", name: "John D.", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John"),
-        EventParticipant(id: "5", name: "Lisa K.", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa")
-    ]
-
-    private let reviews = [
-        Review(id: "1", userName: "Sarah M.", userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah", rating: 5, comment: "Excellent workout! Alex is very motivating and adjusts exercises for different levels.", date: "Oct 28, 2025"),
-        Review(id: "2", userName: "Mike R.", userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike", rating: 5, comment: "Great session, challenging but fun. Highly recommend!", date: "Oct 25, 2025")
-    ]
+    // MARK: - Initialization
+    
+    init(
+        eventId: String,
+        onBack: @escaping () -> Void,
+        onJoin: @escaping () -> Void,
+        onViewCoach: @escaping (_ coachId: String) -> Void,
+        onMessage: @escaping () -> Void,
+        isCoachView: Bool = false
+    ) {
+        self._viewModel = StateObject(wrappedValue: EnhancedEventDetailsViewModel(eventId: eventId, isCoachView: isCoachView))
+        self.onBack = onBack
+        self.onJoin = onJoin
+        self.onViewCoach = onViewCoach
+        self.onMessage = onMessage
+    }
 
     var body: some View {
         ZStack {
@@ -144,22 +71,22 @@ struct EnhancedEventDetailsView: View {
                     Text("Event Details")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
-                    Text(event.sportType)
+                    Text(viewModel.event.sportType)
                         .font(.system(size: 12))
                         .foregroundColor(theme.colors.textSecondary)
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 8) {
-                    Button(action: { isSaved.toggle() }) {
-                        Image(systemName: isSaved ? "heart.fill" : "heart")
+                    Button(action: { viewModel.toggleSaved() }) {
+                        Image(systemName: viewModel.isSaved ? "heart.fill" : "heart")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(isSaved ? Color(hex: "#EF4444") : theme.colors.textPrimary)
+                            .foregroundColor(viewModel.isSaved ? Color(hex: "#EF4444") : theme.colors.textPrimary)
                             .frame(width: 32, height: 32)
                             .background(theme.colors.cardBackground)
                             .clipShape(Circle())
                     }
-                    Button(action: {}) {
+                    Button(action: { viewModel.shareEvent() }) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(theme.colors.textPrimary)
@@ -183,7 +110,7 @@ private extension EnhancedEventDetailsView {
     private var eventHeader: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                Text(event.sportIcon)
+                Text(viewModel.event.sportIcon)
                     .font(.system(size: 28))
                     .frame(width: 52, height: 52)
                     .background(theme.colors.cardBackground)
@@ -195,17 +122,17 @@ private extension EnhancedEventDetailsView {
                     .cornerRadius(14)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(event.title)
+                    Text(viewModel.event.title)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
-                    Text(event.sportType)
+                    Text(viewModel.event.sportType)
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.95))
                 }
                 Spacer()
             }
 
-            if event.coach.isVerified {
+            if viewModel.event.coach.isVerified {
                 Text("✓ Hosted by Verified Coach")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.white)
@@ -221,12 +148,12 @@ private extension EnhancedEventDetailsView {
 
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
-                    infoBox(icon: "calendar", label: "Date", value: event.date)
-                    infoBox(icon: "clock", label: "Time", value: event.time)
+                    infoBox(icon: "calendar", label: "Date", value: viewModel.event.date)
+                    infoBox(icon: "clock", label: "Time", value: viewModel.event.time)
                 }
                 HStack(spacing: 8) {
-                    infoBox(icon: "mappin.and.ellipse", label: "Distance", value: event.distance)
-                    infoBox(icon: "dollarsign", label: "Price", value: "$\(Int(event.price))")
+                    infoBox(icon: "mappin.and.ellipse", label: "Distance", value: viewModel.event.distance)
+                    infoBox(icon: "dollarsign", label: "Price", value: viewModel.priceDisplay)
                 }
             }
         }
@@ -265,7 +192,7 @@ private extension EnhancedEventDetailsView {
     private var coachCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                AsyncImage(url: URL(string: event.coach.avatar)) { img in
+                AsyncImage(url: URL(string: viewModel.event.coach.avatar)) { img in
                     img.resizable().scaledToFill()
                 } placeholder: {
                     Circle().fill(Color.gray.opacity(0.3))
@@ -276,13 +203,13 @@ private extension EnhancedEventDetailsView {
                 .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(event.coach.name)
+                    Text(viewModel.event.coach.name)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
                     HStack(spacing: 4) {
                         Image(systemName: "star.fill")
                             .foregroundColor(.yellow)
-                        Text("\(String(format: "%.1f", event.coach.rating)) (\(event.coach.totalReviews) reviews)")
+                        Text(viewModel.coachRatingText)
                             .font(.system(size: 12))
                             .foregroundColor(theme.colors.textSecondary)
                     }
@@ -290,12 +217,12 @@ private extension EnhancedEventDetailsView {
                 Spacer()
             }
 
-            Text(event.coach.bio)
+            Text(viewModel.event.coach.bio)
                 .font(.system(size: 12))
                 .foregroundColor(theme.colors.textSecondary)
 
             HStack(spacing: 6) {
-                ForEach(event.coach.certifications, id: \.self) { cert in
+                ForEach(viewModel.event.coach.certifications, id: \.self) { cert in
                     HStack(spacing: 4) {
                         Image(systemName: "shield.fill")
                             .font(.system(size: 10))
@@ -317,7 +244,7 @@ private extension EnhancedEventDetailsView {
             }
 
             HStack(spacing: 8) {
-                Button("View Profile") { onViewCoach() }
+                Button("View Profile") { onViewCoach(viewModel.event.coach.id) }
                     .buttonStyle(BrandButtonStyle(variant: .outline))
                 Button(action: onMessage) {
                     Label("Message", systemImage: "message")
@@ -340,16 +267,16 @@ private extension EnhancedEventDetailsView {
     private var tabBar: some View {
         HStack(spacing: 8) {
             ForEach(["details", "participants", "reviews"], id: \.self) { tab in
-                Button(action: { selectedTab = tab }) {
+                Button(action: { viewModel.selectTab(tab) }) {
                     Text(tab.capitalized)
-                        .font(.system(size: 12, weight: selectedTab == tab ? .semibold : .regular))
-                        .foregroundColor(selectedTab == tab ? Color(hex: "#A855F7") : theme.colors.textSecondary)
+                        .font(.system(size: 12, weight: viewModel.selectedTab == tab ? .semibold : .regular))
+                        .foregroundColor(viewModel.selectedTab == tab ? Color(hex: "#A855F7") : theme.colors.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(theme.colors.cardBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(selectedTab == tab ? Color(hex: "#A855F7") : theme.colors.cardStroke, lineWidth: 1)
+                                .stroke(viewModel.selectedTab == tab ? Color(hex: "#A855F7") : theme.colors.cardStroke, lineWidth: 1)
                         )
                         .cornerRadius(16)
                 }
@@ -361,19 +288,19 @@ private extension EnhancedEventDetailsView {
 
     private var tabContent: some View {
         VStack(spacing: 10) {
-            if selectedTab == "details" {
+            if viewModel.selectedTab == "details" {
                 availabilityCard
                 aboutCard
                 whatToBringCard
                 locationCard
-            } else if selectedTab == "participants" {
+            } else if viewModel.selectedTab == "participants" {
                 participantsList
             } else {
                 reviewsList
             }
         }
         .padding(.horizontal, 16)
-        .animation(.easeInOut, value: selectedTab)
+        .animation(.easeInOut, value: viewModel.selectedTab)
     }
 
     private var availabilityCard: some View {
@@ -381,13 +308,12 @@ private extension EnhancedEventDetailsView {
             Text("Availability")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
-            let spotsLeft = event.maxParticipants - event.currentParticipants
-            let fillPercentage = Double(event.currentParticipants) / Double(event.maxParticipants)
+            
             VStack(spacing: 6) {
                 HStack {
-                    Text("\(event.currentParticipants)/\(event.maxParticipants) joined")
+                    Text(viewModel.availabilityText)
                     Spacer()
-                    Text("\(spotsLeft) spots left")
+                    Text(viewModel.spotsLeftText)
                 }
                 .font(.system(size: 12))
                 .foregroundColor(theme.colors.textSecondary)
@@ -399,13 +325,13 @@ private extension EnhancedEventDetailsView {
                             .frame(height: 8)
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color(hex: "#A855F7"))
-                            .frame(width: geo.size.width * fillPercentage, height: 8)
+                            .frame(width: geo.size.width * viewModel.fillPercentage, height: 8)
                     }
                 }
                 .frame(height: 8)
 
-                if spotsLeft <= 3 {
-                    Text("⚠️ Almost full - book now!")
+                if let warning = viewModel.getAvailabilityWarning() {
+                    Text(warning)
                         .font(.system(size: 11))
                         .foregroundColor(Color(hex: "#EA580C"))
                 }
@@ -423,7 +349,7 @@ private extension EnhancedEventDetailsView {
     }
 
     private var aboutCard: some View {
-        infoCard(title: "About this session", content: event.description)
+        infoCard(title: "About this session", content: viewModel.event.description)
     }
 
     private var whatToBringCard: some View {
@@ -431,7 +357,7 @@ private extension EnhancedEventDetailsView {
             Text("What to bring")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
-            ForEach(event.requirements, id: \.self) { item in
+            ForEach(viewModel.event.requirements, id: \.self) { item in
                 HStack(spacing: 6) {
                     Circle()
                         .fill(Color(hex: "#A855F7"))
@@ -461,7 +387,7 @@ private extension EnhancedEventDetailsView {
                 .foregroundColor(theme.colors.textPrimary)
             HStack(spacing: 6) {
                 Image(systemName: "mappin.and.ellipse")
-                Text(event.location)
+                Text(viewModel.event.location)
             }
             .font(.system(size: 12))
             .foregroundColor(theme.colors.textSecondary)
@@ -492,10 +418,10 @@ private extension EnhancedEventDetailsView {
 
     private var participantsList: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("\(event.currentParticipants) people are joining this session")
+            Text(viewModel.participantsCountText)
                 .font(.system(size: 12))
                 .foregroundColor(theme.colors.textSecondary)
-            ForEach(participants) { p in
+            ForEach(viewModel.participants) { p in
                 HStack(spacing: 12) {
                     AsyncImage(url: URL(string: p.avatar)) { img in
                         img.resizable().scaledToFill()
@@ -516,17 +442,19 @@ private extension EnhancedEventDetailsView {
                             .foregroundColor(theme.colors.textSecondary)
                     }
                     Spacer()
-                    Button("View") {}
-                        .font(.system(size: 12))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(theme.colors.cardBackground)
-                        .background(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(theme.colors.cardStroke, lineWidth: 1)
-                        )
-                        .cornerRadius(14)
+                    Button("View") {
+                        viewModel.viewParticipant(p.id)
+                    }
+                    .font(.system(size: 12))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(theme.colors.cardBackground)
+                    .background(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(theme.colors.cardStroke, lineWidth: 1)
+                    )
+                    .cornerRadius(14)
                 }
                 .padding(12)
                 .background(theme.colors.cardBackground)
@@ -543,7 +471,7 @@ private extension EnhancedEventDetailsView {
 
     private var reviewsList: some View {
         VStack(spacing: 10) {
-            ForEach(reviews) { r in
+            ForEach(viewModel.reviews) { r in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         AsyncImage(url: URL(string: r.userAvatar)) { img in
@@ -591,17 +519,21 @@ private extension EnhancedEventDetailsView {
     private var bottomBar: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                if isCoachView {
-                    Button("Edit Event") {}
-                        .buttonStyle(BrandButtonStyle(variant: .outline))
-                    Button("Manage Participants") {}
-                        .buttonStyle(BrandButtonStyle(variant: .default))
+                if viewModel.isCoachView {
+                    Button("Edit Event") {
+                        viewModel.editEvent()
+                    }
+                    .buttonStyle(BrandButtonStyle(variant: .outline))
+                    Button("Manage Participants") {
+                        viewModel.manageParticipants()
+                    }
+                    .buttonStyle(BrandButtonStyle(variant: .default))
                 } else {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Total")
                             .font(.system(size: 11))
                             .foregroundColor(theme.colors.textSecondary)
-                        Text("$\(Int(event.price))")
+                        Text(viewModel.priceDisplay)
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(Color(hex: "#A855F7"))
                     }
@@ -645,9 +577,10 @@ struct EnhancedEventDetailsView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationStack {
             EnhancedEventDetailsView(
+                eventId: "1",
                 onBack: {},
                 onJoin: {},
-                onViewCoach: {},
+                onViewCoach: { _ in },
                 onMessage: {},
                 isCoachView: false
             )
@@ -655,3 +588,4 @@ struct EnhancedEventDetailsView_Previews: PreviewProvider {
         }
     }
 }
+

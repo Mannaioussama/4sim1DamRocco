@@ -9,41 +9,25 @@ import SwiftUI
 
 struct CoachProfileView: View {
     @EnvironmentObject private var theme: Theme
-
-    @State private var isFollowing = false
-    @State private var selectedTab = "about"
+    @StateObject private var viewModel: CoachProfileViewModel
 
     var onBack: (() -> Void)?
     var onBookSession: (() -> Void)?
     var onMessage: (() -> Void)?
-
-    // Mock Coach Data
-    private let coach = CoachProfileData(
-        name: "Alex Thompson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-        isVerified: true,
-        bio: "Certified personal trainer with 8+ years of experience. Specialized in HIIT, strength training, and functional fitness.",
-        rating: 4.8,
-        totalReviews: 124,
-        location: "Los Angeles, CA",
-        specializations: ["HIIT", "Strength Training", "Yoga", "Running"],
-        certifications: ["NASM-CPT", "ACE", "Yoga Alliance RYT-200"],
-        experience: "8 years",
-        totalSessions: 450,
-        followers: 1234
-    )
-
-    private let upcomingSessions = [
-        CoachSession(id: "1", title: "Morning HIIT Bootcamp", date: "Nov 5, 2025", time: "7:00 AM", location: "Central Park", price: 25, spotsLeft: 4, sportIcon: "🏃"),
-        CoachSession(id: "2", title: "Yoga & Meditation", date: "Nov 6, 2025", time: "6:00 PM", location: "Zen Studio", price: 20, spotsLeft: 5, sportIcon: "🧘"),
-        CoachSession(id: "3", title: "Strength & Conditioning", date: "Nov 7, 2025", time: "5:30 PM", location: "FitHub Gym", price: 30, spotsLeft: 2, sportIcon: "💪")
-    ]
-
-    private let reviews = [
-        CoachReview(id: "1", userName: "Sarah M.", userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah", rating: 5, comment: "Alex is an amazing coach! Motivating, knowledgeable, and really cares about your progress.", date: "Oct 28, 2025"),
-        CoachReview(id: "2", userName: "Mike R.", userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike", rating: 5, comment: "Best trainer I've worked with. Great at explaining proper form and technique.", date: "Oct 25, 2025"),
-        CoachReview(id: "3", userName: "Emma L.", userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma", rating: 4, comment: "Really enjoyed the HIIT sessions. Challenging but fun!", date: "Oct 22, 2025")
-    ]
+    
+    // MARK: - Initialization
+    
+    init(
+        coachId: String,
+        onBack: (() -> Void)? = nil,
+        onBookSession: (() -> Void)? = nil,
+        onMessage: (() -> Void)? = nil
+    ) {
+        self._viewModel = StateObject(wrappedValue: CoachProfileViewModel(coachId: coachId))
+        self.onBack = onBack
+        self.onBookSession = onBookSession
+        self.onMessage = onMessage
+    }
 
     var body: some View {
         ZStack {
@@ -51,18 +35,24 @@ struct CoachProfileView: View {
             theme.colors.backgroundGradient.ignoresSafeArea()
             backgroundOrbs
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    profileHeader
-                        .padding(.bottom, 12)
-                    statsRow
-                        .offset(y: -28)
-                    tabsControl
-                        .padding(.top, -4)
-                    tabContent
-                        .padding(.top, 12)
+            if viewModel.isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle())
+                    .scaleEffect(1.2)
+            } else if let coach = viewModel.coach {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        profileHeader(coach: coach)
+                            .padding(.bottom, 12)
+                        statsRow
+                            .offset(y: -28)
+                        tabsControl
+                            .padding(.top, -4)
+                        tabContent
+                            .padding(.top, 12)
+                    }
+                    .padding(.bottom, 24)
                 }
-                .padding(.bottom, 24)
             }
         }
         .navigationTitle("Coach Profile")
@@ -86,7 +76,7 @@ struct CoachProfileView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    // Share action
+                    viewModel.shareProfile()
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 18, weight: .semibold))
@@ -100,6 +90,9 @@ struct CoachProfileView: View {
             }
         }
         .navigationBarBackButtonHidden(onBack != nil)
+        .onAppear {
+            viewModel.trackProfileView()
+        }
     }
 
     // MARK: - Themed Background Orbs
@@ -139,7 +132,7 @@ struct CoachProfileView: View {
     }
 
     // MARK: - Gradient Header (Hero)
-    private var profileHeader: some View {
+    private func profileHeader(coach: CoachProfileData) -> some View {
         ZStack {
             LinearGradient(
                 colors: [theme.colors.accentPurple, theme.colors.accentPink],
@@ -181,7 +174,7 @@ struct CoachProfileView: View {
 
                 // Verified badge
                 if coach.isVerified {
-                    Text("✓ Verified Coach")
+                    Text(viewModel.verifiedBadgeText)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
@@ -199,10 +192,10 @@ struct CoachProfileView: View {
                     Image(systemName: "star.fill")
                         .font(.system(size: 15))
                         .foregroundColor(.white)
-                    Text(String(format: "%.1f", coach.rating))
+                    Text(viewModel.ratingText)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.white)
-                    Text("(\(coach.totalReviews) reviews)")
+                    Text(viewModel.reviewsCountText)
                         .font(.system(size: 13))
                         .foregroundColor(.white.opacity(0.95))
                 }
@@ -220,30 +213,31 @@ struct CoachProfileView: View {
                 // Action Buttons
                 HStack(spacing: 8) {
                     Button {
-                        isFollowing.toggle()
+                        viewModel.toggleFollow()
+                        viewModel.trackFollowAction()
                     } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: isFollowing ? "heart.fill" : "heart")
+                            Image(systemName: viewModel.isFollowing ? "heart.fill" : "heart")
                                 .font(.system(size: 14))
-                            Text(isFollowing ? "Following" : "Follow")
+                            Text(viewModel.followButtonText)
                                 .font(.system(size: 14, weight: .medium))
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 36)
                         .background(
-                            isFollowing
+                            viewModel.isFollowing
                                 ? Color.white.opacity(0.2)
                                 : Color.white
                         )
                         .foregroundColor(
-                            isFollowing
+                            viewModel.isFollowing
                                 ? .white
                                 : theme.colors.accentPurple
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 18)
                                 .stroke(
-                                    isFollowing
+                                    viewModel.isFollowing
                                         ? Color.white.opacity(0.3)
                                         : Color.clear,
                                     lineWidth: 1
@@ -254,6 +248,7 @@ struct CoachProfileView: View {
                     .buttonStyle(ScaleButtonStyle())
 
                     Button {
+                        viewModel.sendMessage()
                         onMessage?()
                     } label: {
                         HStack(spacing: 6) {
@@ -280,9 +275,9 @@ struct CoachProfileView: View {
     // MARK: - Stats Row
     private var statsRow: some View {
         HStack(spacing: 8) {
-            statTile(value: "\(coach.totalSessions)", label: "Sessions")
-            statTile(value: "\(coach.followers)", label: "Followers")
-            statTile(value: coach.experience, label: "Experience")
+            statTile(value: viewModel.totalSessionsText, label: "Sessions")
+            statTile(value: viewModel.followersText, label: "Followers")
+            statTile(value: viewModel.experienceText, label: "Experience")
         }
         .padding(.horizontal, 16)
         .zIndex(2)
@@ -329,26 +324,25 @@ struct CoachProfileView: View {
             // Sliding indicator
             GeometryReader { geometry in
                 let tabWidth = geometry.size.width / 3
-                let index = ["about", "sessions", "reviews"].firstIndex(of: selectedTab) ?? 0
+                let index = viewModel.getTabIndex(viewModel.selectedTab)
 
                 RoundedRectangle(cornerRadius: 8)
                     .fill(theme.colors.accentPurple)
                     .frame(width: tabWidth - 10, height: 34)
                     .offset(x: CGFloat(index) * tabWidth + 5, y: 3)
-                    .animation(.easeInOut(duration: 0.25), value: selectedTab)
+                    .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
             }
 
             // Buttons
             HStack(spacing: 0) {
                 ForEach(["about", "sessions", "reviews"], id: \.self) { tab in
                     Button {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            selectedTab = tab
-                        }
+                        viewModel.selectTab(tab)
+                        viewModel.trackTabView(tab)
                     } label: {
                         Text(tab.capitalized)
-                            .font(.system(size: 14, weight: selectedTab == tab ? .semibold : .medium))
-                            .foregroundColor(selectedTab == tab ? .white : theme.colors.textSecondary)
+                            .font(.system(size: 14, weight: viewModel.selectedTab == tab ? .semibold : .medium))
+                            .foregroundColor(viewModel.selectedTab == tab ? .white : theme.colors.textSecondary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 40)
                     }
@@ -364,7 +358,7 @@ struct CoachProfileView: View {
     @ViewBuilder
     private var tabContent: some View {
         VStack(spacing: 12) {
-            switch selectedTab {
+            switch viewModel.selectedTab {
             case "about": aboutTab
             case "sessions": sessionsTab
             case "reviews": reviewsTab
@@ -375,58 +369,62 @@ struct CoachProfileView: View {
     }
 
     private var aboutTab: some View {
-        VStack(spacing: 12) {
-            // About Card
-            themedCard {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("About")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(theme.colors.textPrimary)
-                    Text(coach.bio)
-                        .font(.system(size: 13))
-                        .foregroundColor(theme.colors.textSecondary)
-                        .lineSpacing(3)
-                }
-            }
-
-            // Specializations Card
-            themedCard {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Specializations")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(theme.colors.textPrimary)
-
-                    WrapHStack(items: coach.specializations) { item in
-                        Text(item)
-                            .font(.system(size: 12, weight: .medium))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(theme.colors.cardBackground, in: Capsule())
-                            .background(theme.colors.barMaterial, in: Capsule())
-                            .foregroundColor(theme.colors.textPrimary)
-                            .overlay(
-                                Capsule().stroke(theme.colors.cardStroke, lineWidth: 1)
-                            )
+        Group {
+            if let coach = viewModel.coach {
+                VStack(spacing: 12) {
+                    // About Card
+                    themedCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("About")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(theme.colors.textPrimary)
+                            Text(coach.bio)
+                                .font(.system(size: 13))
+                                .foregroundColor(theme.colors.textSecondary)
+                                .lineSpacing(3)
+                        }
                     }
-                }
-            }
 
-            // Certifications Card
-            themedCard {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Certifications")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(theme.colors.textPrimary)
+                    // Specializations Card
+                    themedCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Specializations")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(theme.colors.textPrimary)
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(coach.certifications, id: \.self) { cert in
-                            HStack(spacing: 8) {
-                                Image(systemName: "rosette")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(theme.colors.accentPurple)
-                                Text(cert)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(theme.colors.textSecondary)
+                            WrapHStack(items: coach.specializations) { item in
+                                Text(item)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(theme.colors.cardBackground, in: Capsule())
+                                    .background(theme.colors.barMaterial, in: Capsule())
+                                    .foregroundColor(theme.colors.textPrimary)
+                                    .overlay(
+                                        Capsule().stroke(theme.colors.cardStroke, lineWidth: 1)
+                                    )
+                            }
+                        }
+                    }
+
+                    // Certifications Card
+                    themedCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Certifications")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(theme.colors.textPrimary)
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(coach.certifications, id: \.self) { cert in
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "rosette")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(theme.colors.accentPurple)
+                                        Text(cert)
+                                            .font(.system(size: 13))
+                                            .foregroundColor(theme.colors.textSecondary)
+                                    }
+                                }
                             }
                         }
                     }
@@ -441,7 +439,7 @@ struct CoachProfileView: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
 
-            ForEach(upcomingSessions) { session in
+            ForEach(viewModel.upcomingSessions) { session in
                 themedCard {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .top, spacing: 10) {
@@ -464,7 +462,7 @@ struct CoachProfileView: View {
                                 HStack(spacing: 6) {
                                     Image(systemName: "calendar")
                                         .font(.system(size: 12))
-                                    Text("\(session.date) • \(session.time)")
+                                    Text(viewModel.getSessionDateTimeText(session))
                                         .font(.system(size: 12))
                                 }
                                 .foregroundColor(theme.colors.textSecondary)
@@ -482,16 +480,18 @@ struct CoachProfileView: View {
 
                             // Price + spots
                             VStack(alignment: .trailing, spacing: 0) {
-                                Text("$\(Int(session.price))")
+                                Text(viewModel.getSessionPriceText(session))
                                     .font(.system(size: 15, weight: .bold))
                                     .foregroundColor(theme.colors.accentPurple)
-                                Text("\(session.spotsLeft) spots")
+                                Text(viewModel.getSessionSpotsText(session))
                                     .font(.system(size: 11))
                                     .foregroundColor(theme.colors.textSecondary)
                             }
                         }
 
                         Button {
+                            viewModel.bookSession(session)
+                            viewModel.trackSessionClick(session)
                             onBookSession?()
                         } label: {
                             Text("Book Session")
@@ -518,7 +518,7 @@ struct CoachProfileView: View {
 
     private var reviewsTab: some View {
         VStack(spacing: 10) {
-            ForEach(reviews) { review in
+            ForEach(viewModel.reviews) { review in
                 themedCard {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 10) {
@@ -577,42 +577,6 @@ struct CoachProfileView: View {
     }
 }
 
-// MARK: - Models
-struct CoachProfileData {
-    let name: String
-    let avatar: String
-    let isVerified: Bool
-    let bio: String
-    let rating: Double
-    let totalReviews: Int
-    let location: String
-    let specializations: [String]
-    let certifications: [String]
-    let experience: String
-    let totalSessions: Int
-    let followers: Int
-}
-
-struct CoachSession: Identifiable {
-    let id: String
-    let title: String
-    let date: String
-    let time: String
-    let location: String
-    let price: Double
-    let spotsLeft: Int
-    let sportIcon: String
-}
-
-struct CoachReview: Identifiable {
-    let id: String
-    let userName: String
-    let userAvatar: String
-    let rating: Int
-    let comment: String
-    let date: String
-}
-
 // MARK: - WrapHStack
 struct WrapHStack<Data: RandomAccessCollection, Content: View>: View where Data.Element: Hashable {
     let items: Data
@@ -666,6 +630,7 @@ struct WrapHStack<Data: RandomAccessCollection, Content: View>: View where Data.
 #Preview {
     NavigationStack {
         CoachProfileView(
+            coachId: "1",
             onBack: {},
             onBookSession: {},
             onMessage: {}

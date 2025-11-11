@@ -1,58 +1,19 @@
-// Functional old ProfilePage with working pencil (gallery/files) and upload hook, trimmed per your request.
-// CoachDashboardButton removed. Missing subviews (StatPill, AchievementsButton, ProfileCrystalTabs, etc.) are included here.
+//
+//  ProfilePage.swift
+//  NEXO
+//
+//  Created by ROCCO 4X on 3/11/2025.
+//
 
 import SwiftUI
 import PhotosUI
 
-// MARK: - User Model
-
-struct UserProfile {
-    let name: String
-    let bio: String
-    let location: String
-    var avatar: String
-    let stats: UserStats
-}
-
-struct UserStats {
-    let sessionsJoined: Int
-    let sessionsHosted: Int
-    let rating: Double
-    let favoriteSports: [String]
-}
-
 struct ProfilePage: View {
     @EnvironmentObject private var theme: Theme
-    @State private var selectedTab = 0
-
-    // Picker + upload state
-    @State private var showSourceSheet = false
-    @State private var showPhotoPicker = false
-    @State private var showFilesPicker = false
-    @State private var pickedUIImage: UIImage? = nil
-    @State private var isUploading = false
-    @State private var uploadError: String?
-
-    // Services (stub uploader for now)
-    private let imageService = ProfileImageService()
-    private let uploader: ProfileImageUploader = StubProfileImageUploader()
+    @StateObject private var viewModel = ProfilePageViewModel()
 
     var onSettingsClick: () -> Void
     var onAchievementsClick: (() -> Void)?
-
-    // Mock user data
-    @State private var currentUser = UserProfile(
-        name: "Alex Thompson",
-        bio: "Fitness enthusiast | Marathon runner | Yoga lover 🧘‍♀️",
-        location: "San Francisco, CA",
-        avatar: "https://i.pravatar.cc/150?img=33",
-        stats: UserStats(
-            sessionsJoined: 42,
-            sessionsHosted: 15,
-            rating: 4.9,
-            favoriteSports: ["Running", "Swimming", "Hiking", "Yoga", "Cycling"]
-        )
-    )
 
     var body: some View {
         ZStack {
@@ -87,7 +48,10 @@ struct ProfilePage: View {
 
                         Spacer()
 
-                        Button(action: onSettingsClick) {
+                        Button(action: {
+                            viewModel.trackSettingsOpened()
+                            onSettingsClick()
+                        }) {
                             HStack(spacing: 8) {
                                 Image(systemName: "person").font(.system(size: 18))
                                 Text("Profile").font(.system(size: 14, weight: .medium))
@@ -112,19 +76,22 @@ struct ProfilePage: View {
 
                     // Profile Card
                     ProfileGlassCard(
-                        user: currentUser,
-                        pickedUIImage: pickedUIImage,
-                        onPencilTap: { showSourceSheet = true }
+                        user: viewModel.currentUser,
+                        pickedUIImage: viewModel.pickedUIImage,
+                        onPencilTap: { viewModel.openSourcePicker() }
                     )
                     .environmentObject(theme)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
 
-                    // Quick Actions (coach dashboard removed)
+                    // Quick Actions
                     VStack(spacing: 12) {
                         if let achievements = onAchievementsClick {
-                            AchievementsButton(action: achievements)
-                                .environmentObject(theme)
+                            AchievementsButton(action: {
+                                viewModel.trackAchievementsOpened()
+                                achievements()
+                            })
+                            .environmentObject(theme)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -132,8 +99,16 @@ struct ProfilePage: View {
 
                     // Tabs
                     ProfileCrystalTabs(
-                        user: currentUser,
-                        selectedTab: $selectedTab
+                        user: viewModel.currentUser,
+                        selectedTab: $viewModel.selectedTab,
+                        recentActivities: viewModel.recentActivities,
+                        achievements: viewModel.achievements,
+                        skillLevels: viewModel.skillLevels,
+                        interests: viewModel.interests,
+                        onTabChange: { index in
+                            viewModel.selectTab(index)
+                            viewModel.trackTabView(index)
+                        }
                     )
                     .environmentObject(theme)
                     .padding(.horizontal, 16)
@@ -142,62 +117,43 @@ struct ProfilePage: View {
             }
         }
         // Sheet pickers
-        .sheet(isPresented: $showPhotoPicker) {
-            PhotoLibraryPicker(onPick: handlePickedImage(_:), onCancel: {})
-                .ignoresSafeArea()
+        .sheet(isPresented: $viewModel.showPhotoPicker) {
+            PhotoLibraryPicker(
+                onPick: { viewModel.handlePickedImage($0) },
+                onCancel: {}
+            )
+            .ignoresSafeArea()
         }
-        .sheet(isPresented: $showFilesPicker) {
-            FilesImagePicker(onPick: handlePickedImage(_:), onCancel: {})
-                .ignoresSafeArea()
+        .sheet(isPresented: $viewModel.showFilesPicker) {
+            FilesImagePicker(
+                onPick: { viewModel.handlePickedImage($0) },
+                onCancel: {}
+            )
+            .ignoresSafeArea()
         }
         // Centered source picker popup
         .overlay(sourcePickerPopup)
         // Upload overlay + error
         .overlay(uploadOverlay)
-        .alert("Upload Error", isPresented: .constant(uploadError != nil), actions: {
-            Button("OK") { uploadError = nil }
+        .alert("Upload Error", isPresented: .constant(viewModel.uploadError != nil), actions: {
+            Button("OK") { viewModel.uploadError = nil }
         }, message: {
-            Text(uploadError ?? "")
+            Text(viewModel.uploadError ?? "")
         })
-    }
-
-    // MARK: - Handlers
-
-    private func handlePickedImage(_ picked: PickedImage) {
-        pickedUIImage = picked.uiImage // show immediately
-
-        Task {
-            do {
-                isUploading = true
-                let processed = try imageService.processForUpload(picked.uiImage)
-                // Stub upload (replace with your NestJS call later)
-                let newURL = try await uploader.uploadProfileImage(
-                    data: processed,
-                    fileName: picked.fileName,
-                    mimeType: picked.mimeType
-                )
-                currentUser.avatar = newURL.absoluteString
-            } catch {
-                uploadError = error.localizedDescription
-            }
-            isUploading = false
+        .onAppear {
+            viewModel.trackProfileView()
         }
-    }
-
-    private func removeAvatar() {
-        pickedUIImage = nil
-        currentUser.avatar = ""
     }
 
     // MARK: - Centered source picker popup
     private var sourcePickerPopup: some View {
         Group {
-            if showSourceSheet {
+            if viewModel.showSourceSheet {
                 ZStack {
                     // Dim background tap to dismiss
                     Color.black.opacity(0.35)
                         .ignoresSafeArea()
-                        .onTapGesture { withAnimation(.spring(response: 0.25)) { showSourceSheet = false } }
+                        .onTapGesture { viewModel.closeSourcePicker() }
 
                     VStack(spacing: 12) {
                         Text("Change profile photo")
@@ -209,31 +165,21 @@ struct ProfilePage: View {
                             PopupActionButton(
                                 title: "Choose from Library",
                                 systemImage: "photo.on.rectangle",
-                                action: {
-                                    showSourceSheet = false
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                        showPhotoPicker = true
-                                    }
-                                }
+                                action: { viewModel.openPhotoPicker() }
                             )
                             PopupActionButton(
                                 title: "Choose from Files",
                                 systemImage: "folder",
-                                action: {
-                                    showSourceSheet = false
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                        showFilesPicker = true
-                                    }
-                                }
+                                action: { viewModel.openFilesPicker() }
                             )
-                            if pickedUIImage != nil || !currentUser.avatar.isEmpty {
+                            if viewModel.hasAvatar {
                                 PopupActionButton(
                                     title: "Remove Photo",
                                     systemImage: "trash",
                                     roleDestructive: true,
                                     action: {
-                                        removeAvatar()
-                                        withAnimation(.spring(response: 0.25)) { showSourceSheet = false }
+                                        viewModel.removeAvatar()
+                                        viewModel.trackImageRemoved()
                                     }
                                 )
                             }
@@ -241,7 +187,7 @@ struct ProfilePage: View {
                         .padding(.horizontal, 12)
                         .padding(.bottom, 8)
 
-                        Button(action: { withAnimation(.spring(response: 0.25)) { showSourceSheet = false } }) {
+                        Button(action: { viewModel.closeSourcePicker() }) {
                             Text("Cancel")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(theme.colors.textPrimary)
@@ -272,13 +218,13 @@ struct ProfilePage: View {
                 }
             }
         }
-        .animation(.spring(response: 0.25, dampingFraction: 0.9), value: showSourceSheet)
+        .animation(.spring(response: 0.25, dampingFraction: 0.9), value: viewModel.showSourceSheet)
     }
 
     // MARK: - Upload overlay
     private var uploadOverlay: some View {
         Group {
-            if isUploading {
+            if viewModel.isUploading {
                 ZStack {
                     Color.black.opacity(0.25).ignoresSafeArea()
                     HStack(spacing: 10) {
@@ -295,11 +241,11 @@ struct ProfilePage: View {
                 .transition(.opacity)
             }
         }
-        .animation(.easeInOut, value: isUploading)
+        .animation(.easeInOut, value: viewModel.isUploading)
     }
 }
 
-// MARK: - PopupActionButton (local helper)
+// MARK: - PopupActionButton
 private struct PopupActionButton: View {
     @EnvironmentObject private var theme: Theme
     let title: String
@@ -330,7 +276,7 @@ private struct PopupActionButton: View {
     }
 }
 
-// MARK: - Profile Glass Card (pencil wired)
+// MARK: - Profile Glass Card
 private struct ProfileGlassCard: View {
     @EnvironmentObject private var theme: Theme
     let user: UserProfile
@@ -474,7 +420,7 @@ private struct ProfileGlassCard: View {
     }
 }
 
-// MARK: - Stat Pill (included)
+// MARK: - Stat Pill
 private struct StatPill: View {
     @EnvironmentObject private var theme: Theme
     let value: String
@@ -502,7 +448,7 @@ private struct StatPill: View {
     }
 }
 
-// MARK: - Achievements Button (included)
+// MARK: - Achievements Button (missing helper restored)
 struct AchievementsButton: View {
     @EnvironmentObject private var theme: Theme
     let action: () -> Void
@@ -566,450 +512,252 @@ struct AchievementsButton: View {
     }
 }
 
-// MARK: - Tabs (included)
+// MARK: - Tabs (Implemented)
 private struct ProfileCrystalTabs: View {
     @EnvironmentObject private var theme: Theme
     let user: UserProfile
     @Binding var selectedTab: Int
+    let recentActivities: [Activity]
+    let achievements: [AchievementData]
+    let skillLevels: [(sport: String, level: String)]
+    let interests: String
+    var onTabChange: (Int) -> Void
 
     var body: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(hex: "8B5CF6").opacity(0.2),
-                                Color(hex: "EC4899").opacity(0.2),
-                                Color(hex: "0066FF").opacity(0.2)
-                            ],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
-                    )
-                    .blur(radius: 12)
-                    .opacity(0.5)
-                    .padding(-4)
-
-                HStack(spacing: 6) {
-                    CrystalTabButton(title: "About", isSelected: selectedTab == 0) {
-                        withAnimation(.spring(response: 0.3)) { selectedTab = 0 }
-                    }
-                    CrystalTabButton(title: "Activities", isSelected: selectedTab == 1) {
-                        withAnimation(.spring(response: 0.3)) { selectedTab = 1 }
-                    }
-                    CrystalTabButton(title: "Medals", isSelected: selectedTab == 2) {
-                        withAnimation(.spring(response: 0.3)) { selectedTab = 2 }
-                    }
-                }
-                .padding(6)
-            }
-            .background(theme.colors.cardBackground)
-            .background(.ultraThinMaterial)
-            .overlay(
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(theme.colors.cardStroke, lineWidth: 2)
-            )
-            .cornerRadius(24)
-            .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
+        VStack(spacing: 12) {
+            tabSelector
 
             Group {
-                if selectedTab == 0 {
-                    AboutTabContent(user: user)
-                        .environmentObject(theme)
-                } else if selectedTab == 1 {
-                    ActivitiesTabContentUsingMock()
-                        .environmentObject(theme)
-                } else {
-                    MedalsTabContent()
-                        .environmentObject(theme)
+                switch selectedTab {
+                case 0: aboutTab
+                case 1: activitiesTab
+                case 2: medalsTab
+                default: aboutTab
                 }
             }
+            .animation(.easeInOut(duration: 0.2), value: selectedTab)
         }
     }
-}
 
-private struct CrystalTabButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
+    // MARK: - Tab Selector
+    private var tabSelector: some View {
+        HStack(spacing: 6) {
+            tabButton(title: "About", index: 0)
+            tabButton(title: "Activities", index: 1)
+            tabButton(title: "Medals", index: 2)
+        }
+        .padding(6)
+        .background(theme.colors.cardBackground)
+        .background(theme.colors.barMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(theme.colors.cardStroke, lineWidth: 1)
+        )
+        .cornerRadius(16)
+    }
 
-    var body: some View {
-        Button(action: action) {
+    private func tabButton(title: String, index: Int) -> some View {
+        Button {
+            selectedTab = index
+            onTabChange(index)
+        } label: {
             Text(title)
-                .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
-                .foregroundColor(isSelected ? .white : Color.black.opacity(0.8))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(selectedTab == index ? .white : theme.colors.textSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(
                     Group {
-                        if isSelected {
+                        if selectedTab == index {
                             LinearGradient(
-                                colors: [Color(hex: "8B5CF6"), Color(hex: "C4B5FD")],
+                                colors: [Color(hex: "A855F7"), Color(hex: "EC4899")],
                                 startPoint: .topLeading, endPoint: .bottomTrailing
                             )
+                        } else {
+                            theme.colors.cardBackground
                         }
                     }
                 )
-                .cornerRadius(16)
-                .shadow(color: isSelected ? Color(hex: "8B5CF6").opacity(0.3) : .clear, radius: 12, x: 0, y: 6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(theme.colors.cardStroke, lineWidth: 1)
+                )
+                .cornerRadius(12)
+                .shadow(color: selectedTab == index ? .black.opacity(0.08) : .clear, radius: 6, y: 3)
         }
-        .buttonStyle(ScaleButtonStyle())
+        .buttonStyle(.plain)
     }
-}
 
-// MARK: - About Tab (included)
-private struct AboutTabContent: View {
-    @EnvironmentObject private var theme: Theme
-    let user: UserProfile
-
-    var body: some View {
-        VStack(spacing: 12) {
-            CrystalInfoCard(title: "Favorite Sports") {
-                FlowLayout(spacing: 8) {
-                    ForEach(user.stats.favoriteSports, id: \.self) { sport in
-                        Text(sport)
-                            .font(.system(size: 12))
+    // MARK: - About
+    private var aboutTab: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Skill levels
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Skill Levels")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(theme.colors.textPrimary)
+                ForEach(skillLevels.indices, id: \.self) { idx in
+                    HStack {
+                        Text(skillLevels[idx].sport)
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundColor(theme.colors.textPrimary)
-                            .padding(.horizontal, 12)
+                        Spacer()
+                        Text(skillLevels[idx].level)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Color(hex: "A855F7"))
+                            .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(theme.colors.cardBackground)
-                            .background(.ultraThinMaterial)
+                            .background(theme.colors.barMaterial)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(theme.colors.cardStroke, lineWidth: 2)
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(theme.colors.cardStroke, lineWidth: 1)
                             )
-                            .cornerRadius(20)
-                            .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+                            .cornerRadius(12)
                     }
+                    .padding(10)
+                    .background(theme.colors.cardBackground)
+                    .background(theme.colors.barMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(theme.colors.cardStroke, lineWidth: 1)
+                    )
+                    .cornerRadius(14)
                 }
             }
-            .environmentObject(theme)
+            .padding(12)
+            .background(theme.colors.cardBackground)
+            .background(theme.colors.barMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+            )
+            .cornerRadius(16)
 
-            CrystalInfoCard(title: "Interests") {
-                Text("Outdoor activities • Fitness challenges • Meeting new people • Trail running • Open water swimming")
-                    .font(.system(size: 12))
+            // Interests
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Interests")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(theme.colors.textPrimary)
+                Text(interests)
+                    .font(.system(size: 13))
                     .foregroundColor(theme.colors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(3)
             }
-            .environmentObject(theme)
-
-            CrystalInfoCard(title: "Skill Levels") {
-                VStack(spacing: 12) {
-                    SkillRow(sport: "Running", level: "Intermediate")
-                    SkillRow(sport: "Swimming", level: "Advanced")
-                    SkillRow(sport: "Hiking", level: "Intermediate")
-                }
-            }
-            .environmentObject(theme)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.colors.cardBackground)
+            .background(theme.colors.barMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+            )
+            .cornerRadius(16)
         }
     }
-}
 
-// MARK: - Activities Tab (included, uses mockActivities)
-private struct ActivitiesTabContentUsingMock: View {
-    @EnvironmentObject private var theme: Theme
-    private let activities = Array(mockActivities.prefix(5))
+    // MARK: - Activities
+    private var activitiesTab: some View {
+        VStack(spacing: 10) {
+            ForEach(recentActivities) { activity in
+                ActivityRow(activity: activity)
+                    .environmentObject(theme)
+            }
+        }
+    }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recent Activities")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(theme.colors.textPrimary)
-                .padding(.horizontal, 4)
-
-            ForEach(activities) { activity in
-                ActivityRowCard(
-                    icon: activity.sportIcon,
-                    title: activity.title,
-                    date: activity.date,
-                    time: activity.time
-                )
-                .environmentObject(theme)
+    // MARK: - Medals
+    private var medalsTab: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            ForEach(achievements.indices, id: \.self) { idx in
+                AchievementTile(item: achievements[idx])
+                    .environmentObject(theme)
             }
         }
     }
 }
 
-private struct ActivityRowCard: View {
+// MARK: - Activity Row (lightweight)
+private struct ActivityRow: View {
     @EnvironmentObject private var theme: Theme
-    let icon: String
-    let title: String
-    let date: String
-    let time: String
+    let activity: Activity
 
     var body: some View {
-        HStack(spacing: 12) {
-            Text(icon)
-                .font(.system(size: 28))
+        HStack(spacing: 10) {
+            Text(activity.sportIcon)
+                .font(.system(size: 24))
                 .frame(width: 44, height: 44)
                 .background(theme.colors.cardBackground)
-                .background(.ultraThinMaterial)
+                .background(theme.colors.barMaterial)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(theme.colors.cardStroke, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(theme.colors.cardStroke, lineWidth: 1)
                 )
-                .cornerRadius(16)
-                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+                .cornerRadius(12)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 14, weight: .medium))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(activity.title)
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
-
-                HStack(spacing: 4) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 12))
-                    Text(date)
-                        .font(.system(size: 12))
-                    Text("•")
-                        .font(.system(size: 12))
-                    Text(time)
-                        .font(.system(size: 12))
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar").font(.system(size: 11))
+                    Text("\(activity.date) • \(activity.time)")
+                    Image(systemName: "mappin.and.ellipse").font(.system(size: 11))
+                    Text(activity.location)
                 }
+                .font(.system(size: 11))
                 .foregroundColor(theme.colors.textSecondary)
             }
 
             Spacer()
-        }
-        .padding(16)
-        .background(theme.colors.cardBackground)
-        .background(.ultraThinMaterial)
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(theme.colors.cardStroke, lineWidth: 2)
-        )
-        .cornerRadius(24)
-        .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
-    }
-}
 
-// MARK: - Medals Tab (included)
-private struct MedalsTabContent: View {
-    @EnvironmentObject private var theme: Theme
-    let achievements = [
-        ("🏃", "Marathon Runner", "Completed 5+ running events", "3498DB"),
-        ("🏊", "Water Warrior", "Joined 10+ swimming sessions", "2ECC71"),
-        ("👥", "Social Butterfly", "Connected with 25+ athletes", "9B59B6"),
-        ("⭐", "Top Host", "Hosted 10+ successful events", "F39C12"),
-        ("💪", "Consistency King", "30-day activity streak", "E74C3C"),
-        ("🎯", "Goal Crusher", "Achieved 5 personal goals", "1ABC9C")
-    ]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Medals")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(theme.colors.textPrimary)
-                .padding(.horizontal, 4)
-
-            ForEach(achievements.indices, id: \.self) { index in
-                AchievementRow(
-                    icon: achievements[index].0,
-                    title: achievements[index].1,
-                    description: achievements[index].2,
-                    color: achievements[index].3
-                )
-                .environmentObject(theme)
-            }
-        }
-    }
-}
-
-// MARK: - Shared subviews (included)
-private struct CrystalInfoCard<Content: View>: View {
-    @EnvironmentObject private var theme: Theme
-    let title: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(theme.colors.textPrimary)
-            content
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(theme.colors.cardBackground)
-        .background(.ultraThinMaterial)
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(theme.colors.cardStroke, lineWidth: 2)
-        )
-        .cornerRadius(24)
-        .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
-    }
-}
-
-private struct SkillRow: View {
-    @EnvironmentObject private var theme: Theme
-    let sport: String
-    let level: String
-
-    var body: some View {
-        HStack {
-            Text(sport)
-                .font(.system(size: 13))
-                .foregroundColor(theme.colors.textPrimary)
-            Spacer()
-            Text(level)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(theme.colors.textPrimary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(theme.colors.cardBackground)
-                .background(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(theme.colors.cardStroke, lineWidth: 2)
-                )
-                .cornerRadius(20)
-                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
-        }
-    }
-}
-
-private struct AchievementRow: View {
-    @EnvironmentObject private var theme: Theme
-    let icon: String
-    let title: String
-    let description: String
-    let color: String
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(icon)
-                .font(.system(size: 32))
-                .frame(width: 56, height: 56)
-                .background(Color(hex: color).opacity(0.3))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(theme.colors.cardStroke, lineWidth: 2)
-                )
-                .cornerRadius(16)
-                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(theme.colors.textPrimary)
-                Text(description)
-                    .font(.system(size: 12))
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(activity.spotsTaken)/\(activity.spotsTotal)")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(Color(hex: "A855F7"))
+                Text(activity.level)
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(theme.colors.textSecondary)
             }
-
-            Spacer()
-
-            Image(systemName: "trophy.fill")
-                .font(.system(size: 24))
-                .foregroundColor(Color(hex: "FBBF24"))
-                .shadow(color: Color(hex: "FBBF24").opacity(0.4), radius: 8, x: 0, y: 4)
         }
-        .padding(16)
+        .padding(12)
         .background(theme.colors.cardBackground)
-        .background(.ultraThinMaterial)
+        .background(theme.colors.barMaterial)
         .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(theme.colors.cardStroke, lineWidth: 2)
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(theme.colors.cardStroke, lineWidth: 1)
         )
-        .cornerRadius(24)
-        .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
     }
 }
 
-// MARK: - Flow Layout (updated)
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-    var fallbackWidth: CGFloat = 360
+// MARK: - Achievement Tile (compact)
+private struct AchievementTile: View {
+    @EnvironmentObject private var theme: Theme
+    let item: AchievementData
 
-    init(spacing: CGFloat = 8, fallbackWidth: CGFloat = 360) {
-        self.spacing = spacing
-        self.fallbackWidth = fallbackWidth
-    }
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposedMaxWidth(from: proposal)
-        let rows = arrangeSubviews(maxWidth: maxWidth, subviews: subviews)
-
-        // Sum row heights + inter-row spacing
-        let contentHeight = rows.reduce(0) { $0 + $1.height }
-        let totalSpacing = rows.isEmpty ? 0 : spacing * CGFloat(rows.count - 1)
-        let height = contentHeight + totalSpacing
-
-        return CGSize(width: maxWidth, height: height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let rows = arrangeSubviews(maxWidth: bounds.width, subviews: subviews)
-        var y = bounds.minY
-
-        for row in rows {
-            var x = bounds.minX
-            for element in row.elements {
-                subviews[element.index].place(
-                    at: CGPoint(x: x, y: y),
-                    proposal: ProposedViewSize(width: element.size.width, height: element.size.height)
-                )
-                x += element.size.width + spacing
-            }
-            y += row.height + spacing
+    var body: some View {
+        VStack(spacing: 6) {
+            Text(item.icon).font(.system(size: 28))
+            Text(item.title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(theme.colors.textPrimary)
+            Text(item.description)
+                .font(.system(size: 11))
+                .foregroundColor(theme.colors.textSecondary)
+                .multilineTextAlignment(.center)
         }
-    }
-
-    private func arrangeSubviews(maxWidth: CGFloat, subviews: Subviews) -> [Row] {
-        var rows: [Row] = []
-        var currentRow = Row(height: 0, elements: [])
-        var x: CGFloat = 0
-
-        for (index, subview) in subviews.enumerated() {
-            // Measure with a width-aware proposal to get stable chip sizes
-            let measured = subview.sizeThatFits(ProposedViewSize(width: maxWidth, height: nil))
-            var size = measured
-
-            // Defensive fallback if a subview reports an unhelpful size
-            if size.width.isNaN || size.width <= 0 {
-                size.width = maxWidth
-            }
-            if size.height.isNaN || size.height <= 0 {
-                size.height = 0
-            }
-
-            if x > 0, x + size.width > maxWidth {
-                rows.append(currentRow)
-                currentRow = Row(height: 0, elements: [])
-                x = 0
-            }
-
-            currentRow.elements.append(Element(index: index, size: size))
-            currentRow.height = max(currentRow.height, size.height)
-            x += size.width + spacing
-        }
-
-        if !currentRow.elements.isEmpty {
-            rows.append(currentRow)
-        }
-
-        return rows
-    }
-
-    private func proposedMaxWidth(from proposal: ProposedViewSize) -> CGFloat {
-        // Use proposed width if finite; otherwise fall back to a conservative, parameterized constant.
-        if let w = proposal.width, w > 0, w.isFinite {
-            return w
-        } else {
-            // Avoid UIScreen.main (deprecated in iOS 26). Choose a safe default width.
-            return fallbackWidth
-        }
-    }
-
-    struct Row {
-        var height: CGFloat
-        var elements: [Element]
-    }
-
-    struct Element {
-        let index: Int
-        let size: CGSize
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(theme.colors.cardBackground)
+        .background(theme.colors.barMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(theme.colors.cardStroke, lineWidth: 1)
+        )
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
     }
 }
 

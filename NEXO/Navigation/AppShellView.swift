@@ -58,28 +58,6 @@ struct AppShellView: View {
                 // Left 1: Home
                 NavigationStack(path: $router.homePath) {
                     HomeFeedView(
-                        activities: [
-                            Activity(
-                                id: "1",
-                                title: "Morning Basketball Game",
-                                sportType: "Basketball",
-                                sportIcon: "🏀",
-                                hostName: "John Doe",
-                                hostAvatar: "",
-                                date: "Today",
-                                time: "9:00 AM",
-                                location: "Downtown Court",
-                                distance: "2.3 mi",
-                                spotsTotal: 10,
-                                spotsTaken: 7,
-                                level: "Intermediate"
-                            )
-                        ],
-                        sportCategories: [
-                            SportCategory(name: "Basketball", icon: "🏀"),
-                            SportCategory(name: "Tennis", icon: "🎾"),
-                            SportCategory(name: "Soccer", icon: "⚽")
-                        ],
                         onActivityClick: { _ in router.push(.activityRoom) },
                         onSearchClick: { router.push(.searchDiscovery) },
                         onAISuggestionsClick: { router.push(.aiSuggestions) },
@@ -275,9 +253,10 @@ struct AppShellView: View {
 
         case .enhancedEventDetails:
             EnhancedEventDetailsView(
+                eventId: sampleRoomActivity.id,
                 onBack: { router.pop() },
                 onJoin: { router.push(.activityRoom) },
-                onViewCoach: { router.push(.coachProfile) },
+                onViewCoach: { coachId in router.push(.coachProfile(coachId: coachId)) },
                 onMessage: { router.push(.chatConversation) }
             )
             .toolbar(.hidden, for: .tabBar)
@@ -289,9 +268,12 @@ struct AppShellView: View {
             )
             .toolbar(.hidden, for: .tabBar)
 
-        case .coachProfile:
-            CoachProfileView()
-                .toolbar(.hidden, for: .tabBar)
+        case .coachProfile(let coachId):
+            CoachProfileView(
+                coachId: coachId,
+                onBack: { router.pop() }
+            )
+            .toolbar(.hidden, for: .tabBar)
 
         case .quickMatch:
             QuickMatchView()
@@ -324,4 +306,3 @@ struct AppShellView_Previews: PreviewProvider {
     }
 }
 #endif
-

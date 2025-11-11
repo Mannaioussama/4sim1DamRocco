@@ -13,17 +13,7 @@ struct AIMatchmakerView: View {
     var onViewProfile: ((String) -> Void)?
 
     @EnvironmentObject private var theme: Theme
-
-    @State private var messages: [AIMatchMessage] = [
-        AIMatchMessage(
-            id: "1",
-            type: .ai,
-            text: "Hi! I'm your AI matchmaker. I can help you find the perfect sport partners or activities. What would you like to do today?",
-            options: ["Find a running partner", "Join a group activity", "Discover new sports"]
-        )
-    ]
-
-    @State private var inputText = ""
+    @StateObject private var viewModel = AIMatchmakerViewModel()
 
     var body: some View {
         ZStack {
@@ -34,22 +24,40 @@ struct AIMatchmakerView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(spacing: 12) {
-                            ForEach(messages) { message in
+                            ForEach(viewModel.messages) { message in
                                 AIMatchMessageBubble(
                                     message: message,
-                                    onOptionSelect: handleOption,
-                                    onJoinActivity: onJoinActivity,
-                                    onViewProfile: onViewProfile
+                                    onOptionSelect: { option in
+                                        viewModel.handleOptionSelect(option)
+                                        viewModel.trackOptionSelected(option)
+                                    },
+                                    onJoinActivity: { activityId in
+                                        viewModel.joinActivity(activityId)
+                                        onJoinActivity?(activityId)
+                                    },
+                                    onViewProfile: { profileId in
+                                        viewModel.viewProfile(profileId)
+                                        onViewProfile?(profileId)
+                                    }
                                 )
                                 .environment(\.colorScheme, theme.isDarkMode ? .dark : .light)
                                 .environmentObject(theme)
+                            }
+                            
+                            // Typing indicator
+                            if viewModel.isTyping {
+                                HStack {
+                                    TypingIndicator()
+                                        .environmentObject(theme)
+                                    Spacer()
+                                }
                             }
                         }
                         .padding(.vertical)
                         .padding(.horizontal)
                         .id("bottom")
                     }
-                    .onChange(of: messages.count) {
+                    .onChange(of: viewModel.messages.count) { _, _ in
                         withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
                     }
                 }
@@ -91,47 +99,10 @@ struct AIMatchmakerView: View {
         .navigationBarBackButtonHidden(onBack != nil)
     }
 
-    // MARK: - Handlers
-    private func handleOption(_ option: String) {
-        addUserMessage(option)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            if option.contains("running") {
-                addAIMessage("Great! I found 3 runners near you who are free this evening.")
-            } else if option.contains("group") {
-                addAIMessage("Here are some group activities near you this week.")
-            } else {
-                addAIMessage(
-                    "Based on your profile, you might enjoy these sports:",
-                    options: ["Swimming", "Tennis", "Cycling", "Yoga"]
-                )
-            }
-        }
-    }
-
-    private func handleSend() {
-        guard !inputText.isEmpty else { return }
-        addUserMessage(inputText)
-        inputText = ""
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            addAIMessage(
-                "Let me find the best matches for you...",
-                options: ["Show me runners nearby", "Find group activities", "Something else"]
-            )
-        }
-    }
-
-    private func addUserMessage(_ text: String) {
-        messages.append(AIMatchMessage(id: UUID().uuidString, type: .user, text: text))
-    }
-
-    private func addAIMessage(_ text: String, options: [String]? = nil) {
-        messages.append(AIMatchMessage(id: UUID().uuidString, type: .ai, text: text, options: options))
-    }
-
     // MARK: - Input Bar
     private var inputBar: some View {
         HStack(spacing: 8) {
-            TextField("Ask me anything...", text: $inputText)
+            TextField("Ask me anything...", text: $viewModel.inputText)
                 .font(.system(size: 14))
                 .foregroundColor(theme.colors.textPrimary)
                 .padding(.horizontal, 14)
@@ -143,8 +114,16 @@ struct AIMatchmakerView: View {
                         .stroke(theme.colors.cardStroke, lineWidth: 1)
                 )
                 .cornerRadius(20)
+                .submitLabel(.send)
+                .onSubmit {
+                    viewModel.handleSend()
+                    viewModel.trackMessageSent(viewModel.inputText)
+                }
 
-            Button(action: handleSend) {
+            Button(action: {
+                viewModel.trackMessageSent(viewModel.inputText)
+                viewModel.handleSend()
+            }) {
                 Image(systemName: "paperplane.fill")
                     .foregroundColor(.white)
                     .padding(10)
@@ -155,6 +134,8 @@ struct AIMatchmakerView: View {
                     )
                     .clipShape(Circle())
             }
+            .disabled(!viewModel.canSend)
+            .opacity(viewModel.canSend ? 1.0 : 0.6)
         }
         .padding()
         .background(theme.colors.cardBackground.opacity(0.7))
@@ -185,31 +166,59 @@ struct AIMatchmakerView: View {
     }
 }
 
-//
-// MARK: - Message Models
-//
-struct AIMatchMessage: Identifiable {
-    let id: String
-    let type: AIMatchMessageType
-    let text: String?
-    let options: [String]?
-
-    init(id: String, type: AIMatchMessageType, text: String?, options: [String]? = nil) {
-        self.id = id
-        self.type = type
-        self.text = text
-        self.options = options
+// MARK: - Typing Indicator
+struct TypingIndicator: View {
+    @EnvironmentObject private var theme: Theme
+    @State private var animatingDot1 = false
+    @State private var animatingDot2 = false
+    @State private var animatingDot3 = false
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(theme.colors.textSecondary)
+                    .frame(width: 8, height: 8)
+                    .scaleEffect(getScale(for: index))
+                    .animation(
+                        Animation.easeInOut(duration: 0.6)
+                            .repeatForever()
+                            .delay(Double(index) * 0.2),
+                        value: getScale(for: index)
+                    )
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(theme.colors.cardBackground)
+        .background(theme.colors.barMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(theme.colors.cardStroke, lineWidth: 1)
+        )
+        .cornerRadius(20)
+        .onAppear {
+            animatingDot1 = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                animatingDot2 = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                animatingDot3 = true
+            }
+        }
+    }
+    
+    private func getScale(for index: Int) -> CGFloat {
+        switch index {
+        case 0: return animatingDot1 ? 1.2 : 1.0
+        case 1: return animatingDot2 ? 1.2 : 1.0
+        case 2: return animatingDot3 ? 1.2 : 1.0
+        default: return 1.0
+        }
     }
 }
 
-enum AIMatchMessageType {
-    case ai
-    case user
-}
-
-//
 // MARK: - Message Bubble
-//
 struct AIMatchMessageBubble: View {
     @EnvironmentObject private var theme: Theme
     let message: AIMatchMessage
@@ -277,9 +286,7 @@ struct AIMatchMessageBubble: View {
     }
 }
 
-//
 // MARK: - Simple Horizontal Layout
-//
 struct AIFlowLayout<Content: View>: View {
     var spacing: CGFloat
     var content: () -> Content
@@ -296,9 +303,7 @@ struct AIFlowLayout<Content: View>: View {
     }
 }
 
-//
 // MARK: - Preview
-//
 #Preview {
     NavigationStack {
         AIMatchmakerView(onBack: {})

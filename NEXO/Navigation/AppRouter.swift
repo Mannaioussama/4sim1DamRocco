@@ -24,7 +24,7 @@ enum Route: Hashable {
     case activityRoom
     case enhancedEventDetails
     case chatConversation
-    case coachProfile
+    case coachProfile(coachId: String)
     case quickMatch
     case searchDiscovery
     case coachOnboarding
@@ -130,3 +130,4 @@ final class AppRouter: ObservableObject {
         tab = .home
     }
 }
+

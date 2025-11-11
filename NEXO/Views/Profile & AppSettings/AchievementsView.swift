@@ -9,58 +9,57 @@ import SwiftUI
 
 struct AchievementsView: View {
     @EnvironmentObject private var theme: Theme
-    @State private var selectedTab: String = "badges"
-
-    // MARK: - Mock Data
-    let userStats = AchievementsUserStats(
-        level: 12, xp: 2350, nextLevelXp: 3000,
-        totalBadges: 18, currentStreak: 7, longestStreak: 21
-    )
-
-    let badges: [BadgeItem] = [
-        .init(id: "1", icon: "🏃", title: "Marathon Runner", description: "Completed 5+ running events", category: "Running", unlocked: true, unlockedDate: "Oct 28, 2025", rarity: "rare"),
-        .init(id: "2", icon: "🏊", title: "Water Warrior", description: "Joined 10+ swimming sessions", category: "Swimming", unlocked: true, unlockedDate: "Oct 15, 2025", rarity: "common"),
-        .init(id: "3", icon: "👥", title: "Social Butterfly", description: "Connected with 25+ athletes", category: "Social", unlocked: true, unlockedDate: "Oct 10, 2025", rarity: "uncommon"),
-        .init(id: "4", icon: "⭐", title: "Top Host", description: "Hosted 10+ successful events", category: "Hosting", unlocked: true, unlockedDate: "Oct 5, 2025", rarity: "rare"),
-        .init(id: "5", icon: "🔥", title: "Consistency King", description: "Maintain a 30-day streak", category: "Consistency", unlocked: false, progress: 7, total: 30, rarity: "epic"),
-        .init(id: "6", icon: "🌟", title: "Early Bird", description: "Join 20 morning sessions", category: "Participation", unlocked: false, progress: 12, total: 20, rarity: "uncommon")
-    ]
-
-    let challenges: [ChallengeItem] = [
-        .init(id: "1", title: "Weekend Warrior", description: "Complete 4 activities this weekend", progress: 2, total: 4, reward: "100 XP + Weekend Badge", deadline: "2 days left"),
-        .init(id: "2", title: "Variety Seeker", description: "Try 3 different sports this week", progress: 1, total: 3, reward: "150 XP + Explorer Badge", deadline: "5 days left"),
-        .init(id: "3", title: "Social Sprint", description: "Connect with 5 new sport buddies", progress: 3, total: 5, reward: "75 XP", deadline: "7 days left")
-    ]
-
-    let leaderboard: [LeaderboardEntry] = [
-        .init(rank: 1, name: "You", points: 2350, badge: "🥇"),
-        .init(rank: 2, name: "Sarah M.", points: 2280, badge: "🥈"),
-        .init(rank: 3, name: "Mike R.", points: 2150, badge: "🥉"),
-        .init(rank: 4, name: "Emma L.", points: 2020, badge: ""),
-        .init(rank: 5, name: "Alex T.", points: 1980, badge: "")
-    ]
+    @StateObject private var viewModel = AchievementsViewModel()
 
     // MARK: - Body
     var body: some View {
         ZStack {
             theme.colors.backgroundGradient.ignoresSafeArea()
             backgroundOrbs
-            ScrollView {
-                VStack(spacing: 16) {
-                    statsCard
-                    tabSwitcher
-                    tabContent
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 40)
+            
+            if viewModel.isLoading {
+                loadingView
+            } else {
+                mainContent
             }
         }
         .ignoresSafeArea(edges: .bottom)
         .navigationTitle("Achievements")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            viewModel.trackScreenView()
+        }
+    }
+    
+    // MARK: - Loading View
+    
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
+                .scaleEffect(1.2)
+            Text("Loading achievements...")
+                .font(.system(size: 14))
+                .foregroundColor(theme.colors.textSecondary)
+        }
+    }
+    
+    // MARK: - Main Content
+    
+    private var mainContent: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                statsCard
+                tabSwitcher
+                tabContent
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 40)
+        }
     }
 
     // MARK: - Stats
+    
     private var statsCard: some View {
         VStack(spacing: 10) {
             VStack(spacing: 6) {
@@ -69,7 +68,7 @@ struct AchievementsView: View {
                         Text("Your Level")
                             .font(.caption)
                             .foregroundColor(theme.colors.textSecondary)
-                        Text("Level \(userStats.level)")
+                        Text(viewModel.levelText)
                             .font(.title3.bold())
                             .foregroundColor(theme.colors.textPrimary)
                     }
@@ -78,12 +77,12 @@ struct AchievementsView: View {
                         Text("XP Progress")
                             .font(.caption)
                             .foregroundColor(theme.colors.textSecondary)
-                        Text("\(userStats.xp) / \(userStats.nextLevelXp)")
+                        Text(viewModel.xpProgressText)
                             .font(.subheadline.bold())
                             .foregroundColor(theme.colors.textPrimary)
                     }
                 }
-                ProgressView(value: Double(userStats.xp) / Double(userStats.nextLevelXp))
+                ProgressView(value: viewModel.xpProgress)
                     .tint(.yellow)
             }
             .padding()
@@ -100,9 +99,21 @@ struct AchievementsView: View {
             .cornerRadius(16)
 
             HStack(spacing: 8) {
-                quickStat(icon: "rosette", value: "\(userStats.totalBadges)", label: "Badges")
-                quickStat(icon: "bolt.fill", value: "\(userStats.currentStreak)", label: "Streak")
-                quickStat(icon: "chart.line.uptrend.xyaxis", value: "\(userStats.longestStreak)", label: "Best Streak")
+                quickStat(
+                    icon: "rosette",
+                    value: viewModel.totalBadgesText,
+                    label: "Badges"
+                )
+                quickStat(
+                    icon: "bolt.fill",
+                    value: viewModel.currentStreakText,
+                    label: "Streak"
+                )
+                quickStat(
+                    icon: "chart.line.uptrend.xyaxis",
+                    value: viewModel.longestStreakText,
+                    label: "Best Streak"
+                )
             }
         }
     }
@@ -130,14 +141,16 @@ struct AchievementsView: View {
     }
 
     // MARK: - Tabs
+    
     private var tabSwitcher: some View {
         HStack {
             ForEach(["badges", "challenges", "leaderboard"], id: \.self) { tab in
                 AchievementsTabButton(
-                    title: tab.capitalized,
-                    isSelected: selectedTab == tab
+                    title: viewModel.getTabTitle(tab),
+                    isSelected: viewModel.isTabSelected(tab)
                 ) {
-                    selectedTab = tab
+                    viewModel.selectTab(tab)
+                    viewModel.trackTabView(tab)
                 }
                 .environmentObject(theme)
             }
@@ -153,47 +166,66 @@ struct AchievementsView: View {
     }
 
     // MARK: - Tab Content
+    
     @ViewBuilder
     private var tabContent: some View {
-        switch selectedTab {
-        case "badges": badgesGrid
-        case "challenges": challengesList
-        case "leaderboard": leaderboardList
-        default: EmptyView()
+        if viewModel.isBadgesTab {
+            badgesGrid
+        } else if viewModel.isChallengesTab {
+            challengesList
+        } else if viewModel.isLeaderboardTab {
+            leaderboardList
         }
     }
 
     // MARK: - Badges
+    
     private var badgesGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            ForEach(badges) { badge in
+            ForEach(viewModel.badges) { badge in
                 BadgeCard(badge: badge)
                     .environmentObject(theme)
+                    .onTapGesture {
+                        viewModel.selectBadge(badge)
+                        viewModel.trackBadgeView(badge)
+                    }
             }
         }
     }
 
     // MARK: - Challenges
+    
     private var challengesList: some View {
         VStack(spacing: 10) {
-            ForEach(challenges) { challenge in
+            ForEach(viewModel.challenges) { challenge in
                 ChallengeCard(challenge: challenge)
                     .environmentObject(theme)
+                    .onAppear {
+                        viewModel.trackChallengeView(challenge)
+                    }
             }
         }
     }
 
     // MARK: - Leaderboard
+    
     private var leaderboardList: some View {
         VStack(spacing: 8) {
-            ForEach(leaderboard) { entry in
-                LeaderboardRow(entry: entry)
-                    .environmentObject(theme)
+            ForEach(viewModel.leaderboard) { entry in
+                LeaderboardRow(
+                    entry: entry,
+                    isUser: viewModel.isUserEntry(entry)
+                )
+                .environmentObject(theme)
             }
+        }
+        .onAppear {
+            viewModel.trackLeaderboardView()
         }
     }
 
     // MARK: - Background Orbs
+    
     private var backgroundOrbs: some View {
         ZStack {
             Circle()
@@ -216,17 +248,6 @@ struct AchievementsView: View {
         .allowsHitTesting(false)
     }
 }
-
-#if DEBUG
-struct AchievementsView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            AchievementsView()
-                .environmentObject(Theme())
-        }
-    }
-}
-#endif
 
 // MARK: - Subviews
 
@@ -266,12 +287,14 @@ private struct AchievementsTabButton: View {
 private struct LeaderboardRow: View {
     @EnvironmentObject private var theme: Theme
     let entry: LeaderboardEntry
+    let isUser: Bool
+    
     var body: some View {
         HStack {
             Text(entry.badge.isEmpty ? "\(entry.rank)" : entry.badge)
                 .font(.headline)
                 .frame(width: 28, height: 28)
-                .background(entry.name == "You" ? Color.yellow.opacity(0.3) : theme.colors.cardBackground)
+                .background(isUser ? Color.yellow.opacity(0.3) : theme.colors.cardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(theme.colors.cardStroke, lineWidth: 1)
@@ -282,7 +305,7 @@ private struct LeaderboardRow: View {
                 Text("\(entry.points) XP").font(.caption).foregroundColor(theme.colors.textSecondary)
             }
             Spacer()
-            if entry.name == "You" {
+            if isUser {
                 Text("You")
                     .font(.caption2.bold())
                     .padding(4)
@@ -292,7 +315,7 @@ private struct LeaderboardRow: View {
         }
         .padding()
         .background(
-            entry.name == "You"
+            isUser
             ? AnyShapeStyle(
                 LinearGradient(colors: [
                     Color(hexValue: "#FEF3C7"),
@@ -313,6 +336,7 @@ private struct LeaderboardRow: View {
 private struct BadgeCard: View {
     @EnvironmentObject private var theme: Theme
     let badge: BadgeItem
+    
     var body: some View {
         VStack(spacing: 6) {
             Text(badge.icon).font(.largeTitle)
@@ -332,9 +356,11 @@ private struct BadgeCard: View {
                     .foregroundColor(.white)
                     .cornerRadius(10)
             } else {
-                ProgressView(value: Double(badge.progress ?? 0) / Double(badge.total ?? 1))
-                    .tint(.yellow)
-                Text("\(badge.progress ?? 0)/\(badge.total ?? 0)").font(.caption2).foregroundColor(theme.colors.textSecondary)
+                if let progress = badge.progress, let total = badge.total {
+                    ProgressView(value: Double(progress) / Double(total))
+                        .tint(.yellow)
+                    Text("\(progress)/\(total)").font(.caption2).foregroundColor(theme.colors.textSecondary)
+                }
             }
         }
         .padding()
@@ -347,12 +373,14 @@ private struct BadgeCard: View {
         )
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
+        .opacity(badge.unlocked ? 1.0 : 0.7)
     }
 }
 
 private struct ChallengeCard: View {
     @EnvironmentObject private var theme: Theme
     let challenge: ChallengeItem
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -372,9 +400,15 @@ private struct ChallengeCard: View {
             Text(challenge.description).font(.caption).foregroundColor(theme.colors.textSecondary)
             ProgressView(value: Double(challenge.progress) / Double(challenge.total))
                 .tint(.yellow)
-            Text("Reward: \(challenge.reward)")
-                .font(.caption2)
-                .foregroundColor(theme.colors.textSecondary)
+            HStack {
+                Text("Reward: \(challenge.reward)")
+                    .font(.caption2)
+                    .foregroundColor(theme.colors.textSecondary)
+                Spacer()
+                Text("\(challenge.progress)/\(challenge.total)")
+                    .font(.caption2.bold())
+                    .foregroundColor(theme.colors.textPrimary)
+            }
         }
         .padding()
         .background(theme.colors.cardBackground)
@@ -385,47 +419,6 @@ private struct ChallengeCard: View {
         )
         .cornerRadius(16)
     }
-}
-
-// MARK: - Models
-struct AchievementsUserStats {
-    let level: Int
-    let xp: Int
-    let nextLevelXp: Int
-    let totalBadges: Int
-    let currentStreak: Int
-    let longestStreak: Int
-}
-
-struct BadgeItem: Identifiable {
-    let id: String
-    let icon: String
-    let title: String
-    let description: String
-    let category: String
-    let unlocked: Bool
-    var unlockedDate: String? = nil
-    var progress: Int? = nil
-    var total: Int? = nil
-    let rarity: String
-}
-
-struct ChallengeItem: Identifiable {
-    let id: String
-    let title: String
-    let description: String
-    let progress: Int
-    let total: Int
-    let reward: String
-    let deadline: String
-}
-
-struct LeaderboardEntry: Identifiable {
-    let rank: Int
-    let name: String
-    let points: Int
-    let badge: String
-    var id: Int { rank }
 }
 
 // MARK: - Color Helper
@@ -460,3 +453,16 @@ extension Color {
                   opacity: Double(a) / 255)
     }
 }
+
+// MARK: - Preview
+
+#if DEBUG
+struct AchievementsView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationStack {
+            AchievementsView()
+                .environmentObject(Theme())
+        }
+    }
+}
+#endif

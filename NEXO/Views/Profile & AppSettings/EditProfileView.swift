@@ -11,35 +11,11 @@ import PhotosUI
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var theme: Theme
+    @StateObject private var viewModel = EditProfileViewModel()
 
     var onBack: (() -> Void)?
     var onSave: (() -> Void)?
-
-    // Profile form state (mirrors the React example)
-    @State private var name: String = "Alex Johnson"
-    @State private var email: String = "alex.johnson@email.com"
-    @State private var phone: String = "+1 (555) 123-4567"
-    @State private var bio: String = "Passionate about sports and staying active! Love meeting new people through fitness."
-    @State private var location: String = "San Francisco, CA"
-    @State private var dateOfBirth: Date = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        return f.date(from: "1995-06-15") ?? Calendar.current.date(byAdding: .year, value: -30, to: .now)!
-    }()
-
-    // Avatar
-    @State private var avatarURL: String = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop"
-    @State private var pickedItem: PhotosPickerItem?
-    @State private var pickedImageData: Data?
-
-    // Sports
-    @State private var selectedSports: Set<String> = ["Basketball", "Tennis", "Running", "Swimming"]
-
-    private let availableSports: [String] = [
-        "Basketball", "Tennis", "Running", "Swimming",
-        "Soccer", "Volleyball", "Badminton", "Yoga",
-        "Cycling", "Boxing", "Climbing", "Golf"
-    ]
+    var onSendVerification: (() -> Void)?
 
     var body: some View {
         ZStack {
@@ -54,18 +30,61 @@ struct EditProfileView: View {
                         basicInfoSection
                         bioSection
                         sportsSection
+                        emailVerificationSection
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                     .padding(.bottom, 24)
                 }
             }
+            
+            if viewModel.isLoading {
+                loadingOverlay
+            }
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
+        .alert("Success", isPresented: $viewModel.showSuccessAlert) {
+            Button("OK") {}
+        } message: {
+            Text(viewModel.successMessage)
+        }
+        .alert("Error", isPresented: $viewModel.showErrorAlert) {
+            Button("OK") {}
+        } message: {
+            Text(viewModel.errorMessage)
+        }
+        .onAppear {
+            viewModel.trackScreenView()
+        }
+    }
+    
+    // MARK: - Loading Overlay
+    
+    private var loadingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 12) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.2)
+                
+                Text("Saving profile...")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.black.opacity(0.8))
+            )
+        }
     }
 
     // MARK: - Header
+    
     private var header: some View {
         VStack {
             ZStack {
@@ -118,6 +137,8 @@ struct EditProfileView: View {
                             .shadow(color: Color(hex: "8B5CF6").opacity(0.35), radius: 10, y: 4)
                     }
                     .buttonStyle(.plain)
+                    .disabled(viewModel.isLoading)
+                    .opacity(viewModel.isLoading ? 0.6 : 1.0)
                 }
                 .padding(.horizontal, 12)
             }
@@ -135,6 +156,7 @@ struct EditProfileView: View {
     }
 
     // MARK: - Photo Card
+    
     private var photoCard: some View {
         ZStack {
             glowBox(colors: ["8B5CF6","EC4899"], opacity: 0.20, radius: 24)
@@ -147,7 +169,7 @@ struct EditProfileView: View {
                         .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 4))
                         .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
 
-                    PhotosPicker(selection: $pickedItem, matching: .images, photoLibrary: .shared()) {
+                    PhotosPicker(selection: $viewModel.pickedItem, matching: .images, photoLibrary: .shared()) {
                         ZStack {
                             Circle()
                                 .fill(
@@ -165,6 +187,9 @@ struct EditProfileView: View {
                         .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
                     }
                     .buttonStyle(.plain)
+                    .onChange(of: viewModel.hasPickedNewPhoto) { _, _ in
+                        viewModel.trackPhotoChanged()
+                    }
                 }
                 Text("Tap to change photo")
                     .font(.system(size: 12))
@@ -179,12 +204,10 @@ struct EditProfileView: View {
                 .stroke(Color.white.opacity(theme.isDarkMode ? 0.12 : 0.8), lineWidth: 2)
         )
         .cornerRadius(20)
-        .task(id: pickedItem) {
-            await loadPickedPhoto()
-        }
     }
 
     // MARK: - Basic Info
+    
     private var basicInfoSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Basic Information")
@@ -196,34 +219,34 @@ struct EditProfileView: View {
                 glowBox(colors: ["8B5CF6","EC4899"], opacity: 0.15, radius: 24)
 
                 VStack(spacing: 12) {
-                    labeledField("Full Name") {
-                        TextField("Your name", text: $name)
+                    labeledField("Full Name", error: viewModel.nameError) {
+                        TextField("Your name", text: $viewModel.name)
                             .textContentType(.name)
                             .submitLabel(.done)
                     }
 
-                    labeledField(icon: "envelope.fill", label: "Email") {
-                        TextField("email@example.com", text: $email)
+                    labeledField(icon: "envelope.fill", label: "Email", error: viewModel.emailError) {
+                        TextField("email@example.com", text: $viewModel.email)
                             .keyboardType(.emailAddress)
                             .textContentType(.emailAddress)
                             .autocapitalization(.none)
                             .submitLabel(.done)
                     }
 
-                    labeledField(icon: "phone.fill", label: "Phone") {
-                        TextField("+1 (555) 123-4567", text: $phone)
+                    labeledField(icon: "phone.fill", label: "Phone", error: viewModel.phoneError) {
+                        TextField("+1 (555) 123-4567", text: $viewModel.phone)
                             .keyboardType(.phonePad)
                             .textContentType(.telephoneNumber)
                             .submitLabel(.done)
                     }
 
-                    labeledField(icon: "calendar", label: "Date of Birth") {
-                        DatePicker("", selection: $dateOfBirth, displayedComponents: .date)
+                    labeledField(icon: "calendar", label: "Date of Birth", error: "") {
+                        DatePicker("", selection: $viewModel.dateOfBirth, displayedComponents: .date)
                             .labelsHidden()
                     }
 
-                    labeledField(icon: "mappin", label: "Location") {
-                        TextField("City, State", text: $location)
+                    labeledField(icon: "mappin", label: "Location", error: viewModel.locationError) {
+                        TextField("City, State", text: $viewModel.location)
                             .textContentType(.fullStreetAddress)
                             .submitLabel(.done)
                     }
@@ -241,6 +264,7 @@ struct EditProfileView: View {
     }
 
     // MARK: - Bio
+    
     private var bioSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("About Me")
@@ -252,17 +276,24 @@ struct EditProfileView: View {
                 glowBox(colors: ["8B5CF6","EC4899"], opacity: 0.15, radius: 24)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    // Make TextEditor background fully transparent
-                    TextEditor(text: $bio)
+                    TextEditor(text: $viewModel.bio)
                         .scrollContentBackground(.hidden)
                         .background(Color.clear)
                         .frame(minHeight: 100)
                         .font(.system(size: 14))
 
-                    Text("\(bio.count)/200 characters")
-                        .font(.system(size: 11))
-                        .foregroundColor(theme.colors.textSecondary)
-                        .padding(.horizontal, 2)
+                    HStack {
+                        Text(viewModel.bioCharacterCountText)
+                            .font(.system(size: 11))
+                            .foregroundColor(viewModel.isBioTooLong ? .red : theme.colors.textSecondary)
+                            .padding(.horizontal, 2)
+                        
+                        if viewModel.isBioTooLong {
+                            Text("Too long!")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.red)
+                        }
+                    }
                 }
                 .padding(16)
             }
@@ -270,13 +301,19 @@ struct EditProfileView: View {
             .background(theme.colors.barMaterial)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.white.opacity(theme.isDarkMode ? 0.12 : 0.8), lineWidth: 2)
+                    .stroke(
+                        viewModel.isBioTooLong
+                            ? Color.red
+                            : Color.white.opacity(theme.isDarkMode ? 0.12 : 0.8),
+                        lineWidth: 2
+                    )
             )
             .cornerRadius(20)
         }
     }
 
     // MARK: - Sports
+    
     private var sportsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
@@ -286,6 +323,12 @@ struct EditProfileView: View {
                 Text("Sports Interests")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
+                
+                Spacer()
+                
+                Text("\(viewModel.selectedSportsCount) selected")
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.colors.textSecondary)
             }
             .padding(.horizontal, 6)
 
@@ -297,44 +340,8 @@ struct EditProfileView: View {
                         .font(.system(size: 12))
                         .foregroundColor(theme.colors.textSecondary)
 
-                    // Flow of chips
-                    FlowLayout(spacing: 8) {
-                        ForEach(availableSports, id: \.self) { sport in
-                            let isSelected = selectedSports.contains(sport)
-                            Button {
-                                toggleSport(sport)
-                            } label: {
-                                Text(sport)
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(isSelected ? .white : theme.colors.textPrimary.opacity(0.8))
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        Group {
-                                            if isSelected {
-                                                LinearGradient(
-                                                    colors: [Color(hex: "8B5CF6"), Color(hex: "EC4899")],
-                                                    startPoint: .topLeading, endPoint: .bottomTrailing
-                                                )
-                                            } else {
-                                                Color.clear // no white background when unselected
-                                            }
-                                        }
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 999)
-                                            .stroke(
-                                                isSelected
-                                                ? Color.clear
-                                                : theme.colors.cardStroke,
-                                                lineWidth: isSelected ? 0 : 2
-                                            )
-                                    )
-                                    .clipShape(Capsule())
-                                    .shadow(color: isSelected ? Color.black.opacity(0.15) : .clear, radius: 8, y: 3)
-                            }
-                            .buttonStyle(.plain)
-                        }
+                    WrapHStack(items: viewModel.availableSports) { sport in
+                        sportChip(for: sport)
                     }
                 }
                 .padding(16)
@@ -349,8 +356,141 @@ struct EditProfileView: View {
         }
     }
 
+    private func sportChip(for sport: String) -> some View {
+        let isSelected = viewModel.isSportSelected(sport)
+        return Button {
+            viewModel.toggleSport(sport)
+            viewModel.trackSportToggled(sport, selected: !isSelected)
+        } label: {
+            Text(sport)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(isSelected ? .white : theme.colors.textPrimary.opacity(0.8))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    Group {
+                        if isSelected {
+                            LinearGradient(
+                                colors: [Color(hex: "8B5CF6"), Color(hex: "EC4899")],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        } else {
+                            Color.clear
+                        }
+                    }
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 999)
+                        .stroke(
+                            isSelected ? Color.clear : theme.colors.cardStroke,
+                            lineWidth: isSelected ? 0 : 2
+                        )
+                )
+                .clipShape(Capsule())
+                .shadow(color: isSelected ? Color.black.opacity(0.15) : .clear, radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Email Verification
+    
+    private var emailVerificationSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(Color(hex: viewModel.emailVerificationColor))
+                Text("Email Verification")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(theme.colors.textPrimary)
+            }
+            .padding(.horizontal, 6)
+
+            ZStack {
+                glowBox(colors: viewModel.emailVerificationGlowColors, opacity: 0.15, radius: 20)
+
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: viewModel.emailVerificationGlowColors[0]).opacity(0.2),
+                                        Color(hex: viewModel.emailVerificationGlowColors[1]).opacity(0.2)
+                                    ],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.6), lineWidth: 2))
+
+                        Image(systemName: viewModel.emailVerificationIcon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(Color(hex: viewModel.emailVerificationColor))
+                    }
+                    .frame(width: 44, height: 44)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Text(viewModel.emailVerificationTitle)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(theme.colors.textPrimary)
+                            if viewModel.emailVerified {
+                                Text("✓ Verified")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color(hex: "2ECC71"))
+                                    .clipShape(Capsule())
+                            }
+                        }
+
+                        Text(viewModel.emailVerificationMessage)
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.colors.textSecondary)
+
+                        if !viewModel.emailVerified {
+                            Button {
+                                handleSendVerification()
+                            } label: {
+                                Text("Send Verification Email")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color(hex: "F39C12"), Color(hex: "E67E22")],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .clipShape(Capsule())
+                                    .shadow(color: Color(hex: "F39C12").opacity(0.35), radius: 8, y: 3)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 2)
+                            .disabled(viewModel.isLoading)
+                            .opacity(viewModel.isLoading ? 0.6 : 1.0)
+                        }
+                    }
+
+                    Spacer()
+                }
+                .padding(14)
+            }
+            .background(theme.colors.cardBackground)
+            .background(theme.colors.barMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.white.opacity(theme.isDarkMode ? 0.12 : 0.8), lineWidth: 2)
+            )
+            .cornerRadius(20)
+        }
+    }
+
     // MARK: - Helpers
-    private func labeledField(_ label: String, @ViewBuilder field: () -> some View) -> some View {
+    
+    private func labeledField(_ label: String, error: String = "", @ViewBuilder field: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 13))
@@ -362,13 +502,25 @@ struct EditProfileView: View {
                 .background(Color.white.opacity(theme.isDarkMode ? 0.06 : 0.5))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(theme.isDarkMode ? 0.12 : 0.6), lineWidth: 2)
+                        .stroke(
+                            error.isEmpty
+                                ? Color.white.opacity(theme.isDarkMode ? 0.12 : 0.6)
+                                : Color.red,
+                            lineWidth: 2
+                        )
                 )
                 .cornerRadius(12)
+            
+            if !error.isEmpty {
+                Text(error)
+                    .font(.system(size: 11))
+                    .foregroundColor(.red)
+                    .padding(.horizontal, 2)
+            }
         }
     }
 
-    private func labeledField(icon: String, label: String, @ViewBuilder field: () -> some View) -> some View {
+    private func labeledField(icon: String, label: String, error: String = "", @ViewBuilder field: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
@@ -386,19 +538,31 @@ struct EditProfileView: View {
                 .background(Color.white.opacity(theme.isDarkMode ? 0.06 : 0.5))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(theme.isDarkMode ? 0.12 : 0.6), lineWidth: 2)
+                        .stroke(
+                            error.isEmpty
+                                ? Color.white.opacity(theme.isDarkMode ? 0.12 : 0.6)
+                                : Color.red,
+                            lineWidth: 2
+                        )
                 )
                 .cornerRadius(12)
+            
+            if !error.isEmpty {
+                Text(error)
+                    .font(.system(size: 11))
+                    .foregroundColor(.red)
+                    .padding(.horizontal, 2)
+            }
         }
     }
 
     @ViewBuilder
     private var avatarView: some View {
-        if let data = pickedImageData, let ui = UIImage(data: data) {
+        if let data = viewModel.pickedImageData, let ui = UIImage(data: data) {
             Image(uiImage: ui)
                 .resizable()
                 .scaledToFill()
-        } else if let url = URL(string: avatarURL) {
+        } else if let url = URL(string: viewModel.avatarURL) {
             AsyncImage(url: url) { img in
                 img.resizable().scaledToFill()
             } placeholder: {
@@ -410,8 +574,7 @@ struct EditProfileView: View {
     }
 
     private var initialsPlaceholder: some View {
-        let initials = name.split(separator: " ").compactMap { $0.first }.map(String.init).joined()
-        return Text(initials.isEmpty ? "A" : initials)
+        Text(viewModel.displayInitials)
             .font(.system(size: 32, weight: .bold))
             .foregroundColor(Color(hex: "8B5CF6"))
             .frame(width: 96, height: 96)
@@ -486,27 +649,33 @@ struct EditProfileView: View {
         .allowsHitTesting(false)
     }
 
-    private func toggleSport(_ sport: String) {
-        if selectedSports.contains(sport) {
-            selectedSports.remove(sport)
-        } else {
-            selectedSports.insert(sport)
-        }
-    }
-
+    // MARK: - Actions
+    
     private func handleSave() {
-        onSave?()
-        if let onBack { onBack() } else { dismiss() }
-    }
-
-    // Load the selected photo into Data
-    private func loadPickedPhoto() async {
-        guard let item = pickedItem else { return }
-        if let data = try? await item.loadTransferable(type: Data.self) {
-            await MainActor.run {
-                pickedImageData = data
+        viewModel.saveProfile(
+            onSuccess: {
+                viewModel.trackProfileSaved()
+                onSave?()
+                if let onBack {
+                    onBack()
+                } else {
+                    dismiss()
+                }
+            },
+            onError: { error in
+                viewModel.trackProfileSaveFailed(error: error)
             }
-        }
+        )
+    }
+    
+    private func handleSendVerification() {
+        viewModel.sendVerificationEmail(
+            onSuccess: {
+                viewModel.trackVerificationEmailSent()
+                onSendVerification?()
+            },
+            onError: { _ in }
+        )
     }
 }
 

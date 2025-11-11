@@ -7,73 +7,11 @@
 
 import SwiftUI
 
-// MARK: - Notification Model
-
-struct AppNotification: Identifiable {
-    let id: String
-    let icon: String
-    let message: String
-    let time: String
-    let actionText: String?
-}
-
 struct NotificationsScreen: View {
     var onBack: () -> Void
 
     @EnvironmentObject private var theme: Theme
-    
-    // Make notifications mutable so dismiss can work
-    @State private var notifications: [AppNotification] = [
-        AppNotification(
-            id: "1",
-            icon: "👥",
-            message: "Sarah Johnson joined your swimming session",
-            time: "2m ago",
-            actionText: nil
-        ),
-        AppNotification(
-            id: "2",
-            icon: "🏀",
-            message: "New basketball match near you - Downtown Court",
-            time: "15m ago",
-            actionText: "View"
-        ),
-        AppNotification(
-            id: "3",
-            icon: "💬",
-            message: "Michael Chen sent you a message",
-            time: "1h ago",
-            actionText: nil
-        ),
-        AppNotification(
-            id: "4",
-            icon: "⭐",
-            message: "You received a 5-star rating from Emma Wilson!",
-            time: "2h ago",
-            actionText: nil
-        ),
-        AppNotification(
-            id: "5",
-            icon: "🎯",
-            message: "Achievement unlocked: Marathon Runner 🏃",
-            time: "3h ago",
-            actionText: "View"
-        ),
-        AppNotification(
-            id: "6",
-            icon: "📅",
-            message: "Reminder: Yoga session starts in 1 hour",
-            time: "Yesterday",
-            actionText: "Details"
-        ),
-        AppNotification(
-            id: "7",
-            icon: "👋",
-            message: "3 new connection requests",
-            time: "Yesterday",
-            actionText: "View"
-        )
-    ]
+    @StateObject private var viewModel = NotificationsViewModel()
     
     var body: some View {
         ZStack {
@@ -83,33 +21,12 @@ struct NotificationsScreen: View {
             backgroundOrbs.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                if notifications.isEmpty {
-                    emptyState
-                        .padding(.top, 8)
+                if viewModel.isLoading {
+                    loadingView
+                } else if viewModel.hasNotifications {
+                    notificationsList
                 } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 10) {
-                            ForEach(notifications) { notification in
-                                NotificationCard(
-                                    notification: notification,
-                                    onPrimaryAction: {
-                                        // Placeholder: route to details if needed
-                                    },
-                                    onDismiss: {
-                                        withAnimation(.spring(response: 0.3)) {
-                                            notifications.removeAll { $0.id == notification.id }
-                                        }
-                                    }
-                                )
-                                .environmentObject(theme)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .padding(.bottom, 100)
-                        // Reduce the default gap under the nav bar (iOS 15-safe)
-                        .padding(.top, -6)
-                    }
+                    emptyState
                 }
             }
         }
@@ -134,11 +51,84 @@ struct NotificationsScreen: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Back")
             }
+            
+            if viewModel.hasNotifications {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button(action: { viewModel.markAllAsRead() }) {
+                            Label("Mark all as read", systemImage: "checkmark.circle")
+                        }
+                        
+                        Button(role: .destructive, action: { viewModel.clearAll() }) {
+                            Label("Clear all", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(theme.colors.textPrimary)
+                            .frame(width: 32, height: 32)
+                            .background(theme.colors.cardBackground)
+                            .background(theme.colors.barMaterial)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+                            )
+                    }
+                }
+            }
         }
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(theme.colors.barMaterial, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
-        .navigationBarBackButtonHidden(true) // Hide the system back button to avoid duplicates
+        .navigationBarBackButtonHidden(true)
+        .onAppear {
+            viewModel.trackScreenView()
+        }
+    }
+    
+    // MARK: - Loading View
+    
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
+                .scaleEffect(1.2)
+            Text("Loading notifications...")
+                .font(.system(size: 14))
+                .foregroundColor(theme.colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    // MARK: - Notifications List
+    
+    private var notificationsList: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 10) {
+                ForEach(viewModel.notifications) { notification in
+                    NotificationCard(
+                        notification: notification,
+                        onPrimaryAction: {
+                            viewModel.handleNotificationAction(notification)
+                            viewModel.trackNotificationAction(notification)
+                        },
+                        onDismiss: {
+                            viewModel.dismissNotification(notification.id)
+                            viewModel.trackNotificationDismissed(notification)
+                        }
+                    )
+                    .environmentObject(theme)
+                    .onAppear {
+                        viewModel.trackNotificationView(notification)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .padding(.bottom, 100)
+            .padding(.top, -6)
+        }
     }
     
     // MARK: - Optional Themed Orbs (matches other screens vibe)
@@ -215,22 +205,33 @@ struct NotificationsScreen: View {
                                 .stroke(theme.colors.cardStroke, lineWidth: 2)
                         )
                     
-                    Text("🔔")
+                    Text(viewModel.emptyStateIcon)
                         .font(.system(size: 64))
                 }
                 .frame(width: 96, height: 96)
                 .shadow(color: .black.opacity(theme.isDarkMode ? 0.35 : 0.15), radius: 20, x: 0, y: 10)
             }
             
-            Text("No notifications")
+            Text(viewModel.emptyStateTitle)
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
             
-            Text("We'll notify you when something happens")
+            Text(viewModel.emptyStateDescription)
                 .font(.system(size: 14))
                 .foregroundColor(theme.colors.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
+            
+            Button(action: { viewModel.refreshNotifications() }) {
+                Text("Refresh")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(theme.colors.accentPurple)
+                    .cornerRadius(20)
+            }
+            .padding(.top, 8)
             
             Spacer()
         }
@@ -314,9 +315,6 @@ struct NotificationCard: View {
         .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.08), radius: 12, x: 0, y: 6)
     }
 }
-
-// NOTE: Reusable components defined in other files:
-// - BrandButtonStyle, ScaleButtonStyle, Color.init(hex:)
 
 // MARK: - Preview
 

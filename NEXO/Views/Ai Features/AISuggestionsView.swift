@@ -7,91 +7,13 @@
 
 import SwiftUI
 
-// MARK: - Data Model
-struct ActivitySuggestion: Identifiable {
-    let id: String
-    let title: String
-    let sportType: String
-    let sportIcon: String
-    let level: String
-    let hostName: String
-    let hostAvatar: String
-    let date: String
-    let time: String
-    let location: String
-    let distance: String
-    let spotsTotal: Int
-    let spotsTaken: Int
-    let description: String
-}
-
 // MARK: - Main View
 struct AISuggestionsView: View {
     var onBack: (() -> Void)?
     var onJoinActivity: ((ActivitySuggestion) -> Void)?
 
     @EnvironmentObject private var theme: Theme
-    @State private var savedActivities: Set<String> = []
-
-    // MARK: - Mock AI suggestions
-    private let aiSuggestions: [ActivitySuggestion] = [
-        .init(id: "ai-1",
-              title: "Morning Beach Volleyball Match",
-              sportType: "Volleyball",
-              sportIcon: "🏐",
-              level: "Intermediate",
-              hostName: "Emma Wilson",
-              hostAvatar: "https://i.pravatar.cc/150?img=5",
-              date: "Today",
-              time: "8:00 AM",
-              location: "Santa Monica Beach",
-              distance: "1.2 mi",
-              spotsTotal: 12,
-              spotsTaken: 8,
-              description: "Join us for a fun morning volleyball session!"),
-        .init(id: "ai-2",
-              title: "Evening Running Group",
-              sportType: "Running",
-              sportIcon: "🏃",
-              level: "All Levels",
-              hostName: "Michael Chen",
-              hostAvatar: "https://i.pravatar.cc/150?img=12",
-              date: "Today",
-              time: "6:30 PM",
-              location: "Central Park",
-              distance: "0.8 mi",
-              spotsTotal: 15,
-              spotsTaken: 10,
-              description: "Easy-paced group run for all fitness levels"),
-        .init(id: "ai-3",
-              title: "Yoga & Meditation Session",
-              sportType: "Yoga",
-              sportIcon: "🧘",
-              level: "Beginner",
-              hostName: "Sarah Johnson",
-              hostAvatar: "https://i.pravatar.cc/150?img=9",
-              date: "Tomorrow",
-              time: "7:00 AM",
-              location: "Zen Studio",
-              distance: "1.5 mi",
-              spotsTotal: 20,
-              spotsTaken: 15,
-              description: "Start your day with mindful movement"),
-        .init(id: "ai-4",
-              title: "Pickup Basketball Game",
-              sportType: "Basketball",
-              sportIcon: "🏀",
-              level: "Intermediate",
-              hostName: "James Rodriguez",
-              hostAvatar: "https://i.pravatar.cc/150?img=15",
-              date: "Tomorrow",
-              time: "5:00 PM",
-              location: "Downtown Court",
-              distance: "2.1 mi",
-              spotsTotal: 10,
-              spotsTaken: 7,
-              description: "Competitive but friendly basketball match")
-    ]
+    @StateObject private var viewModel = AISuggestionsViewModel()
 
     var body: some View {
         ZStack {
@@ -101,37 +23,43 @@ struct AISuggestionsView: View {
             VStack(spacing: 0) {
                 header
 
-                ScrollView {
-                    VStack(spacing: 14) {
-                        whyTheseSection
+                if viewModel.isLoading {
+                    loadingView
+                } else if viewModel.hasSuggestions {
+                    ScrollView {
+                        VStack(spacing: 14) {
+                            whyTheseSection
 
-                        ForEach(aiSuggestions) { activity in
-                            ActivityCard(
-                                activity: activity,
-                                isSaved: savedActivities.contains(activity.id),
-                                onSaveToggle: toggleSave,
-                                onJoin: onJoinActivity
-                            )
-                            .environmentObject(theme)
+                            ForEach(viewModel.aiSuggestions) { activity in
+                                ActivityCard(
+                                    activity: activity,
+                                    isSaved: viewModel.isSaved(activity.id),
+                                    onSaveToggle: { id in
+                                        viewModel.toggleSave(id)
+                                        viewModel.trackSuggestionSaved(activity)
+                                    },
+                                    onJoin: { activity in
+                                        viewModel.joinActivity(activity)
+                                        onJoinActivity?(activity)
+                                    }
+                                )
+                                .environmentObject(theme)
+                                .onAppear {
+                                    viewModel.trackSuggestionViewed(activity)
+                                }
+                            }
+
+                            moreComingCard
                         }
-
-                        moreComingCard
+                        .padding(.horizontal)
+                        .padding(.bottom, 24)
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom, 24)
+                } else {
+                    emptyStateView
                 }
             }
         }
         .ignoresSafeArea()
-    }
-
-    // MARK: - Actions
-    private func toggleSave(_ id: String) {
-        if savedActivities.contains(id) {
-            savedActivities.remove(id)
-        } else {
-            savedActivities.insert(id)
-        }
     }
 
     // MARK: - Header
@@ -148,15 +76,30 @@ struct AISuggestionsView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("For You")
+                    Text(viewModel.headerTitle)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(theme.colors.textPrimary)
-                    Text("AI-powered recommendations")
+                    Text(viewModel.headerSubtitle)
                         .font(.system(size: 13))
                         .foregroundColor(theme.colors.textSecondary)
                 }
 
                 Spacer()
+                
+                if viewModel.savedCount > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(hex: "#EF4444"))
+                        Text("\(viewModel.savedCount)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(theme.colors.textPrimary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(theme.colors.cardBackground)
+                    .cornerRadius(12)
+                }
             }
             .padding(.horizontal)
 
@@ -180,10 +123,10 @@ struct AISuggestionsView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Personalized Picks")
+                            Text(viewModel.personalizationTitle)
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.white)
-                            Text("Based on your activity & preferences")
+                            Text(viewModel.personalizationDescription)
                                 .font(.system(size: 12))
                                 .foregroundColor(.white.opacity(0.9))
                         }
@@ -208,11 +151,11 @@ struct AISuggestionsView: View {
                     .overlay(Image(systemName: "chart.line.uptrend.xyaxis")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.white))
-                Text("Why these activities?")
+                Text(viewModel.whyTheseTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
             }
-            Text("We've selected activities matching your skill level, preferred sports, and schedule. These are nearby and have availability.")
+            Text(viewModel.whyTheseDescription)
                 .font(.system(size: 12))
                 .foregroundColor(theme.colors.textSecondary)
                 .padding(.leading, 30)
@@ -241,10 +184,10 @@ struct AISuggestionsView: View {
                     .foregroundColor(.purple)
             }
 
-            Text("More suggestions coming")
+            Text(viewModel.moreComingTitle)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
-            Text("As you join more activities, our AI will get better at recommending perfect matches.")
+            Text(viewModel.moreComingDescription)
                 .font(.system(size: 13))
                 .foregroundColor(theme.colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -258,6 +201,48 @@ struct AISuggestionsView: View {
                 .stroke(theme.colors.cardStroke, lineWidth: 1)
         )
         .cornerRadius(20)
+    }
+    
+    // MARK: - Loading View
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
+                .scaleEffect(1.2)
+            Text("Loading AI suggestions...")
+                .font(.system(size: 14))
+                .foregroundColor(theme.colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    // MARK: - Empty State
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 48))
+                .foregroundColor(.purple)
+            Text("No suggestions yet")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(theme.colors.textPrimary)
+            Text("Complete your profile to get personalized activity recommendations")
+                .font(.system(size: 14))
+                .foregroundColor(theme.colors.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            Button(action: { viewModel.refreshSuggestions() }) {
+                Text("Refresh")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(LinearGradient(colors: [.purple, .pink], startPoint: .leading, endPoint: .trailing))
+                    .cornerRadius(20)
+            }
+            .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Background Orbs

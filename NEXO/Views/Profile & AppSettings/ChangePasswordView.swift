@@ -1,26 +1,19 @@
+//
+//  ChangePasswordView.swift
+//  NEXO
+//
+//  Created by ROCCO 4X on 4/11/2025.
+//
+
 import SwiftUI
 
 struct ChangePasswordView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var theme: Theme
+    @StateObject private var viewModel = ChangePasswordViewModel()
 
     var onBack: (() -> Void)?
     var onSave: (() -> Void)?
-
-    // Form state
-    @State private var currentPassword: String = ""
-    @State private var newPassword: String = ""
-    @State private var confirmPassword: String = ""
-
-    // Visibility toggles
-    @State private var showCurrent = false
-    @State private var showNew = false
-    @State private var showConfirm = false
-
-    // Errors
-    @State private var currentError: String = ""
-    @State private var newError: String = ""
-    @State private var confirmError: String = ""
 
     var body: some View {
         ZStack {
@@ -41,12 +34,56 @@ struct ChangePasswordView: View {
                     .padding(.bottom, 24)
                 }
             }
+            
+            if viewModel.isLoading {
+                loadingOverlay
+            }
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
+        .alert("Success", isPresented: $viewModel.showSuccessAlert) {
+            Button("OK") {
+                handleSuccessfulSave()
+            }
+        } message: {
+            Text(viewModel.alertMessage)
+        }
+        .alert("Error", isPresented: $viewModel.showErrorAlert) {
+            Button("OK") {}
+        } message: {
+            Text(viewModel.alertMessage)
+        }
+        .onAppear {
+            viewModel.trackScreenView()
+        }
     }
 
-    // MARK: - Header (styled like EditProfileView)
+    // MARK: - Loading Overlay
+    
+    private var loadingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 12) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.2)
+                
+                Text("Changing password...")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.black.opacity(0.8))
+            )
+        }
+    }
+
+    // MARK: - Header
+    
     private var header: some View {
         VStack {
             ZStack {
@@ -98,6 +135,8 @@ struct ChangePasswordView: View {
                             .shadow(color: Color(hex: "8B5CF6").opacity(0.35), radius: 10, y: 4)
                     }
                     .buttonStyle(.plain)
+                    .disabled(viewModel.isLoading)
+                    .opacity(viewModel.isLoading ? 0.6 : 1.0)
                 }
                 .padding(.horizontal, 12)
             }
@@ -115,6 +154,7 @@ struct ChangePasswordView: View {
     }
 
     // MARK: - Security Tip Card
+    
     private var securityTipCard: some View {
         ZStack {
             glowBox(colors: ["8B5CF6","EC4899"], opacity: 0.20, radius: 20)
@@ -136,10 +176,10 @@ struct ChangePasswordView: View {
                 .frame(width: 44, height: 44)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Security Tip")
+                    Text(viewModel.securityTipTitle)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
-                    Text("Use a strong password with at least 8 characters, including letters, numbers, and symbols.")
+                    Text(viewModel.securityTipMessage)
                         .font(.system(size: 12))
                         .foregroundColor(theme.colors.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -158,6 +198,7 @@ struct ChangePasswordView: View {
     }
 
     // MARK: - Password Info Card
+    
     private var passwordInfoCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Password Information")
@@ -171,22 +212,30 @@ struct ChangePasswordView: View {
                 VStack(spacing: 12) {
                     passwordField(
                         title: "Current Password",
-                        text: $currentPassword,
-                        isVisible: $showCurrent,
-                        error: currentError
+                        text: $viewModel.currentPassword,
+                        isVisible: $viewModel.showCurrent,
+                        error: viewModel.currentError,
+                        onToggle: { viewModel.toggleCurrentPasswordVisibility() }
                     )
                     passwordField(
                         title: "New Password",
-                        text: $newPassword,
-                        isVisible: $showNew,
-                        error: newError
+                        text: $viewModel.newPassword,
+                        isVisible: $viewModel.showNew,
+                        error: viewModel.newError,
+                        onToggle: { viewModel.toggleNewPasswordVisibility() }
                     )
                     passwordField(
                         title: "Confirm New Password",
-                        text: $confirmPassword,
-                        isVisible: $showConfirm,
-                        error: confirmError
+                        text: $viewModel.confirmPassword,
+                        isVisible: $viewModel.showConfirm,
+                        error: viewModel.confirmError,
+                        onToggle: { viewModel.toggleConfirmPasswordVisibility() }
                     )
+                    
+                    // Password strength indicator
+                    if viewModel.hasNewPassword {
+                        passwordStrengthIndicator
+                    }
                 }
                 .padding(16)
             }
@@ -199,8 +248,42 @@ struct ChangePasswordView: View {
             .cornerRadius(20)
         }
     }
+    
+    // MARK: - Password Strength Indicator
+    
+    private var passwordStrengthIndicator: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Password Strength:")
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.colors.textSecondary)
+                
+                Spacer()
+                
+                Text(viewModel.passwordStrengthText)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color(hex: viewModel.passwordStrengthColor))
+            }
+            
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(height: 6)
+                    
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color(hex: viewModel.passwordStrengthColor))
+                        .frame(width: geometry.size.width * (CGFloat(viewModel.passwordStrengthScore) / 5.0), height: 6)
+                        .animation(.spring(response: 0.3), value: viewModel.passwordStrengthScore)
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding(.top, 4)
+    }
 
     // MARK: - Requirements Card
+    
     private var requirementsCard: some View {
         ZStack {
             glowBox(colors: ["8B5CF6","EC4899"], opacity: 0.10, radius: 20)
@@ -211,10 +294,9 @@ struct ChangePasswordView: View {
                     .foregroundColor(theme.colors.textPrimary)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    requirementRow("At least 8 characters long")
-                    requirementRow("Include uppercase and lowercase letters")
-                    requirementRow("Include at least one number")
-                    requirementRow("Include at least one special character")
+                    ForEach(viewModel.requirements, id: \.text) { requirement in
+                        requirementRow(requirement.text, isMet: requirement.isMet)
+                    }
                 }
             }
             .padding(12)
@@ -229,7 +311,14 @@ struct ChangePasswordView: View {
     }
 
     // MARK: - Components
-    private func passwordField(title: String, text: Binding<String>, isVisible: Binding<Bool>, error: String) -> some View {
+    
+    private func passwordField(
+        title: String,
+        text: Binding<String>,
+        isVisible: Binding<Bool>,
+        error: String,
+        onToggle: @escaping () -> Void
+    ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: "lock.fill")
@@ -244,11 +333,11 @@ struct ChangePasswordView: View {
             ZStack(alignment: .trailing) {
                 Group {
                     if isVisible.wrappedValue {
-                        TextField("••••••••", text: text)
+                        TextField(viewModel.getFieldPlaceholder(for: title), text: text)
                             .textContentType(.password)
                             .autocapitalization(.none)
                     } else {
-                        SecureField("••••••••", text: text)
+                        SecureField(viewModel.getFieldPlaceholder(for: title), text: text)
                             .textContentType(.password)
                             .autocapitalization(.none)
                     }
@@ -258,15 +347,16 @@ struct ChangePasswordView: View {
                 .background(Color.white.opacity(theme.isDarkMode ? 0.06 : 0.5))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(theme.isDarkMode ? 0.12 : 0.6), lineWidth: 2)
+                        .stroke(
+                            error.isEmpty ? Color.white.opacity(theme.isDarkMode ? 0.12 : 0.6) : Color.red,
+                            lineWidth: 2
+                        )
                 )
                 .cornerRadius(12)
-                .onChangeCompat(of: text.wrappedValue) {
-                    clearError(for: title)
-                }
 
                 Button {
-                    isVisible.wrappedValue.toggle()
+                    onToggle()
+                    viewModel.trackVisibilityToggled(title, visible: isVisible.wrappedValue)
                 } label: {
                     Image(systemName: isVisible.wrappedValue ? "eye.slash" : "eye")
                         .font(.system(size: 14, weight: .semibold))
@@ -285,14 +375,15 @@ struct ChangePasswordView: View {
         }
     }
 
-    private func requirementRow(_ text: String) -> some View {
+    private func requirementRow(_ text: String, isMet: Bool) -> some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(Color(hex: "8B5CF6"))
-                .frame(width: 6, height: 6)
+            Image(systemName: isMet ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 12))
+                .foregroundColor(isMet ? Color(hex: "10B981") : Color(hex: "8B5CF6").opacity(0.5))
             Text(text)
                 .font(.system(size: 11))
                 .foregroundColor(theme.colors.textSecondary)
+                .strikethrough(isMet, color: theme.colors.textSecondary.opacity(0.5))
         }
     }
 
@@ -358,43 +449,26 @@ struct ChangePasswordView: View {
         .allowsHitTesting(false)
     }
 
-    // MARK: - Validation
-    private func clearError(for title: String) {
-        switch title {
-        case "Current Password": currentError = ""
-        case "New Password": newError = ""
-        case "Confirm New Password": confirmError = ""
-        default: break
-        }
-    }
-
-    private func validate() -> Bool {
-        var ok = true
-        if currentPassword.isEmpty {
-            currentError = "Current password is required"
-            ok = false
-        }
-        if newPassword.isEmpty {
-            newError = "New password is required"
-            ok = false
-        } else if newPassword.count < 8 {
-            newError = "Password must be at least 8 characters"
-            ok = false
-        }
-        if confirmPassword.isEmpty {
-            confirmError = "Please confirm your password"
-            ok = false
-        } else if newPassword != confirmPassword {
-            confirmError = "Passwords do not match"
-            ok = false
-        }
-        return ok
-    }
-
+    // MARK: - Actions
+    
     private func handleSave() {
-        if validate() {
-            onSave?()
-            if let onBack { onBack() } else { dismiss() }
+        viewModel.savePassword(
+            onSuccess: {
+                handleSuccessfulSave()
+            },
+            onError: { error in
+                viewModel.trackPasswordChangeFailed(error: error)
+            }
+        )
+    }
+    
+    private func handleSuccessfulSave() {
+        viewModel.trackPasswordChanged()
+        onSave?()
+        if let onBack {
+            onBack()
+        } else {
+            dismiss()
         }
     }
 }
@@ -403,17 +477,5 @@ struct ChangePasswordView: View {
     NavigationStack {
         ChangePasswordView()
             .environmentObject(Theme())
-    }
-}
-
-// MARK: - Compatibility helper for onChange (iOS 17 deprecation)
-private extension View {
-    @ViewBuilder
-    func onChangeCompat<Value: Equatable>(of value: Value, perform action: @escaping () -> Void) -> some View {
-        if #available(iOS 17.0, *) {
-            self.onChange(of: value, action)
-        } else {
-            self.onChange(of: value) { _ in action() }
-        }
     }
 }

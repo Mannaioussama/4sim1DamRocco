@@ -244,14 +244,13 @@ let sportCategories: [SportCategory] = [
 struct SupportingComponents_Previews: PreviewProvider {
     static var previews: some View {
         HomeFeedView(
-            activities: mockActivities,
-            sportCategories: sportCategories,
             onActivityClick: { _ in },
             onSearchClick: {},
             onQuickMatchClick: {},
             onAIMatchmakerClick: {},
             onEventDetailsClick: {},
-            onCreateClick: {}
+            onCreateClick: {},
+            onNotificationsClick: {}
         )
         .environmentObject(Theme())
     }

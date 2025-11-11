@@ -13,29 +13,7 @@ struct AICoachView: View {
     var onFindPartner: (() -> Void)?
 
     @EnvironmentObject private var theme: Theme
-
-    @State private var selectedTab: String = "overview"
-    @State private var navigateToAchievements: Bool = false
-    @State private var navigateToMatchmaker: Bool = false
-
-    private let weeklyStats = (workouts: 3, goal: 5, calories: 1200, minutes: 180, streak: 7)
-
-    private let suggestions: [Suggestion] = [
-        .init(title: "Try a morning swim", description: "4 swimmers nearby are free tomorrow 7AM", icon: "🏊", time: "Tomorrow 7AM", participants: 4, matchScore: 95),
-        .init(title: "Join evening yoga session", description: "Perfect for recovery after your runs", icon: "🧘", time: "Today 6PM", participants: 8, matchScore: 88),
-        .init(title: "Weekend cycling group", description: "Explore new routes with local cyclists", icon: "🚴", time: "Saturday 8AM", participants: 12, matchScore: 82)
-    ]
-
-    private let workoutTips: [Tip] = [
-        .init(title: "Warm-up is essential", description: "Spend 5-10 minutes warming up to prevent injuries and improve performance.", icon: "🔥", category: "Basics"),
-        .init(title: "Stay hydrated", description: "Drink water before, during, and after your workout for optimal performance.", icon: "💧", category: "Health"),
-        .init(title: "Progressive overload", description: "Gradually increase intensity to continue seeing improvements.", icon: "📈", category: "Training")
-    ]
-
-    private let challenges: [Challenge] = [
-        .init(title: "30-Day Running Streak", description: "Run at least 1 mile every day for 30 days", progress: 7, total: 30, reward: "🏆 Marathon Badge"),
-        .init(title: "Weekly Variety Challenge", description: "Try 3 different sports this week", progress: 1, total: 3, reward: "⭐ Explorer Badge")
-    ]
+    @StateObject private var viewModel = AICoachViewModel()
 
     var body: some View {
         ZStack {
@@ -54,9 +32,9 @@ struct AICoachView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 12) {
-                        if selectedTab == "overview" { overviewTab }
-                        if selectedTab == "suggestions" { suggestionsTab }
-                        if selectedTab == "tips" { tipsTab }
+                        if viewModel.selectedTab == "overview" { overviewTab }
+                        if viewModel.selectedTab == "suggestions" { suggestionsTab }
+                        if viewModel.selectedTab == "tips" { tipsTab }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
@@ -79,51 +57,23 @@ struct AICoachView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(theme.colors.barMaterial, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
-        .navigationDestination(isPresented: $navigateToAchievements) {
+        .navigationDestination(isPresented: $viewModel.navigateToAchievements) {
             AchievementsView()
         }
-        .navigationDestination(isPresented: $navigateToMatchmaker) {
+        .navigationDestination(isPresented: $viewModel.navigateToMatchmaker) {
             AIMatchmakerView()
         }
     }
-}
-
-// MARK: - Models
-struct Suggestion: Identifiable {
-    let id = UUID()
-    let title: String
-    let description: String
-    let icon: String
-    let time: String
-    let participants: Int
-    let matchScore: Int
-}
-
-struct Tip: Identifiable {
-    let id = UUID()
-    let title: String
-    let description: String
-    let icon: String
-    let category: String
-}
-
-struct Challenge: Identifiable {
-    let id = UUID()
-    let title: String
-    let description: String
-    let progress: Int
-    let total: Int
-    let reward: String
 }
 
 // MARK: - UI Sections
 extension AICoachView {
     private var headerSection: some View {
         VStack(spacing: 4) {
-            Text("Progress starts with small steps")
+            Text(viewModel.motivationalMessage)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.white)
-            Text("Keep going! You're doing great 💪")
+            Text(viewModel.motivationalSubtext)
                 .font(.system(size: 12))
                 .foregroundColor(.white.opacity(0.9))
         }
@@ -145,18 +95,17 @@ extension AICoachView {
         HStack(spacing: 0) {
             ForEach(["overview", "suggestions", "tips"], id: \.self) { tab in
                 Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedTab = tab
-                    }
+                    viewModel.selectTab(tab)
+                    viewModel.trackTabView(tab)
                 }) {
                     VStack(spacing: 12) {
                         Text(tab == "overview" ? "Overview" : tab == "suggestions" ? "Suggestions" : "Tips")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(selectedTab == tab ? theme.colors.accentPurple : theme.colors.textSecondary)
+                            .foregroundColor(viewModel.selectedTab == tab ? theme.colors.accentPurple : theme.colors.textSecondary)
                         
                         Rectangle()
                             .frame(height: 2)
-                            .foregroundColor(selectedTab == tab ? theme.colors.accentPurple : .clear)
+                            .foregroundColor(viewModel.selectedTab == tab ? theme.colors.accentPurple : .clear)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -192,7 +141,7 @@ extension AICoachView {
                     .foregroundColor(theme.colors.textPrimary)
                 Spacer()
                 HStack(spacing: 4) {
-                    Text("\(weeklyStats.streak) day streak")
+                    Text(viewModel.streakBadgeText)
                         .font(.system(size: 11, weight: .medium))
                     Text("🔥")
                         .font(.system(size: 11))
@@ -205,9 +154,9 @@ extension AICoachView {
             }
 
             HStack(spacing: 12) {
-                statColumn(title: "Workouts", value: "\(weeklyStats.workouts)", color: theme.colors.accentPurple)
-                statColumn(title: "Calories", value: "\(weeklyStats.calories)", color: theme.colors.accentOrange)
-                statColumn(title: "Minutes", value: "\(weeklyStats.minutes)", color: Color.blue)
+                statColumn(title: "Workouts", value: viewModel.getStatValue(for: "workouts"), color: theme.colors.accentPurple)
+                statColumn(title: "Calories", value: viewModel.getStatValue(for: "calories"), color: theme.colors.accentOrange)
+                statColumn(title: "Minutes", value: viewModel.getStatValue(for: "minutes"), color: Color.blue)
             }
 
             VStack(spacing: 6) {
@@ -216,7 +165,7 @@ extension AICoachView {
                         .font(.system(size: 12))
                         .foregroundColor(theme.colors.textSecondary)
                     Spacer()
-                    Text("\(weeklyStats.workouts)/\(weeklyStats.goal)")
+                    Text(viewModel.weeklyGoalText)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(theme.colors.textPrimary)
                 }
@@ -229,7 +178,7 @@ extension AICoachView {
                         
                         RoundedRectangle(cornerRadius: 4)
                             .fill(theme.colors.accentPurple)
-                            .frame(width: geometry.size.width * CGFloat(weeklyStats.workouts) / CGFloat(weeklyStats.goal), height: 8)
+                            .frame(width: geometry.size.width * viewModel.weeklyGoalProgress, height: 8)
                     }
                 }
                 .frame(height: 8)
@@ -269,16 +218,18 @@ extension AICoachView {
                     )
                     .frame(width: 44, height: 44)
                 
-                Image(systemName: "sun.max.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.yellow)
+                if let weather = viewModel.weatherInfo {
+                    Image(systemName: weather.icon)
+                        .font(.system(size: 24))
+                        .foregroundColor(.yellow)
+                }
             }
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("Perfect weather today!")
+                Text(viewModel.weatherTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
-                Text("72°F, sunny — ideal for outdoor training")
+                Text(viewModel.weatherDisplayText)
                     .font(.system(size: 12))
                     .foregroundColor(theme.colors.textSecondary)
             }
@@ -307,7 +258,7 @@ extension AICoachView {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
             
-            ForEach(challenges) { challenge in
+            ForEach(viewModel.challenges) { challenge in
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 10) {
                         ZStack {
@@ -343,7 +294,7 @@ extension AICoachView {
                                 .font(.system(size: 12))
                                 .foregroundColor(theme.colors.textSecondary)
                             Spacer()
-                            Text("\(challenge.progress)/\(challenge.total)")
+                            Text(viewModel.getChallengeProgressText(challenge))
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(theme.colors.textPrimary)
                         }
@@ -356,7 +307,7 @@ extension AICoachView {
                                 
                                 RoundedRectangle(cornerRadius: 4)
                                     .fill(theme.colors.accentPurple)
-                                    .frame(width: geometry.size.width * CGFloat(challenge.progress) / CGFloat(challenge.total), height: 8)
+                                    .frame(width: geometry.size.width * viewModel.getChallengeProgress(challenge), height: 8)
                             }
                         }
                         .frame(height: 8)
@@ -383,7 +334,7 @@ extension AICoachView {
         HStack(spacing: 10) {
             Button(action: {
                 onStartChallenge?()
-                navigateToAchievements = true
+                viewModel.startChallenge()
             }) {
                 VStack(spacing: 8) {
                     Image(systemName: "rosette")
@@ -407,7 +358,7 @@ extension AICoachView {
 
             Button(action: {
                 onFindPartner?()
-                navigateToMatchmaker = true
+                viewModel.findPartner()
             }) {
                 VStack(spacing: 8) {
                     Image(systemName: "person.2.fill")
@@ -452,7 +403,7 @@ extension AICoachView {
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
             
-            ForEach(suggestions) { suggestion in
+            ForEach(viewModel.suggestions) { suggestion in
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 10) {
                         Text(suggestion.icon)
@@ -467,7 +418,7 @@ extension AICoachView {
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(theme.colors.textPrimary)
                                 
-                                Text("\(suggestion.matchScore)% match")
+                                Text(viewModel.getMatchScoreText(suggestion))
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 8)
@@ -497,7 +448,7 @@ extension AICoachView {
                                 HStack(spacing: 4) {
                                     Image(systemName: "person.2")
                                         .font(.system(size: 12))
-                                    Text("\(suggestion.participants) interested")
+                                    Text(viewModel.getParticipantsText(suggestion))
                                         .font(.system(size: 12))
                                 }
                             }
@@ -506,7 +457,10 @@ extension AICoachView {
                         Spacer()
                     }
                     
-                    Button(action: {}) {
+                    Button(action: {
+                        viewModel.joinSuggestion(suggestion)
+                        viewModel.trackSuggestionInteraction(suggestion)
+                    }) {
                         HStack(spacing: 6) {
                             Image(systemName: "bolt.fill")
                                 .font(.system(size: 14))
@@ -550,7 +504,7 @@ extension AICoachView {
                     .font(.system(size: 12))
                     .foregroundColor(theme.colors.textSecondary)
                 
-                Button(action: {}) {
+                Button(action: { viewModel.browseVideos() }) {
                     Text("Browse Videos")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(theme.colors.textSecondary)
@@ -580,7 +534,7 @@ extension AICoachView {
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
 
-            ForEach(workoutTips) { tip in
+            ForEach(viewModel.workoutTips) { tip in
                 HStack(spacing: 10) {
                     Text(tip.icon)
                         .font(.system(size: 22))

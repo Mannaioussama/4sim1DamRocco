@@ -13,8 +13,9 @@ struct SettingsView: View {
     var onLogout: (() -> Void)?
 
     @EnvironmentObject private var theme: Theme
+    @StateObject private var viewModel = SettingsViewModel()
 
-    // MARK: - Local Palette for SettingsView (only static accents)
+    // MARK: - Local Palette
     struct Palette {
         static let iconPurple = Color(hex: "#A855F7")
         static let iconTileGradient = LinearGradient(
@@ -27,131 +28,165 @@ struct SettingsView: View {
         )
     }
 
-    // MARK: - Mock verification status
-    @State private var verificationStatus: VerificationStatus = .none
-
-    // MARK: - User toggles
-    @State private var aiSuggestions = true
-    @State private var motivationTips = true
-    @State private var coachRecs = true
-    @State private var smartNotifs = false
-
-    @State private var publicProfile = true
-    @State private var showLocation = true
-    @State private var pushNotifs = true
-    @State private var emailNotifs = false
-    @State private var sound = true
-
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                verificationCard
-                settingsSections
-                logoutButton
+        ZStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    verificationCard
+                    settingsSections
+                    logoutButton
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 40)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 40)
+            .background(theme.colors.backgroundGradient.ignoresSafeArea())
+            .overlay(backgroundOrbs)
+            
+            if viewModel.isLoading {
+                loadingOverlay
+            }
         }
-        .background(
-            theme.colors.backgroundGradient.ignoresSafeArea()
-        )
-        .overlay(backgroundOrbs)
         .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.inline)
-        // iOS 16+ typed navigation destinations
-        .navigationDestination(for: SettingsRoute.self) { route in
-            switch route {
-            case .editProfile:
-                EditProfileView()
-                    .environmentObject(theme)
-                    .toolbar(.hidden, for: .tabBar)
-            case .changePassword:
-                ChangePasswordView()
-                    .environmentObject(theme)
-                    .toolbar(.hidden, for: .tabBar)
+        .alert("Logout", isPresented: $viewModel.showLogoutConfirmation) {
+            Button("Cancel", role: .cancel) {
+                viewModel.cancelLogout()
             }
+            Button("Logout", role: .destructive) {
+                handleLogout()
+            }
+        } message: {
+            Text("Are you sure you want to log out?")
+        }
+        .onAppear {
+            viewModel.trackScreenView()
+            viewModel.loadSettings()
+        }
+    }
+    
+    // MARK: - Loading Overlay
+    
+    private var loadingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 12) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.2)
+                
+                Text("Please wait...")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.black.opacity(0.8))
+            )
         }
     }
 
     // MARK: - Verification Card
+    
     private var verificationCard: some View {
-        Group {
-            switch verificationStatus {
-            case .none:
-                InfoCardView(
-                    color: Color(hex: "3498DB"),
-                    title: "Become a Verified Coach",
-                    description: "Get verified to host paid sessions and build trust",
-                    buttonTitle: "Apply Now",
-                    buttonAction: onApplyVerification
-                )
-            case .pending:
-                InfoCardView(
-                    color: .yellow,
-                    title: "Verification Pending",
-                    description: "We're reviewing your application. This typically takes 2–3 business days.",
-                    badgeText: "Under Review",
-                    badgeColor: .yellow.opacity(0.8)
-                )
-            case .approved:
-                InfoCardView(
-                    color: Color(hex: "2ECC71"),
-                    title: "Verified Coach",
-                    description: "You can now create paid sessions and access coach features",
-                    badgeText: "✓ Verified",
-                    badgeColor: Color(hex: "2ECC71")
-                )
-            }
-        }
+        let data = viewModel.verificationCardData
+        return InfoCardView(
+            color: data.color,
+            title: data.title,
+            description: data.description,
+            buttonTitle: data.buttonTitle,
+            buttonAction: handleVerificationAction,
+            badgeText: data.badgeText,
+            badgeColor: data.badgeColor
+        )
         .padding(.top, 10)
     }
 
     // MARK: - Settings Sections
+    
     private var settingsSections: some View {
         VStack(spacing: 20) {
-            SettingsSectionView(title: "Appearance", items: [
+            SettingsSectionView(title: viewModel.appearanceSectionTitle, items: [
                 .toggle("Night Mode", Binding(
                     get: { theme.isDarkMode },
                     set: { theme.isDarkMode = $0 }
                 ), systemIcon: "moon.fill")
             ])
 
-            SettingsSectionView(title: "Account", items: [
-                .routeNavigate("Edit Profile", systemIcon: "person", extra: nil, route: .editProfile),
-                .routeNavigate("Change Password", systemIcon: "lock", extra: nil, route: .changePassword)
+            SettingsSectionView(title: viewModel.accountSectionTitle, items: [
+                .destination(
+                    "Edit Profile",
+                    systemIcon: "person",
+                    extra: viewModel.hasUnverifiedEmail ? "__unverified__" : nil,
+                    destination: AnyView(
+                        EditProfileView()
+                            .environmentObject(theme)
+                            .toolbar(.hidden, for: .tabBar)
+                    )
+                ),
+                .destination(
+                    "Change Password",
+                    systemIcon: "lock",
+                    extra: nil,
+                    destination: AnyView(
+                        ChangePasswordView()
+                            .environmentObject(theme)
+                            .toolbar(.hidden, for: .tabBar)
+                    )
+                )
             ])
 
-            SettingsSectionView(title: "AI Preferences", items: [
-                .toggle("AI Suggestions", $aiSuggestions, systemIcon: "sparkles"),
-                .toggle("Motivation Tips", $motivationTips, systemIcon: "sparkles"),
-                .toggle("Coach Recommendations", $coachRecs, systemIcon: "sparkles"),
-                .toggle("Smart Notifications", $smartNotifs, systemIcon: "sparkles")
+            SettingsSectionView(title: viewModel.aiPreferencesSectionTitle, items: [
+                .toggle("AI Suggestions", $viewModel.aiSuggestions, systemIcon: "sparkles"),
+                .toggle("Motivation Tips", $viewModel.motivationTips, systemIcon: "sparkles"),
+                .toggle("Coach Recommendations", $viewModel.coachRecs, systemIcon: "sparkles"),
+                .toggle("Smart Notifications", $viewModel.smartNotifs, systemIcon: "sparkles")
             ])
 
-            SettingsSectionView(title: "Privacy", items: [
-                .toggle("Public Profile", $publicProfile, systemIcon: "shield"),
-                .toggle("Show Location", $showLocation, systemIcon: "shield"),
-                .navigate("Blocked Users", systemIcon: "person.fill.xmark")
+            SettingsSectionView(title: viewModel.privacySectionTitle, items: [
+                .toggle("Public Profile", $viewModel.publicProfile, systemIcon: "shield"),
+                .toggle("Show Location", $viewModel.showLocation, systemIcon: "shield"),
+                .navigate("Blocked Users", systemIcon: "person.fill.xmark", action: {
+                    viewModel.openBlockedUsers()
+                    viewModel.trackNavigationTo("Blocked Users")
+                })
             ])
 
-            SettingsSectionView(title: "Notifications", items: [
-                .toggle("Push Notifications", $pushNotifs, systemIcon: "bell.fill"),
-                .toggle("Email Notifications", $emailNotifs, systemIcon: "envelope"),
-                .toggle("Sound", $sound, systemIcon: "speaker.wave.2.fill")
+            SettingsSectionView(title: viewModel.notificationsSectionTitle, items: [
+                .toggle("Push Notifications", $viewModel.pushNotifs, systemIcon: "bell.fill"),
+                .toggle("Email Notifications", $viewModel.emailNotifs, systemIcon: "envelope"),
+                .toggle("Sound", $viewModel.sound, systemIcon: "speaker.wave.2.fill")
             ])
 
-            SettingsSectionView(title: "App Info", items: [
-                .navigate("Terms of Service", systemIcon: "info.circle"),
-                .navigate("Privacy Policy", systemIcon: "info.circle"),
-                .navigate("Contact Support", systemIcon: "info.circle"),
-                .navigate("About", systemIcon: "info.circle", extra: "v1.0.0")
+            SettingsSectionView(title: viewModel.appInfoSectionTitle, items: [
+                .navigate("Terms of Service", systemIcon: "info.circle", action: {
+                    viewModel.openTermsOfService()
+                    viewModel.trackNavigationTo("Terms of Service")
+                }),
+                .navigate("Privacy Policy", systemIcon: "info.circle", action: {
+                    viewModel.openPrivacyPolicy()
+                    viewModel.trackNavigationTo("Privacy Policy")
+                }),
+                .navigate("Contact Support", systemIcon: "info.circle", action: {
+                    viewModel.openContactSupport()
+                    viewModel.trackNavigationTo("Contact Support")
+                }),
+                .navigate("About", systemIcon: "info.circle", extra: viewModel.appVersion, action: {
+                    viewModel.openAbout()
+                    viewModel.trackNavigationTo("About")
+                })
             ])
         }
     }
 
     // MARK: - Logout Button
+    
     private var logoutButton: some View {
-        Button(action: { onLogout?() }) {
+        Button(action: {
+            viewModel.showLogoutDialog()
+        }) {
             HStack {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
                     .font(.system(size: 18, weight: .semibold))
@@ -169,14 +204,12 @@ struct SettingsView: View {
             .shadow(color: .pink.opacity(0.4), radius: 10, y: 4)
         }
         .padding(.top, 10)
-    }
-
-    // MARK: - Background Gradient (kept for reference)
-    private var backgroundGradient: LinearGradient {
-        theme.colors.backgroundGradient
+        .disabled(viewModel.isLoading)
+        .opacity(viewModel.isLoading ? 0.6 : 1.0)
     }
 
     // MARK: - Floating Orbs
+    
     private var backgroundOrbs: some View {
         ZStack {
             Circle()
@@ -195,28 +228,28 @@ struct SettingsView: View {
         }
         .allowsHitTesting(false)
     }
-}
-
-#Preview {
-    NavigationStack {
-        SettingsView(
-            onBack: {},
-            onApplyVerification: {},
-            onLogout: {}
+    
+    // MARK: - Actions
+    
+    private func handleVerificationAction() {
+        viewModel.applyForVerification(
+            onSuccess: {
+                viewModel.trackVerificationApplied()
+                onApplyVerification?()
+            },
+            onError: { _ in }
         )
-        .environmentObject(Theme())
     }
-}
-
-// MARK: - VerificationStatus Enum
-enum VerificationStatus {
-    case none, pending, approved
-}
-
-// MARK: - Routing for SettingsView
-enum SettingsRoute: Hashable {
-    case editProfile
-    case changePassword
+    
+    private func handleLogout() {
+        viewModel.confirmLogout(
+            onSuccess: {
+                viewModel.trackLogout()
+                onLogout?()
+            },
+            onError: { _ in }
+        )
+    }
 }
 
 // MARK: - Info Card
@@ -330,7 +363,7 @@ private struct SettingsSectionView: View {
 enum SettingsItem: View {
     case navigate(String, systemIcon: String, extra: String? = nil, action: (() -> Void)? = nil)
     case toggle(String, Binding<Bool>, systemIcon: String)
-    case routeNavigate(String, systemIcon: String, extra: String? = nil, route: SettingsRoute)
+    case destination(String, systemIcon: String, extra: String? = nil, destination: AnyView)
 
     var body: some View {
         switch self {
@@ -342,9 +375,13 @@ enum SettingsItem: View {
                             .font(.subheadline)
                         Spacer()
                         if let extra = extra {
-                            Text(extra)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            if extra == "__unverified__" {
+                                PulsingDot(color: Color(hex: "F39C12"))
+                            } else {
+                                Text(extra)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         Image(systemName: "chevron.right")
                             .font(.system(size: 13, weight: .semibold))
@@ -354,7 +391,7 @@ enum SettingsItem: View {
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle()) // whole row tappable
+                .contentShape(Rectangle())
                 .accessibilityAddTraits(.isButton)
             }
             .buttonStyle(.plain)
@@ -372,17 +409,23 @@ enum SettingsItem: View {
             }
             .padding(10)
 
-        case .routeNavigate(let label, let icon, let extra, let route):
-            NavigationLink(value: route) {
+        case .destination(let label, let icon, let extra, let destinationView):
+            NavigationLink {
+                destinationView
+            } label: {
                 Row(icon: icon) {
                     HStack {
                         Text(label)
                             .font(.subheadline)
                         Spacer()
                         if let extra = extra {
-                            Text(extra)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            if extra == "__unverified__" {
+                                PulsingDot(color: Color(hex: "F39C12"))
+                            } else {
+                                Text(extra)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         Image(systemName: "chevron.right")
                             .font(.system(size: 13, weight: .semibold))
@@ -391,12 +434,14 @@ enum SettingsItem: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .accessibilityAddTraits(.isButton)
             }
             .buttonStyle(.plain)
         }
     }
 
-    // Shared row with themed colors
     private struct Row<Content: View>: View {
         @EnvironmentObject private var theme: Theme
         let icon: String
@@ -416,5 +461,42 @@ enum SettingsItem: View {
                     .foregroundColor(theme.colors.textPrimary)
             }
         }
+    }
+}
+
+// MARK: - Pulsing Dot
+private struct PulsingDot: View {
+    let color: Color
+    @State private var animate = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(color.opacity(0.4))
+                .frame(width: 10, height: 10)
+                .scaleEffect(animate ? 1.6 : 1.0)
+                .opacity(animate ? 0.0 : 0.7)
+
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.2).repeatForever(autoreverses: false)) {
+                animate = true
+            }
+        }
+        .accessibilityLabel("Email not verified")
+    }
+}
+
+#Preview {
+    NavigationStack {
+        SettingsView(
+            onBack: {},
+            onApplyVerification: {},
+            onLogout: {}
+        )
+        .environmentObject(Theme())
     }
 }

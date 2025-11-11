@@ -25,47 +25,17 @@ enum MessageSender {
 
 struct ChatConversationView: View {
     @EnvironmentObject private var theme: Theme
-    let chatId: String
-    var onBack: () -> Void
-    
-    @State private var messageText = ""
+    @StateObject private var viewModel: ChatConversationViewModel
     @FocusState private var isInputFocused: Bool
     
-    // Mock messages
-    let messages: [Message] = [
-        Message(
-            id: "1",
-            text: "Hey! Are we still on for swimming tomorrow?",
-            sender: .other,
-            time: "10:30 AM",
-            senderName: "Sarah Mitchell",
-            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah"
-        ),
-        Message(
-            id: "2",
-            text: "Yes! 7 AM at City Pool 💪",
-            sender: .me,
-            time: "10:32 AM",
-            senderName: nil,
-            avatar: nil
-        ),
-        Message(
-            id: "3",
-            text: "Perfect! I'll bring extra goggles in case anyone needs them",
-            sender: .other,
-            time: "10:33 AM",
-            senderName: "Sarah Mitchell",
-            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah"
-        ),
-        Message(
-            id: "4",
-            text: "Great idea! See you there 🏊",
-            sender: .me,
-            time: "10:35 AM",
-            senderName: nil,
-            avatar: nil
-        )
-    ]
+    var onBack: () -> Void
+    
+    // MARK: - Initialization
+    
+    init(chatId: String, onBack: @escaping () -> Void) {
+        self._viewModel = StateObject(wrappedValue: ChatConversationViewModel(chatId: chatId))
+        self.onBack = onBack
+    }
     
     var body: some View {
         ZStack {
@@ -81,6 +51,17 @@ struct ChatConversationView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
+        // Keep VM and local focus state in sync (optional)
+        .onChange(of: isInputFocused) { newValue in
+            if viewModel.isInputFocused != newValue {
+                viewModel.isInputFocused = newValue
+            }
+        }
+        .onChange(of: viewModel.isInputFocused) { newValue in
+            if isInputFocused != newValue {
+                isInputFocused = newValue
+            }
+        }
     }
 
     // MARK: Header with centered title
@@ -147,7 +128,7 @@ struct ChatConversationView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 12) {
-                    ForEach(messages) { message in
+                    ForEach(viewModel.messages) { message in
                         MessageBubble(message: message)
                             .environmentObject(theme)
                             .id(message.id)
@@ -157,8 +138,15 @@ struct ChatConversationView: View {
                 .padding(.vertical, 16)
             }
             .onAppear {
-                if let lastMessage = messages.last {
-                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                if let lastMessageId = viewModel.getLastMessageId() {
+                    proxy.scrollTo(lastMessageId, anchor: .bottom)
+                }
+            }
+            .onChange(of: viewModel.messages.count) { _ in
+                if let lastMessageId = viewModel.getLastMessageId() {
+                    withAnimation {
+                        proxy.scrollTo(lastMessageId, anchor: .bottom)
+                    }
                 }
             }
         }
@@ -167,7 +155,7 @@ struct ChatConversationView: View {
     // MARK: Input Bar
     private var inputBar: some View {
         HStack(spacing: 8) {
-            TextField("Type a message...", text: $messageText)
+            TextField("Type a message...", text: $viewModel.messageText)
                 .font(.system(size: 15))
                 .foregroundColor(theme.colors.textPrimary)
                 .padding(.horizontal, 16)
@@ -182,10 +170,12 @@ struct ChatConversationView: View {
                 .focused($isInputFocused)
                 .submitLabel(.send)
                 .onSubmit {
-                    handleSend()
+                    viewModel.sendMessage()
                 }
             
-            Button(action: handleSend) {
+            Button(action: {
+                viewModel.sendMessage()
+            }) {
                 Text("Send")
             }
             .buttonStyle(BrandButtonStyle(variant: .default))
@@ -198,13 +188,6 @@ struct ChatConversationView: View {
             RoundedRectangle(cornerRadius: 0)
                 .stroke(theme.colors.cardStroke, lineWidth: 0)
         )
-    }
-    
-    private func handleSend() {
-        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        print("Sending message: \(messageText)")
-        messageText = ""
-        isInputFocused = false
     }
 }
 

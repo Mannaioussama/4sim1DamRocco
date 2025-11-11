@@ -7,64 +7,13 @@
 
 import SwiftUI
 
-// MARK: - Data Models
-struct DiscoverySportCategory: Identifiable {
-    let id = UUID()
-    let name: String
-    let icon: String
-    let color: Color
-}
-
-struct DiscoveryActivity: Identifiable {
-    let id = UUID()
-    let title: String
-    let sportIcon: String
-    let hostName: String
-    let hostAvatar: String
-    let distance: String
-    let date: String
-    let spotsTotal: Int
-    let spotsTaken: Int
-}
-
-struct DiscoveryUser: Identifiable {
-    let id = UUID()
-    let name: String
-    let avatar: String
-    let sport: String
-    let distance: String
-}
-
 // MARK: - Main View
 struct SearchDiscoveryView: View {
     var onBack: (() -> Void)?
     var onCoachClick: (() -> Void)?
 
     @EnvironmentObject private var theme: Theme
-
-    // MARK: - Mock Data
-    private let sportCategories: [DiscoverySportCategory] = [
-        .init(name: "Running", icon: "🏃", color: .green),
-        .init(name: "Yoga", icon: "🧘‍♀️", color: .purple),
-        .init(name: "Cycling", icon: "🚴‍♀️", color: .blue),
-        .init(name: "Basketball", icon: "🏀", color: .orange),
-        .init(name: "Tennis", icon: "🎾", color: .mint),
-        .init(name: "Football", icon: "⚽️", color: .gray)
-    ]
-
-    private let mockActivities: [DiscoveryActivity] = [
-        .init(title: "Morning Run", sportIcon: "🏃", hostName: "Alex", hostAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex", distance: "0.5 mi", date: "Nov 4", spotsTotal: 10, spotsTaken: 6),
-        .init(title: "Yoga Flow", sportIcon: "🧘‍♀️", hostName: "Emma", hostAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma", distance: "1.2 mi", date: "Nov 5", spotsTotal: 8, spotsTaken: 5),
-        .init(title: "Evening Ride", sportIcon: "🚴‍♀️", hostName: "Tom", hostAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tom", distance: "2.1 mi", date: "Nov 6", spotsTotal: 12, spotsTaken: 7)
-    ]
-
-    private let activeUsers: [DiscoveryUser] = [
-        .init(name: "Jessica Lee", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jessica", sport: "Running", distance: "0.3 mi"),
-        .init(name: "Tom Harris", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tom", sport: "Cycling", distance: "0.7 mi"),
-        .init(name: "Nina Patel", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Nina", sport: "Yoga", distance: "1.2 mi")
-    ]
-
-    @State private var searchText: String = ""
+    @StateObject private var viewModel = SearchDiscoveryViewModel()
 
     var body: some View {
         ZStack {
@@ -145,10 +94,17 @@ extension SearchDiscoveryView {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(theme.colors.textSecondary)
-                TextField("Search sports, people, or places...", text: $searchText)
+                TextField("Search sports, people, or places...", text: $viewModel.searchText)
                     .font(.system(size: 15))
                     .disableAutocorrection(true)
                     .foregroundColor(theme.colors.textPrimary)
+                
+                if viewModel.hasSearchText {
+                    Button(action: { viewModel.clearSearch() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(theme.colors.textSecondary)
+                    }
+                }
             }
             .padding(10)
             .background(theme.colors.cardBackground)
@@ -159,6 +115,17 @@ extension SearchDiscoveryView {
                     .stroke(theme.colors.cardStroke, lineWidth: 1)
             )
             .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 5, x: 0, y: theme.isDarkMode ? 6 : 2)
+            
+            if viewModel.isSearching {
+                HStack {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                    Text("Searching...")
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.colors.textSecondary)
+                }
+                .padding(.leading, 10)
+            }
         }
         .padding(.horizontal)
         .padding(.top)
@@ -169,7 +136,7 @@ extension SearchDiscoveryView {
 extension SearchDiscoveryView {
     private var coachSection: some View {
         Group {
-            if let onCoachClick = onCoachClick {
+            if let onCoachClick = onCoachClick, let coach = viewModel.featuredCoach {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Verified Coaches")
                         .font(.system(size: 17, weight: .semibold))
@@ -177,7 +144,7 @@ extension SearchDiscoveryView {
 
                     Button(action: onCoachClick) {
                         HStack(spacing: 10) {
-                            AsyncImage(url: URL(string: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex")) { img in
+                            AsyncImage(url: URL(string: coach.avatar)) { img in
                                 img.resizable().scaledToFill()
                             } placeholder: {
                                 Circle().fill(Color.gray.opacity(0.3))
@@ -187,17 +154,19 @@ extension SearchDiscoveryView {
 
                             VStack(alignment: .leading, spacing: 3) {
                                 HStack(spacing: 4) {
-                                    Text("Alex Thompson")
+                                    Text(coach.name)
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundColor(theme.colors.textPrimary)
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(Color(hex: "#A855F7"))
-                                        .font(.system(size: 11))
+                                    if coach.isVerified {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(Color(hex: "#A855F7"))
+                                            .font(.system(size: 11))
+                                    }
                                 }
-                                Text("Certified HIIT & Strength Trainer")
+                                Text(coach.title)
                                     .font(.system(size: 12))
                                     .foregroundColor(theme.colors.textSecondary)
-                                Text("⭐ 4.8 (124 reviews) • 450+ sessions")
+                                Text(viewModel.coachRatingText)
                                     .font(.system(size: 11))
                                     .foregroundColor(theme.colors.textSecondary)
                             }
@@ -223,28 +192,31 @@ extension SearchDiscoveryView {
                 .foregroundColor(theme.colors.textPrimary)
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 12) {
-                ForEach(sportCategories) { category in
-                    VStack(spacing: 6) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(theme.colors.cardBackground)
-                                .background(theme.colors.barMaterial)
-                                .overlay(RoundedRectangle(cornerRadius: 24).stroke(theme.colors.cardStroke, lineWidth: 2))
-                                .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 6)
-                            VStack(spacing: 6) {
-                                Text(category.icon)
-                                    .font(.system(size: 22))
-                                    .frame(width: 44, height: 44)
-                                    .background(category.color.opacity(theme.isDarkMode ? 0.18 : 0.2))
-                                    .cornerRadius(16)
-                                Text(category.name)
-                                    .font(.system(size: 11))
-                                    .foregroundColor(theme.colors.textPrimary)
+                ForEach(viewModel.sportCategories) { category in
+                    Button(action: { viewModel.selectCategory(category) }) {
+                        VStack(spacing: 6) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 24)
+                                    .fill(theme.colors.cardBackground)
+                                    .background(theme.colors.barMaterial)
+                                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(theme.colors.cardStroke, lineWidth: 2))
+                                    .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 6)
+                                VStack(spacing: 6) {
+                                    Text(category.icon)
+                                        .font(.system(size: 22))
+                                        .frame(width: 44, height: 44)
+                                        .background(category.color.opacity(theme.isDarkMode ? 0.18 : 0.2))
+                                        .cornerRadius(16)
+                                    Text(category.name)
+                                        .font(.system(size: 11))
+                                        .foregroundColor(theme.colors.textPrimary)
+                                }
+                                .padding(8)
                             }
-                            .padding(8)
+                            .frame(height: 90)
                         }
-                        .frame(height: 90)
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -253,61 +225,71 @@ extension SearchDiscoveryView {
 
     private var trendingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Trending Near You")
+            Text(viewModel.hasSearchText ? "Search Results" : "Trending Near You")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
 
-            VStack(spacing: 10) {
-                ForEach(mockActivities.prefix(3)) { activity in
-                    RoundedRectangle(cornerRadius: 28)
-                        .fill(theme.colors.cardBackground)
-                        .background(theme.colors.barMaterial)
-                        .overlay(RoundedRectangle(cornerRadius: 28).stroke(theme.colors.cardStroke, lineWidth: 2))
-                        .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 12 : 8)
-                        .overlay(
-                            HStack(spacing: 10) {
-                                Text(activity.sportIcon)
-                                    .font(.system(size: 20))
-                                    .frame(width: 44, height: 44)
-                                    .background(theme.colors.cardBackground)
-                                    .cornerRadius(16)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(activity.title)
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(theme.colors.textPrimary)
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "mappin.and.ellipse")
-                                        Text(activity.distance)
-                                        Text("•")
-                                        Text(activity.date)
-                                    }
-                                    .font(.system(size: 12))
-                                    .foregroundColor(theme.colors.textSecondary)
-                                    HStack(spacing: 6) {
-                                        AsyncImage(url: URL(string: activity.hostAvatar)) { img in
-                                            img.resizable().scaledToFill()
-                                        } placeholder: {
-                                            Circle().fill(Color.gray.opacity(0.3))
-                                        }
-                                        .frame(width: 20, height: 20)
-                                        .clipShape(Circle())
-                                        Text(activity.hostName)
+            if viewModel.displayedActivities.isEmpty && viewModel.hasSearchText && !viewModel.isSearching {
+                Text("No activities found for '\(viewModel.searchText)'")
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.colors.textSecondary)
+                    .padding()
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(viewModel.displayedActivities) { activity in
+                        Button(action: { viewModel.selectActivity(activity) }) {
+                            RoundedRectangle(cornerRadius: 28)
+                                .fill(theme.colors.cardBackground)
+                                .background(theme.colors.barMaterial)
+                                .overlay(RoundedRectangle(cornerRadius: 28).stroke(theme.colors.cardStroke, lineWidth: 2))
+                                .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 12 : 8)
+                                .overlay(
+                                    HStack(spacing: 10) {
+                                        Text(activity.sportIcon)
+                                            .font(.system(size: 20))
+                                            .frame(width: 44, height: 44)
+                                            .background(theme.colors.cardBackground)
+                                            .cornerRadius(16)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(activity.title)
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundColor(theme.colors.textPrimary)
+                                            HStack(spacing: 6) {
+                                                Image(systemName: "mappin.and.ellipse")
+                                                Text(activity.distance)
+                                                Text("•")
+                                                Text(activity.date)
+                                            }
                                             .font(.system(size: 12))
                                             .foregroundColor(theme.colors.textSecondary)
+                                            HStack(spacing: 6) {
+                                                AsyncImage(url: URL(string: activity.hostAvatar)) { img in
+                                                    img.resizable().scaledToFill()
+                                                } placeholder: {
+                                                    Circle().fill(Color.gray.opacity(0.3))
+                                                }
+                                                .frame(width: 20, height: 20)
+                                                .clipShape(Circle())
+                                                Text(activity.hostName)
+                                                    .font(.system(size: 12))
+                                                    .foregroundColor(theme.colors.textSecondary)
+                                            }
+                                        }
+                                        Spacer()
+                                        Text(viewModel.getSpotsText(for: activity))
+                                            .font(.system(size: 11, weight: .medium))
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(theme.colors.cardBackground)
+                                            .cornerRadius(12)
+                                            .foregroundColor(Color(hex: "#A855F7"))
                                     }
-                                }
-                                Spacer()
-                                Text("\(activity.spotsTotal - activity.spotsTaken) spots")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(theme.colors.cardBackground)
-                                    .cornerRadius(12)
-                                    .foregroundColor(Color(hex: "#A855F7"))
-                            }
-                            .padding()
-                        )
-                        .frame(height: 90)
+                                    .padding()
+                                )
+                                .frame(height: 90)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
@@ -321,7 +303,7 @@ extension SearchDiscoveryView {
                 .foregroundColor(theme.colors.textPrimary)
 
             VStack(spacing: 10) {
-                ForEach(activeUsers) { user in
+                ForEach(viewModel.activeUsers) { user in
                     RoundedRectangle(cornerRadius: 28)
                         .fill(theme.colors.cardBackground)
                         .background(theme.colors.barMaterial)
@@ -347,25 +329,30 @@ extension SearchDiscoveryView {
                                     Text(user.name)
                                         .font(.system(size: 14, weight: .medium))
                                         .foregroundColor(theme.colors.textPrimary)
-                                    Text("\(user.sport) • \(user.distance) away")
+                                    Text(viewModel.getUserActivityText(for: user))
                                         .font(.system(size: 12))
                                         .foregroundColor(theme.colors.textSecondary)
                                 }
                                 Spacer()
                                 HStack(spacing: 6) {
-                                    Button("Follow") {}
-                                        .font(.system(size: 12))
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(theme.colors.cardBackground)
-                                        .cornerRadius(16)
-                                    Button("Chat") {}
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color(hex: "#A855F7"))
-                                        .foregroundColor(.white)
-                                        .cornerRadius(16)
+                                    Button(action: { viewModel.followUser(user) }) {
+                                        Text("Follow")
+                                    }
+                                    .font(.system(size: 12))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(theme.colors.cardBackground)
+                                    .cornerRadius(16)
+                                    
+                                    Button(action: { viewModel.chatWithUser(user) }) {
+                                        Text("Chat")
+                                    }
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color(hex: "#A855F7"))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(16)
                                 }
                             }
                             .padding()

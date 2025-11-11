@@ -1,5 +1,5 @@
 //
-//  OnboardingScreens.swift
+//  OnboardingView.swift
 //  NEXO
 //
 //  Created by ROCCO 4X on 3/11/2025.
@@ -7,47 +7,15 @@
 
 import SwiftUI
 
-struct OnboardingScreenData {
-    let title: String
-    let subtitle: String
-    let imageURL: URL
-    let iconName: String
-    let accentColor: Color
-}
-
-struct OnboardingScreensView: View {
+struct OnboardingView: View {
     @EnvironmentObject private var theme: Theme
-    @State private var currentStep: Int = 0
-    let steps: [OnboardingScreenData]
-    let onComplete: () -> Void
-
+    @StateObject private var viewModel: OnboardingViewModel
+    
+    // MARK: - Initialization
     init(onComplete: @escaping () -> Void) {
-        self.onComplete = onComplete
-        self.steps = [
-            OnboardingScreenData(
-                title: "Welcome to NEXO",
-                subtitle: "Connect with people who love sports as much as you do",
-                imageURL: URL(string: "https://images.unsplash.com/photo-1760879946121-893199733851?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080")!,
-                iconName: "waveform.path.ecg",
-                accentColor: Color(hex: "8B5CF6")
-            ),
-            OnboardingScreenData(
-                title: "Find Your Sport Partners",
-                subtitle: "Discover nearby activities and join sessions with like-minded people",
-                imageURL: URL(string: "https://images.unsplash.com/photo-1758684051112-3df152ce3256?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080")!,
-                iconName: "person.3.fill",
-                accentColor: Color(hex: "EC4899")
-            ),
-            OnboardingScreenData(
-                title: "Stay Active Together",
-                subtitle: "Create your own activities or join existing ones near you",
-                imageURL: URL(string: "https://images.unsplash.com/photo-1760879946121-893199733851?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080")!,
-                iconName: "mappin.circle.fill",
-                accentColor: Color(hex: "10B981")
-            )
-        ]
+        _viewModel = StateObject(wrappedValue: OnboardingViewModel(onComplete: onComplete))
     }
-
+    
     var body: some View {
         ZStack {
             // Fullscreen background image
@@ -69,21 +37,20 @@ struct OnboardingScreensView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if currentStep < steps.count - 1 {
+                if !viewModel.isLastStep {
                     skipButton
                 }
             }
         }
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(Color.clear, for: .navigationBar)
-        // Force the app’s chosen appearance here as well
         .environment(\.colorScheme, theme.isDarkMode ? .dark : .light)
     }
     
     // MARK: - Fullscreen Image Background
     
     private var imageBackground: some View {
-        let step = steps[currentStep]
+        let step = viewModel.currentStepData
         
         return GeometryReader { proxy in
             ZStack {
@@ -117,7 +84,7 @@ struct OnboardingScreensView: View {
             .frame(width: proxy.size.width, height: proxy.size.height)
             .ignoresSafeArea()
             .transition(.opacity)
-            .animation(.easeInOut(duration: 0.5), value: currentStep)
+            .animation(.easeInOut(duration: 0.5), value: viewModel.currentStep)
         }
     }
     
@@ -142,7 +109,7 @@ struct OnboardingScreensView: View {
                 .frame(width: 160, height: 160)
                 .blur(radius: 100)
                 .offset(x: -120, y: -280)
-                .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true), value: currentStep)
+                .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true), value: viewModel.currentStep)
             
             // Pink orb
             Circle()
@@ -161,7 +128,7 @@ struct OnboardingScreensView: View {
                 .frame(width: 200, height: 200)
                 .blur(radius: 100)
                 .offset(x: 140, y: 400)
-                .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true).delay(1), value: currentStep)
+                .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true).delay(1), value: viewModel.currentStep)
         }
         .allowsHitTesting(false)
     }
@@ -169,7 +136,7 @@ struct OnboardingScreensView: View {
     // MARK: - Center Glass Icon
     
     private var centerIcon: some View {
-        let step = steps[currentStep]
+        let step = viewModel.currentStepData
         
         return ZStack {
             // Pulsating glow
@@ -188,8 +155,8 @@ struct OnboardingScreensView: View {
                 )
                 .frame(width: 180, height: 180)
                 .blur(radius: 50)
-                .scaleEffect(currentStep % 2 == 0 ? 1.0 : 1.2)
-                .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: currentStep)
+                .scaleEffect(viewModel.currentStep % 2 == 0 ? 1.0 : 1.2)
+                .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: viewModel.currentStep)
             
             // Glass circle with crystal effect (theme glass)
             ZStack {
@@ -242,13 +209,13 @@ struct OnboardingScreensView: View {
             .shadow(color: Color.black.opacity(theme.isDarkMode ? 0.35 : 0.3), radius: 40, x: 0, y: 25)
         }
         .transition(.scale.combined(with: .opacity))
-        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: currentStep)
+        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: viewModel.currentStep)
     }
     
     // MARK: - Bottom Floating Card (Compact Crystal Glass)
     
     private var bottomCard: some View {
-        let step = steps[currentStep]
+        let step = viewModel.currentStepData
         
         return VStack(spacing: 20) {
             // Title and subtitle
@@ -257,7 +224,7 @@ struct OnboardingScreensView: View {
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(theme.colors.textPrimary)
                     .multilineTextAlignment(.center)
-                    .id("title-\(currentStep)")
+                    .id("title-\(viewModel.currentStep)")
                 
                 Text(step.subtitle)
                     .font(.system(size: 15))
@@ -265,17 +232,17 @@ struct OnboardingScreensView: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
                     .padding(.horizontal, 4)
-                    .id("subtitle-\(currentStep)")
+                    .id("subtitle-\(viewModel.currentStep)")
             }
             .transition(.opacity.combined(with: .move(edge: .bottom)))
-            .animation(.spring(response: 0.6, dampingFraction: 0.8), value: currentStep)
+            .animation(.spring(response: 0.6, dampingFraction: 0.8), value: viewModel.currentStep)
             
             // Progress indicators
             HStack(spacing: 8) {
-                ForEach(0..<steps.count, id: \.self) { index in
+                ForEach(0..<viewModel.steps.count, id: \.self) { index in
                     Capsule()
                         .fill(
-                            index == currentStep
+                            index == viewModel.currentStep
                                 ? LinearGradient(
                                     colors: [
                                         step.accentColor,
@@ -296,20 +263,20 @@ struct OnboardingScreensView: View {
                         .overlay(
                             Capsule()
                                 .stroke(
-                                    index == currentStep
+                                    index == viewModel.currentStep
                                         ? theme.colors.cardStroke.opacity(0.0)
                                         : theme.colors.cardStroke,
-                                    lineWidth: index == currentStep ? 0 : 1.5
+                                    lineWidth: index == viewModel.currentStep ? 0 : 1.5
                                 )
                         )
-                        .frame(width: index == currentStep ? 36 : 10, height: 10)
+                        .frame(width: index == viewModel.currentStep ? 36 : 10, height: 10)
                         .shadow(
-                            color: index == currentStep ? step.accentColor.opacity(0.5) : .clear,
+                            color: index == viewModel.currentStep ? step.accentColor.opacity(0.5) : .clear,
                             radius: 10,
                             x: 0,
                             y: 5
                         )
-                        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: currentStep)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: viewModel.currentStep)
                 }
             }
             
@@ -373,7 +340,7 @@ struct OnboardingScreensView: View {
     // MARK: - Action Button (Crystal Glass)
     
     private var actionButton: some View {
-        let step = steps[currentStep]
+        let step = viewModel.currentStepData
         
         return ZStack {
             // Button glow
@@ -395,21 +362,17 @@ struct OnboardingScreensView: View {
             
             Button(action: {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    if currentStep < steps.count - 1 {
-                        currentStep += 1
-                    } else {
-                        onComplete()
-                    }
+                    viewModel.nextStep()
                 }
             }) {
                 HStack(spacing: 10) {
-                    Text(currentStep < steps.count - 1 ? "Next" : "Get Started")
+                    Text(viewModel.buttonTitle)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(theme.colors.textPrimary)
                     
-                    Image(systemName: currentStep < steps.count - 1 ? "arrow.right" : "arrow.right.circle.fill")
+                    Image(systemName: viewModel.buttonIcon)
                         .font(.system(size: 19, weight: .bold))
-                        .foregroundColor(currentStep < steps.count - 1 ? theme.colors.textPrimary : step.accentColor)
+                        .foregroundColor(viewModel.isLastStep ? step.accentColor : theme.colors.textPrimary)
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
@@ -456,7 +419,7 @@ struct OnboardingScreensView: View {
     private var skipButton: some View {
         Button(action: {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                onComplete()
+                viewModel.skip()
             }
         }) {
             Text("Skip")
@@ -506,7 +469,7 @@ struct PremiumButtonStyle: ButtonStyle {
 
 #Preview {
     NavigationStack {
-        OnboardingScreensView {
+        OnboardingView {
             print("Onboarding completed")
         }
         .environmentObject(Theme())

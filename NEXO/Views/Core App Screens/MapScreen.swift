@@ -7,87 +7,12 @@
 
 import SwiftUI
 import MapKit
-import Combine
-import CoreLocation
-
-enum ViewMode {
-    case map
-    case list
-}
 
 struct MapScreen: View {
     @EnvironmentObject private var theme: Theme
-
-    @State private var selectedActivity: Activity? = nil
-    @State private var viewMode: ViewMode = .map
-    @State private var savedActivities = Set<String>()
-    @StateObject private var mapViewModel = MapViewModel()
+    @StateObject private var viewModel = MapScreenViewModel()
     
     var onActivityClick: (Activity) -> Void
-    
-    // AI-suggested activities
-    let aiSuggestions: [Activity] = [
-        Activity(
-            id: "ai-1",
-            title: "Morning Beach Volleyball Match",
-            sportType: "Volleyball",
-            sportIcon: "🏐",
-            hostName: "Emma Wilson",
-            hostAvatar: "https://i.pravatar.cc/150?img=5",
-            date: "Today",
-            time: "8:00 AM",
-            location: "Santa Monica Beach",
-            distance: "1.2 mi",
-            spotsTotal: 12,
-            spotsTaken: 8,
-            level: "Intermediate"
-        ),
-        Activity(
-            id: "ai-2",
-            title: "Evening Running Group",
-            sportType: "Running",
-            sportIcon: "🏃",
-            hostName: "Michael Chen",
-            hostAvatar: "https://i.pravatar.cc/150?img=12",
-            date: "Today",
-            time: "6:30 PM",
-            location: "Central Park",
-            distance: "0.8 mi",
-            spotsTotal: 15,
-            spotsTaken: 10,
-            level: "All Levels"
-        ),
-        Activity(
-            id: "ai-3",
-            title: "Yoga & Meditation Session",
-            sportType: "Yoga",
-            sportIcon: "🧘",
-            hostName: "Sarah Johnson",
-            hostAvatar: "https://i.pravatar.cc/150?img=9",
-            date: "Tomorrow",
-            time: "7:00 AM",
-            location: "Zen Studio",
-            distance: "1.5 mi",
-            spotsTotal: 20,
-            spotsTaken: 15,
-            level: "Beginner"
-        ),
-        Activity(
-            id: "ai-4",
-            title: "Pickup Basketball Game",
-            sportType: "Basketball",
-            sportIcon: "🏀",
-            hostName: "James Rodriguez",
-            hostAvatar: "https://i.pravatar.cc/150?img=15",
-            date: "Tomorrow",
-            time: "5:00 PM",
-            location: "Downtown Court",
-            distance: "2.1 mi",
-            spotsTotal: 10,
-            spotsTaken: 7,
-            level: "Intermediate"
-        )
-    ]
     
     var body: some View {
         ZStack {
@@ -160,12 +85,28 @@ struct MapScreen: View {
         VStack(spacing: 0) {
             headerView
             
-            if viewMode == .map {
+            if viewModel.isLoading {
+                loadingView
+            } else if viewModel.isMapMode {
                 mapView
             } else {
                 listView
             }
         }
+    }
+    
+    // MARK: - Loading View
+    
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
+                .scaleEffect(1.2)
+            Text("Loading AI suggestions...")
+                .font(.system(size: 14))
+                .foregroundColor(theme.colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     // MARK: - Header View
@@ -191,12 +132,12 @@ struct MapScreen: View {
     private var headerTopSection: some View {
         HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Sessions")
+                Text(viewModel.headerTitle)
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(theme.colors.textPrimary)
                     .tracking(-0.5)
                 
-                Text("AI-powered recommendations")
+                Text(viewModel.headerSubtitle)
                     .font(.system(size: 14))
                     .foregroundColor(theme.colors.textSecondary)
             }
@@ -246,7 +187,10 @@ struct MapScreen: View {
     }
     
     private var mapToggleButton: some View {
-        Button(action: { viewMode = .map }) {
+        Button(action: {
+            viewModel.switchToMapMode()
+            viewModel.trackViewModeChanged(.map)
+        }) {
             HStack(spacing: 8) {
                 Image(systemName: "map")
                     .font(.system(size: 16))
@@ -256,15 +200,18 @@ struct MapScreen: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 36)
-            .foregroundColor(viewMode == .map ? .white : theme.colors.textSecondary)
-            .background(viewMode == .map ? theme.colors.accentGreen : Color.clear)
+            .foregroundColor(viewModel.isMapMode ? .white : theme.colors.textSecondary)
+            .background(viewModel.isMapMode ? theme.colors.accentGreen : Color.clear)
             .cornerRadius(12)
-            .shadow(color: viewMode == .map ? .black.opacity(0.1) : .clear, radius: 4, x: 0, y: 2)
+            .shadow(color: viewModel.isMapMode ? .black.opacity(0.1) : .clear, radius: 4, x: 0, y: 2)
         }
     }
     
     private var listToggleButton: some View {
-        Button(action: { viewMode = .list }) {
+        Button(action: {
+            viewModel.switchToListMode()
+            viewModel.trackViewModeChanged(.list)
+        }) {
             HStack(spacing: 8) {
                 Image(systemName: "list.bullet")
                     .font(.system(size: 16))
@@ -274,10 +221,10 @@ struct MapScreen: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 36)
-            .foregroundColor(viewMode == .list ? .white : theme.colors.textSecondary)
-            .background(viewMode == .list ? theme.colors.accentGreen : Color.clear)
+            .foregroundColor(viewModel.isListMode ? .white : theme.colors.textSecondary)
+            .background(viewModel.isListMode ? theme.colors.accentGreen : Color.clear)
             .cornerRadius(12)
-            .shadow(color: viewMode == .list ? .black.opacity(0.1) : .clear, radius: 4, x: 0, y: 2)
+            .shadow(color: viewModel.isListMode ? .black.opacity(0.1) : .clear, radius: 4, x: 0, y: 2)
         }
     }
     
@@ -285,120 +232,57 @@ struct MapScreen: View {
     
     private var mapView: some View {
         ZStack {
-            RealMapView(viewModel: mapViewModel)
-                .cornerRadius(24)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(theme.colors.cardStroke, lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
-                .padding(.horizontal, 16)
+            Map(position: $viewModel.position) {
+                UserAnnotation()
+            }
+            .onMapCameraChange { context in
+                viewModel.updateRegion(context.region)
+            }
+            .cornerRadius(24)
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+            .padding(.horizontal, 16)
             
-            ForEach(Array(aiSuggestions.enumerated()), id: \.element.id) { index, activity in
+            // Activity Pins
+            ForEach(Array(viewModel.aiSuggestions.enumerated()), id: \.element.id) { index, activity in
                 ActivityPin(
                     activity: activity,
-                    isSelected: selectedActivity?.id == activity.id,
-                    position: pinPosition(for: index),
+                    isSelected: viewModel.isActivitySelected(activity),
+                    position: viewModel.getPinPosition(for: index),
                     onTap: {
-                        withAnimation(.spring(response: 0.3)) {
-                            selectedActivity = activity
-                        }
+                        viewModel.selectActivity(activity)
+                        viewModel.trackActivitySelected(activity)
                     }
                 )
             }
             
+            // Map Controls
             VStack {
                 Spacer()
                 
                 HStack {
                     Spacer()
                     
-                    VStack(spacing: 8) {
-                        // Zoom Controls
-                        VStack(spacing: 0) {
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    mapViewModel.zoomIn()
-                                }
-                            }) {
-                                Text("+")
-                                    .font(.system(size: 20, weight: .light))
-                                    .foregroundColor(theme.colors.textPrimary)
-                                    .frame(width: 44, height: 44)
-                            }
-                            
-                            Divider()
-                                .background(theme.colors.cardStroke)
-                            
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    mapViewModel.zoomOut()
-                                }
-                            }) {
-                                Text("−")
-                                    .font(.system(size: 20, weight: .light))
-                                    .foregroundColor(theme.colors.textPrimary)
-                                    .frame(width: 44, height: 44)
-                            }
-                        }
-                        .frame(width: 44)
-                        .background(theme.colors.cardBackground)
-                        .background(theme.colors.barMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(theme.colors.cardStroke, lineWidth: 1)
-                        )
-                        .cornerRadius(16)
-                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-                        
-                        // Location Button
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                mapViewModel.centerOnUser()
-                            }
-                        }) {
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(theme.colors.textPrimary)
-                                .frame(width: 44, height: 44)
-                        }
-                        .background(theme.colors.cardBackground)
-                        .background(theme.colors.barMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(theme.colors.cardStroke, lineWidth: 1)
-                        )
-                        .cornerRadius(16)
-                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-                        
-                        // Filters Button
-                        Button(action: {}) {
-                            Image(systemName: "slider.horizontal.3")
-                                .font(.system(size: 20))
-                                .foregroundColor(.white)
-                                .frame(width: 44, height: 44)
-                        }
-                        .background(theme.colors.accentPurple)
-                        .cornerRadius(16)
-                        .shadow(color: theme.colors.accentPurple.opacity(0.4), radius: 8, x: 0, y: 4)
-                    }
-                    .padding(.trailing, 24)
-                    .padding(.bottom, selectedActivity != nil ? 180 : 60)
+                    mapControlsView
                 }
             }
             
-            if let activity = selectedActivity {
+            // Selected Activity Card
+            if let activity = viewModel.selectedActivity {
                 VStack {
                     Spacer()
                     
                     SelectedActivityCard(
                         activity: activity,
                         onClose: {
-                            withAnimation(.spring(response: 0.3)) {
-                                selectedActivity = nil
-                            }
+                            viewModel.deselectActivity()
                         },
                         onJoin: {
+                            viewModel.joinActivity(activity)
+                            viewModel.trackActivityJoin(activity)
                             onActivityClick(activity)
                         }
                     )
@@ -410,101 +294,113 @@ struct MapScreen: View {
         }
     }
     
+    private var mapControlsView: some View {
+        VStack(spacing: 8) {
+            // Zoom Controls
+            VStack(spacing: 0) {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        viewModel.zoomIn()
+                        viewModel.trackZoomIn()
+                    }
+                }) {
+                    Text("+")
+                        .font(.system(size: 20, weight: .light))
+                        .foregroundColor(theme.colors.textPrimary)
+                        .frame(width: 44, height: 44)
+                }
+                
+                Divider()
+                    .background(theme.colors.cardStroke)
+                
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        viewModel.zoomOut()
+                        viewModel.trackZoomOut()
+                    }
+                }) {
+                    Text("−")
+                        .font(.system(size: 20, weight: .light))
+                        .foregroundColor(theme.colors.textPrimary)
+                        .frame(width: 44, height: 44)
+                }
+            }
+            .frame(width: 44)
+            .background(theme.colors.cardBackground)
+            .background(theme.colors.barMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+            )
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+            
+            // Location Button
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    viewModel.centerOnUser()
+                    viewModel.trackCenterOnUser()
+                }
+            }) {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(theme.colors.textPrimary)
+                    .frame(width: 44, height: 44)
+            }
+            .background(theme.colors.cardBackground)
+            .background(theme.colors.barMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+            )
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+            
+            // Filters Button
+            Button(action: {}) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 20))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+            }
+            .background(theme.colors.accentPurple)
+            .cornerRadius(16)
+            .shadow(color: theme.colors.accentPurple.opacity(0.4), radius: 8, x: 0, y: 4)
+        }
+        .padding(.trailing, 24)
+        .padding(.bottom, viewModel.hasSelectedActivity ? 180 : 60)
+    }
+    
     // MARK: - List View
     
     private var listView: some View {
         ScrollView {
             VStack(spacing: 12) {
                 // AI Info Banner
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(theme.colors.cardBackground)
-                            .background(theme.colors.barMaterial)
-                        
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
-                    }
-                    .frame(width: 44, height: 44)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Personalized For You")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.white)
-                        
-                        Text("Based on your activity & preferences")
-                            .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.9))
-                    }
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    LinearGradient(
-                        colors: [
-                            theme.colors.accentPurple,
-                            theme.colors.accentPink
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .cornerRadius(16)
-                .shadow(color: theme.colors.accentPurple.opacity(0.3), radius: 8, x: 0, y: 4)
+                personalizedBanner
                 
                 // Why This Section
-                HStack(alignment: .top, spacing: 8) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        theme.colors.accentPurple,
-                                        theme.colors.accentPink
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 16))
-                            .foregroundColor(.white)
-                    }
-                    .frame(width: 32, height: 32)
-                    
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Why these activities?")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(theme.colors.textPrimary)
-                        
-                        Text("We've selected activities matching your skill level, preferred sports, and typical schedule. These are nearby and have availability.")
-                            .font(.system(size: 12))
-                            .foregroundColor(theme.colors.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(theme.colors.cardBackground)
-                .background(theme.colors.barMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(theme.colors.cardStroke, lineWidth: 1)
-                )
-                .cornerRadius(16)
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                whyTheseSection
                 
                 // Activity Cards
-                ForEach(aiSuggestions) { activity in
+                ForEach(viewModel.aiSuggestions) { activity in
                     AIActivityCard(
                         activity: activity,
-                        isSaved: savedActivities.contains(activity.id),
-                        onToggleSave: { toggleSave(activity.id) },
-                        onJoin: { onActivityClick(activity) }
+                        isSaved: viewModel.isSaved(activity.id),
+                        onToggleSave: {
+                            viewModel.toggleSave(activity.id)
+                            viewModel.trackActivitySave(activity)
+                        },
+                        onJoin: {
+                            viewModel.joinActivity(activity)
+                            viewModel.trackActivityJoin(activity)
+                            onActivityClick(activity)
+                        }
                     )
                     .environmentObject(theme)
+                    .onAppear {
+                        viewModel.trackActivityView(activity)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -513,88 +409,87 @@ struct MapScreen: View {
         }
     }
     
-    // MARK: - Helper Methods
-    
-    private func toggleSave(_ id: String) {
-        if savedActivities.contains(id) {
-            savedActivities.remove(id)
-        } else {
-            savedActivities.insert(id)
+    private var personalizedBanner: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(theme.colors.cardBackground)
+                    .background(theme.colors.barMaterial)
+                
+                Image(systemName: "sparkles")
+                    .font(.system(size: 20))
+                    .foregroundColor(.white)
+            }
+            .frame(width: 44, height: 44)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(viewModel.personalizedTitle)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                Text(viewModel.personalizedDescription)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.9))
+            }
         }
-    }
-    
-    private func pinPosition(for index: Int) -> CGPoint {
-        let positions: [(CGFloat, CGFloat)] = [
-            (0.32, 0.22),
-            (0.62, 0.38),
-            (0.28, 0.52),
-            (0.72, 0.68)
-        ]
-        let position = positions[index % positions.count]
-        return CGPoint(x: position.0, y: position.1)
-    }
-}
-
-// MARK: - Map ViewModel
-
-class MapViewModel: ObservableObject {
-    @Published var position: MapCameraPosition = .region(
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 34.0522, longitude: -118.2437),
-            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            LinearGradient(
+                colors: [
+                    theme.colors.accentPurple,
+                    theme.colors.accentPink
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         )
-    )
-    
-    @Published var currentRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 34.0522, longitude: -118.2437),
-        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-    )
-    
-    private let locationManager = CLLocationManager()
-    
-    init() {
-        locationManager.requestWhenInUseAuthorization()
+        .cornerRadius(16)
+        .shadow(color: theme.colors.accentPurple.opacity(0.3), radius: 8, x: 0, y: 4)
     }
     
-    func zoomIn() {
-        let newSpan = MKCoordinateSpan(
-            latitudeDelta: max(currentRegion.span.latitudeDelta * 0.5, 0.001),
-            longitudeDelta: max(currentRegion.span.longitudeDelta * 0.5, 0.001)
+    private var whyTheseSection: some View {
+        HStack(alignment: .top, spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                theme.colors.accentPurple,
+                                theme.colors.accentPink
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16))
+                    .foregroundColor(.white)
+            }
+            .frame(width: 32, height: 32)
+            
+            VStack(alignment: .leading, spacing: 6) {
+                Text(viewModel.whyTheseTitle)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(theme.colors.textPrimary)
+                
+                Text(viewModel.whyTheseDescription)
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.colors.cardBackground)
+        .background(theme.colors.barMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(theme.colors.cardStroke, lineWidth: 1)
         )
-        currentRegion.span = newSpan
-        position = .region(currentRegion)
-    }
-    
-    func zoomOut() {
-        let newSpan = MKCoordinateSpan(
-            latitudeDelta: min(currentRegion.span.latitudeDelta * 2.0, 180),
-            longitudeDelta: min(currentRegion.span.longitudeDelta * 2.0, 180)
-        )
-        currentRegion.span = newSpan
-        position = .region(currentRegion)
-    }
-    
-    func centerOnUser() {
-        let status = locationManager.authorizationStatus
-        if status == .notDetermined {
-            locationManager.requestWhenInUseAuthorization()
-        }
-        position = .userLocation(fallback: .automatic)
-    }
-}
-
-// MARK: - Real Map View with MapKit
-
-struct RealMapView: View {
-    @ObservedObject var viewModel: MapViewModel
-    
-    var body: some View {
-        Map(position: $viewModel.position) {
-            UserAnnotation()
-        }
-        .onMapCameraChange { context in
-            viewModel.currentRegion = context.region
-        }
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
 }
 

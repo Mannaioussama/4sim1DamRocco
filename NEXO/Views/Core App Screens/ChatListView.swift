@@ -7,91 +7,11 @@
 
 import SwiftUI
 
-// MARK: - Chat Model
-
-struct Chat: Identifiable {
-    let id: String
-    let participantNames: String
-    let participantAvatars: [String]
-    let lastMessage: String
-    let lastMessageTime: String
-    let unreadCount: Int
-    let isGroup: Bool
-}
-
 struct ChatListView: View {
     @EnvironmentObject private var theme: Theme
-    @State private var searchQuery = ""
+    @StateObject private var viewModel = ChatListViewModel()
     
     var onChatSelect: (String) -> Void
-    
-    // Mock chats data
-    let mockChats: [Chat] = [
-        Chat(
-            id: "1",
-            participantNames: "Sarah Johnson",
-            participantAvatars: ["https://i.pravatar.cc/150?img=9"],
-            lastMessage: "See you at the yoga session tomorrow!",
-            lastMessageTime: "2m",
-            unreadCount: 2,
-            isGroup: false
-        ),
-        Chat(
-            id: "2",
-            participantNames: "Basketball Squad",
-            participantAvatars: ["https://i.pravatar.cc/150?img=15", "https://i.pravatar.cc/150?img=12"],
-            lastMessage: "Who's bringing the ball?",
-            lastMessageTime: "15m",
-            unreadCount: 5,
-            isGroup: true
-        ),
-        Chat(
-            id: "3",
-            participantNames: "Michael Chen",
-            participantAvatars: ["https://i.pravatar.cc/150?img=12"],
-            lastMessage: "Great run today! Same time next week?",
-            lastMessageTime: "1h",
-            unreadCount: 0,
-            isGroup: false
-        ),
-        Chat(
-            id: "4",
-            participantNames: "Tennis Partners",
-            participantAvatars: ["https://i.pravatar.cc/150?img=5", "https://i.pravatar.cc/150?img=9"],
-            lastMessage: "Court is booked for Saturday",
-            lastMessageTime: "3h",
-            unreadCount: 1,
-            isGroup: true
-        ),
-        Chat(
-            id: "5",
-            participantNames: "Emma Wilson",
-            participantAvatars: ["https://i.pravatar.cc/150?img=5"],
-            lastMessage: "Thanks for the volleyball tips!",
-            lastMessageTime: "Yesterday",
-            unreadCount: 0,
-            isGroup: false
-        ),
-        Chat(
-            id: "6",
-            participantNames: "James Rodriguez",
-            participantAvatars: ["https://i.pravatar.cc/150?img=15"],
-            lastMessage: "Let's do another pickup game soon",
-            lastMessageTime: "Yesterday",
-            unreadCount: 0,
-            isGroup: false
-        )
-    ]
-    
-    var filteredChats: [Chat] {
-        if searchQuery.isEmpty {
-            return mockChats
-        }
-        return mockChats.filter { chat in
-            chat.participantNames.localizedCaseInsensitiveContains(searchQuery) ||
-            chat.lastMessage.localizedCaseInsensitiveContains(searchQuery)
-        }
-    }
     
     var body: some View {
         ZStack {
@@ -99,7 +19,7 @@ struct ChatListView: View {
             theme.colors.backgroundGradient
                 .ignoresSafeArea()
             
-            // Floating Orbs (kept; they blend in both modes)
+            // Floating Orbs
             FloatingOrb(
                 size: 288,
                 color: LinearGradient(
@@ -147,61 +67,152 @@ struct ChatListView: View {
             
             VStack(spacing: 0) {
                 // Header
-                VStack(spacing: 0) {
-                    Text("Messages")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(theme.colors.textPrimary)
-                        .tracking(-0.5)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.bottom, 10)
-                    
-                    // Search Bar
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 18))
-                            .foregroundColor(theme.colors.textSecondary)
-                        
-                        TextField("Search conversations...", text: $searchQuery)
-                            .font(.system(size: 15))
-                            .foregroundColor(theme.colors.textPrimary)
-                            .tint(theme.colors.accentPurple)
-                            .accentColor(theme.colors.accentPurple)
-                    }
-                    .padding(.horizontal, 12)
-                    .frame(height: 40)
-                    .background(theme.colors.cardBackground)
-                    .background(theme.colors.barMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(theme.colors.cardStroke, lineWidth: 1)
-                    )
-                    .cornerRadius(12)
-                }
-                .padding(16)
-                .background(theme.colors.surfaceSecondary)
-                .background(theme.colors.barMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(theme.colors.cardStroke, lineWidth: 1)
-                )
-                .cornerRadius(24)
-                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
+                headerSection
                 
                 // Chat List
-                ScrollView {
-                    VStack(spacing: 8) {
-                        ForEach(filteredChats) { chat in
-                            ChatRow(chat: chat, onTap: { onChatSelect(chat.id) })
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 100)
+                if viewModel.isLoading {
+                    loadingView
+                } else if viewModel.hasSearchResults || !viewModel.isSearching {
+                    chatListContent
+                } else {
+                    emptySearchView
                 }
             }
         }
+    }
+    
+    // MARK: - Header Section
+    
+    private var headerSection: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Messages")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(theme.colors.textPrimary)
+                    .tracking(-0.5)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                if viewModel.totalUnreadCount > 0 {
+                    HStack(spacing: 4) {
+                        Text("\(viewModel.totalUnreadCount)")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(theme.colors.accentGreen)
+                    .cornerRadius(10)
+                }
+            }
+            .padding(.bottom, 10)
+            
+            // Search Bar
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 18))
+                    .foregroundColor(theme.colors.textSecondary)
+                
+                TextField("Search conversations...", text: $viewModel.searchQuery)
+                    .font(.system(size: 15))
+                    .foregroundColor(theme.colors.textPrimary)
+                    .tint(theme.colors.accentPurple)
+                    .accentColor(theme.colors.accentPurple)
+                
+                if viewModel.isSearching {
+                    Button(action: { viewModel.clearSearch() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(theme.colors.textSecondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 40)
+            .background(theme.colors.cardBackground)
+            .background(theme.colors.barMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+            )
+            .cornerRadius(12)
+        }
+        .padding(16)
+        .background(theme.colors.surfaceSecondary)
+        .background(theme.colors.barMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(theme.colors.cardStroke, lineWidth: 1)
+        )
+        .cornerRadius(24)
+        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+    }
+    
+    // MARK: - Chat List Content
+    
+    private var chatListContent: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                ForEach(viewModel.filteredChats) { chat in
+                    ChatRow(
+                        chat: chat,
+                        onTap: {
+                            viewModel.selectChat(chat.id)
+                            viewModel.trackChatOpened(chat.id)
+                            onChatSelect(chat.id)
+                        }
+                    )
+                    .environmentObject(theme)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 100)
+        }
+    }
+    
+    // MARK: - Loading View
+    
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
+                .scaleEffect(1.2)
+            Text("Loading conversations...")
+                .font(.system(size: 14))
+                .foregroundColor(theme.colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    // MARK: - Empty Search View
+    
+    private var emptySearchView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 48))
+                .foregroundColor(theme.colors.textSecondary)
+            Text("No conversations found")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(theme.colors.textPrimary)
+            Text("Try searching with different keywords")
+                .font(.system(size: 14))
+                .foregroundColor(theme.colors.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            Button(action: { viewModel.clearSearch() }) {
+                Text("Clear Search")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(theme.colors.accentPurple)
+                    .cornerRadius(20)
+            }
+            .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -320,9 +331,6 @@ struct ChatRow: View {
         .buttonStyle(ScaleButtonStyle())
     }
 }
-
-// NOTE: Reusable components defined in other files:
-// - FloatingOrb, ScaleButtonStyle, Color.init(hex:)
 
 // MARK: - Preview
 

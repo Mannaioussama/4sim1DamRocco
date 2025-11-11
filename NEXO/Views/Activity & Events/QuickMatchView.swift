@@ -7,112 +7,12 @@
 
 import SwiftUI
 
-// MARK: - Models
-struct MatchProfile: Identifiable, Equatable {
-    let id = UUID()
-    let name: String
-    let age: Int
-    let avatar: String
-    let coverImage: String
-    let location: String
-    let distance: String
-    let bio: String
-    let sports: [SportInfo]
-    let interests: [String]
-    let rating: Double
-    let activitiesJoined: Int
-}
-
-struct SportInfo: Identifiable, Equatable {
-    let id = UUID()
-    let name: String
-    let icon: String
-    let level: String
-}
-
 // MARK: - Main View
 struct QuickMatchView: View {
     var onBack: (() -> Void)?
 
     @EnvironmentObject private var theme: Theme
-
-    @State private var currentIndex: Int = 0
-    @State private var matchedProfile: MatchProfile?
-    @State private var showMatch = false
-    @State private var likedCount: Int = 0
-
-    // Mock Data
-    private let profiles: [MatchProfile] = [
-        .init(
-            name: "Jessica", age: 26,
-            avatar: "https://i.pravatar.cc/400?img=45",
-            coverImage: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800&h=600&fit=crop",
-            location: "Downtown", distance: "2.3 mi",
-            bio: "Love staying active and meeting new people! Always up for a challenge 🏃‍♀️",
-            sports: [
-                .init(name: "Running", icon: "🏃", level: "Intermediate"),
-                .init(name: "Yoga", icon: "🧘", level: "Advanced"),
-                .init(name: "Tennis", icon: "🎾", level: "Beginner")
-            ],
-            interests: ["Morning workouts", "Trail running", "Wellness"],
-            rating: 4.8, activitiesJoined: 34
-        ),
-        .init(
-            name: "Marcus", age: 29,
-            avatar: "https://i.pravatar.cc/400?img=12",
-            coverImage: "https://images.unsplash.com/photo-1546483875-ad9014c88eba?w=800&h=600&fit=crop",
-            location: "West Side", distance: "1.8 mi",
-            bio: "Basketball enthusiast and fitness lover. Let's ball! 🏀",
-            sports: [
-                .init(name: "Basketball", icon: "🏀", level: "Advanced"),
-                .init(name: "Swimming", icon: "🏊", level: "Intermediate"),
-                .init(name: "Cycling", icon: "🚴", level: "Intermediate")
-            ],
-            interests: ["Team sports", "Competitive", "Weekend warrior"],
-            rating: 4.9, activitiesJoined: 52
-        ),
-        .init(
-            name: "Olivia", age: 24,
-            avatar: "https://i.pravatar.cc/400?img=32",
-            coverImage: "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=800&h=600&fit=crop",
-            location: "North Beach", distance: "3.1 mi",
-            bio: "Beach volleyball and ocean lover 🌊 Looking for active friends!",
-            sports: [
-                .init(name: "Volleyball", icon: "🏐", level: "Advanced"),
-                .init(name: "Surfing", icon: "🏄", level: "Intermediate"),
-                .init(name: "Beach Sports", icon: "⛱️", level: "Intermediate")
-            ],
-            interests: ["Beach activities", "Social sports", "Outdoor fun"],
-            rating: 4.7, activitiesJoined: 28
-        ),
-        .init(
-            name: "David", age: 31,
-            avatar: "https://i.pravatar.cc/400?img=15",
-            coverImage: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&h=600&fit=crop",
-            location: "Central Park", distance: "1.2 mi",
-            bio: "Gym rat turned outdoor enthusiast. Always exploring new activities!",
-            sports: [
-                .init(name: "Hiking", icon: "🥾", level: "Advanced"),
-                .init(name: "Rock Climbing", icon: "🧗", level: "Intermediate"),
-                .init(name: "CrossFit", icon: "💪", level: "Advanced")
-            ],
-            interests: ["Adventure", "Strength training", "Nature"],
-            rating: 4.9, activitiesJoined: 67
-        )
-    ]
-
-    // MARK: - Computed
-    private var currentProfile: MatchProfile? {
-        guard currentIndex < profiles.count else { return nil }
-        return profiles[currentIndex]
-    }
-    
-    private var nextProfiles: [MatchProfile] {
-        let start = currentIndex + 1
-        let end = min(start + 2, profiles.count)
-        if start >= end { return [] }
-        return Array(profiles[start..<end])
-    }
+    @StateObject private var viewModel = QuickMatchViewModel()
 
     // MARK: - View
     var body: some View {
@@ -121,11 +21,9 @@ struct QuickMatchView: View {
             backgroundOrbs
 
             VStack(spacing: 0) {
-                // Removed the in-content header to avoid overlapping with the navigation bar
-
                 Spacer()
                 
-                if let profile = currentProfile {
+                if let profile = viewModel.currentProfile {
                     cardStack(profile: profile)
                 } else {
                     emptyState
@@ -134,11 +32,10 @@ struct QuickMatchView: View {
                 Spacer()
             }
 
-            if showMatch, let matched = matchedProfile {
+            if viewModel.showMatch, let matched = viewModel.matchedProfile {
                 matchModal(for: matched)
             }
         }
-        // Do NOT ignore safe areas for the whole screen so content lays below the nav/status bar
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if let onBack {
@@ -164,41 +61,9 @@ struct QuickMatchView: View {
         .toolbarBackground(theme.colors.barMaterial, for: .navigationBar)
         .navigationBarBackButtonHidden(onBack != nil)
     }
-
-    // MARK: - Handlers
-    private func handleSwipe(_ direction: SwipeDirection, _ profile: MatchProfile) {
-        if direction == .right {
-            likedCount += 1
-            if Bool.random() {
-                matchedProfile = profile
-                withAnimation(.spring()) {
-                    showMatch = true
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    withAnimation {
-                        showMatch = false
-                    }
-                }
-            }
-        }
-        
-        withAnimation(.spring(response: 0.3)) {
-            currentIndex += 1
-        }
-    }
-    
-    private func handleLike() {
-        guard let profile = currentProfile else { return }
-        handleSwipe(.right, profile)
-    }
-    
-    private func handlePass() {
-        guard let profile = currentProfile else { return }
-        handleSwipe(.left, profile)
-    }
 }
 
-// MARK: - Background (adapted)
+// MARK: - Background
 private extension QuickMatchView {
     var backgroundOrbs: some View {
         ZStack {
@@ -232,23 +97,6 @@ private extension QuickMatchView {
                 .offset(x: 120, y: -80)
         }
         .allowsHitTesting(false)
-    }
-}
-
-// MARK: - Header
-extension QuickMatchView {
-    private var header: some View {
-        HStack {
-            if let onBack {
-                Button(action: onBack) {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(theme.colors.textPrimary)
-                        .padding(6)
-                }
-            }
-            Spacer()
-        }
     }
 }
 
@@ -302,7 +150,7 @@ extension QuickMatchView {
             
             // Base card (level 0)
             SwipeCard(profile: profile) { direction in
-                handleSwipe(direction, profile)
+                viewModel.handleSwipe(direction, profile)
             }
             .environmentObject(theme)
             .frame(width: 340, height: 530)
@@ -312,7 +160,7 @@ extension QuickMatchView {
             VStack {
                 HStack {
                     Spacer()
-                    LikesBadge(count: likedCount)
+                    LikesBadge(count: viewModel.likedCount)
                         .environmentObject(theme)
                         .padding(.top, -70)
                         .padding(.trailing, 8)
@@ -329,15 +177,13 @@ extension QuickMatchView {
     }
     
     private var previewStack: some View {
-        ForEach(Array(nextProfiles.enumerated()), id: \.element.id) { index, _ in
-            // Keep the structure, but visually neutralize the layers
+        ForEach(Array(viewModel.nextProfiles.enumerated()), id: \.element.id) { index, _ in
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color.clear) // no fill so it doesn’t look like another card
+                .fill(Color.clear)
                 .overlay(
                     RoundedRectangle(cornerRadius: 24)
-                        .stroke(Color.clear, lineWidth: 0) // keep overlay but invisible
+                        .stroke(Color.clear, lineWidth: 0)
                 )
-                // very subtle shadow only in dark mode; none in light mode
                 .shadow(
                     color: .black.opacity(theme.isDarkMode ? 0.12 : 0.0),
                     radius: theme.isDarkMode ? 10 : 0,
@@ -345,14 +191,14 @@ extension QuickMatchView {
                 )
                 .scaleEffect(1 - CGFloat(index + 1) * 0.05)
                 .offset(y: -CGFloat(index + 1) * 10)
-                .opacity(theme.isDarkMode ? (1 - Double(index + 1) * 0.15) : 0) // invisible in light
+                .opacity(theme.isDarkMode ? (1 - Double(index + 1) * 0.15) : 0)
         }
     }
     
     private var actionButtons: some View {
         HStack(spacing: 16) {
-            PassButton(action: handlePass)
-            LikeButton(action: handleLike)
+            PassButton(action: { viewModel.handlePass() })
+            LikeButton(action: { viewModel.handleLike() })
         }
         .environmentObject(theme)
     }
@@ -428,8 +274,6 @@ private struct LikeButton: View {
 }
 
 // MARK: - SwipeCard
-enum SwipeDirection { case left, right }
-
 struct SwipeCard: View {
     @EnvironmentObject private var theme: Theme
     let profile: MatchProfile

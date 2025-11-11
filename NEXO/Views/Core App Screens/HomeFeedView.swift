@@ -9,15 +9,7 @@ import SwiftUI
 
 struct HomeFeedView: View {
     @EnvironmentObject private var theme: Theme
-
-    @State private var searchQuery = ""
-    @State private var savedActivities = Set<String>()
-    @State private var filterSport = "all"
-    @State private var filterDistance: Double = 5
-    @State private var showFilters = false
-    
-    let activities: [Activity]
-    let sportCategories: [SportCategory]
+    @StateObject private var viewModel = HomeFeedViewModel()
     
     var onActivityClick: (Activity) -> Void
     var onSearchClick: (() -> Void)?
@@ -28,22 +20,12 @@ struct HomeFeedView: View {
     var onCreateClick: (() -> Void)?
     var onNotificationsClick: (() -> Void)?
     
-    var filteredActivities: [Activity] {
-        activities.filter { activity in
-            let matchesSearch = searchQuery.isEmpty ||
-                activity.title.localizedCaseInsensitiveContains(searchQuery) ||
-                activity.sportType.localizedCaseInsensitiveContains(searchQuery)
-            let matchesSport = filterSport == "all" || activity.sportType == filterSport
-            return matchesSearch && matchesSport
-        }
-    }
-    
     var body: some View {
         ZStack {
             theme.colors.backgroundGradient
                 .ignoresSafeArea()
             
-            // Orbs left as-is; they blend with both modes
+            // Floating Orbs
             FloatingOrb(
                 size: 128,
                 color: LinearGradient(
@@ -106,157 +88,15 @@ struct HomeFeedView: View {
             
             VStack(spacing: 0) {
                 // Header
-                VStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Discover")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(theme.colors.textPrimary)
-                        
-                        Text("Near You")
-                            .font(.system(size: 15))
-                            .foregroundColor(theme.colors.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 10)
-                    
-                    // Search and Filter
-                    HStack(spacing: 8) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 18))
-                                .foregroundColor(theme.colors.textSecondary)
-                            
-                            TextField("Search activities...", text: $searchQuery)
-                                .font(.system(size: 15))
-                                .foregroundColor(theme.colors.textPrimary)
-                                .tint(theme.colors.accentPurple)
-                                .accentColor(theme.colors.accentPurple)
-                        }
-                        .padding(.horizontal, 12)
-                        .frame(height: 40)
-                        .background(theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.7 : 1))
-                        .background(theme.colors.barMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(theme.colors.cardStroke, lineWidth: 1)
-                        )
-                        .cornerRadius(16)
-                        .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
-                        
-                        Button(action: { showFilters = true }) {
-                            Image(systemName: "slider.horizontal.3")
-                                .font(.system(size: 18))
-                                .foregroundColor(theme.colors.textPrimary)
-                                .frame(width: 40, height: 40)
-                                .background(theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.7 : 1))
-                                .background(theme.colors.barMaterial)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(theme.colors.cardStroke, lineWidth: 1)
-                                )
-                                .cornerRadius(16)
-                                .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
-                }
-                .overlay(alignment: .topTrailing) {
-                    if let onNotificationsClick {
-                        Button(action: onNotificationsClick) {
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                theme.colors.cardBackground,
-                                                theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.6 : 0.8)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .background(theme.colors.barMaterial)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(theme.colors.cardStroke, lineWidth: 1)
-                                    )
-                                Image(systemName: "bell")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(theme.colors.textPrimary)
-                            }
-                            .frame(width: 36, height: 36)
-                            .shadow(color: .black.opacity(theme.isDarkMode ? 0.35 : 0.06), radius: theme.isDarkMode ? 12 : 6, x: 0, y: theme.isDarkMode ? 6 : 3)
-                        }
-                        .buttonStyle(ScaleButtonStyle())
-                        .padding(.trailing, 16)
-                        .padding(.top, 8)
-                        .accessibilityLabel("Notifications")
-                    }
-                }
+                headerSection
                 
                 // Activity Feed
-                ScrollView {
-                    VStack(spacing: 10) {
-                        // Featured Cards Grid
-                        HStack(spacing: 10) {
-                            if let quickMatch = onQuickMatchClick {
-                                CrystalFeatureCard(
-                                    title: "Quick Match",
-                                    subtitle: "Swipe to connect",
-                                    icon: "bolt.fill",
-                                    iconColor: theme.isDarkMode ? theme.colors.accentOrange : Color(hex: "EC4899"),
-                                    gradientColors: theme.isDarkMode
-                                        ? [Color.black.opacity(0.35), Color.black.opacity(0.25)]
-                                        : [Color(hex: "FCE7F3").opacity(0.7), Color(hex: "FBCFE8").opacity(0.6)],
-                                    glowColors: theme.isDarkMode
-                                        ? [theme.colors.accentOrangeGlow.opacity(0.25), theme.colors.accentPurpleGlow.opacity(0.18)]
-                                        : [Color(hex: "FCE7F3").opacity(0.6), Color(hex: "FBCFE8").opacity(0.5)],
-                                    action: quickMatch
-                                )
-                            }
-                            
-                            if let aiMatchmaker = onAIMatchmakerClick {
-                                CrystalFeatureCard(
-                                    title: "AI Matchmaker",
-                                    subtitle: "Find partners",
-                                    icon: "sparkles",
-                                    iconColor: theme.colors.accentPurple,
-                                    gradientColors: theme.isDarkMode
-                                        ? [Color.black.opacity(0.35), Color.black.opacity(0.25)]
-                                        : [Color(hex: "E9D5FF").opacity(0.7), Color(hex: "DDD6FE").opacity(0.6)],
-                                    glowColors: theme.isDarkMode
-                                        ? [theme.colors.accentPurpleGlow.opacity(0.25), theme.colors.accentGreenGlow.opacity(0.18)]
-                                        : [Color(hex: "E9D5FF").opacity(0.6), Color(hex: "DDD6FE").opacity(0.5)],
-                                    action: aiMatchmaker
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        
-                        // Explore More Card
-                        if let searchClick = onSearchClick {
-                            CrystalExploreCard(action: searchClick)
-                                .padding(.horizontal, 16)
-                        }
-                        
-                        // Activity Cards
-                        ForEach(filteredActivities) { activity in
-                            ActivityCrystalCard(
-                                activity: activity,
-                                isSaved: savedActivities.contains(activity.id),
-                                onToggleSave: { toggleSave(activity.id) },
-                                onJoin: { onActivityClick(activity) },
-                                onDetails: onEventDetailsClick
-                            )
-                            .padding(.horizontal, 16)
-                            .environmentObject(theme)
-                        }
-                    }
-                    .padding(.top, 12)
-                    .padding(.bottom, 100)
+                if viewModel.isLoading {
+                    loadingView
+                } else if viewModel.hasFilteredActivities {
+                    activityFeedContent
+                } else {
+                    emptyStateView
                 }
             }
             
@@ -273,22 +113,268 @@ struct HomeFeedView: View {
                 }
             }
         }
-        .sheet(isPresented: $showFilters) {
+        .sheet(isPresented: $viewModel.showFilters) {
             FilterSheet(
-                filterSport: $filterSport,
-                filterDistance: $filterDistance,
-                sportCategories: sportCategories
+                filterSport: $viewModel.filterSport,
+                filterDistance: $viewModel.filterDistance,
+                sportCategories: viewModel.sportCategories
             )
             .environmentObject(theme)
         }
     }
     
-    private func toggleSave(_ id: String) {
-        if savedActivities.contains(id) {
-            savedActivities.remove(id)
-        } else {
-            savedActivities.insert(id)
+    // MARK: - Header Section
+    
+    private var headerSection: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(viewModel.headerTitle)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(theme.colors.textPrimary)
+                
+                Text(viewModel.headerSubtitle)
+                    .font(.system(size: 15))
+                    .foregroundColor(theme.colors.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 10)
+            
+            // Search and Filter
+            HStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 18))
+                        .foregroundColor(theme.colors.textSecondary)
+                    
+                    TextField("Search activities...", text: $viewModel.searchQuery)
+                        .font(.system(size: 15))
+                        .foregroundColor(theme.colors.textPrimary)
+                        .tint(theme.colors.accentPurple)
+                        .accentColor(theme.colors.accentPurple)
+                    
+                    if viewModel.isSearching {
+                        Button(action: { viewModel.clearSearch() }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(theme.colors.textSecondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .frame(height: 40)
+                .background(theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.7 : 1))
+                .background(theme.colors.barMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(theme.colors.cardStroke, lineWidth: 1)
+                )
+                .cornerRadius(16)
+                .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
+                
+                Button(action: {
+                    viewModel.toggleFilters()
+                    viewModel.trackFilterApplied()
+                }) {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 18))
+                            .foregroundColor(theme.colors.textPrimary)
+                            .frame(width: 40, height: 40)
+                            .background(theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.7 : 1))
+                            .background(theme.colors.barMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+                            )
+                            .cornerRadius(16)
+                            .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
+                        
+                        if viewModel.activeFiltersCount > 0 {
+                            Circle()
+                                .fill(theme.colors.accentGreen)
+                                .frame(width: 16, height: 16)
+                                .overlay(
+                                    Text("\(viewModel.activeFiltersCount)")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundColor(.white)
+                                )
+                                .offset(x: 4, y: -4)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 12)
         }
+        .overlay(alignment: .topTrailing) {
+            if let onNotificationsClick {
+                Button(action: onNotificationsClick) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        theme.colors.cardBackground,
+                                        theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.6 : 0.8)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .background(theme.colors.barMaterial)
+                            .overlay(
+                                Circle()
+                                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+                            )
+                        Image(systemName: "bell")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(theme.colors.textPrimary)
+                    }
+                    .frame(width: 36, height: 36)
+                    .shadow(color: .black.opacity(theme.isDarkMode ? 0.35 : 0.06), radius: theme.isDarkMode ? 12 : 6, x: 0, y: theme.isDarkMode ? 6 : 3)
+                }
+                .buttonStyle(ScaleButtonStyle())
+                .padding(.trailing, 16)
+                .padding(.top, 8)
+                .accessibilityLabel("Notifications")
+            }
+        }
+    }
+    
+    // MARK: - Activity Feed Content
+    
+    private var activityFeedContent: some View {
+        ScrollView {
+            VStack(spacing: 10) {
+                // Featured Cards Grid
+                HStack(spacing: 10) {
+                    if let quickMatch = onQuickMatchClick {
+                        CrystalFeatureCard(
+                            title: "Quick Match",
+                            subtitle: "Swipe to connect",
+                            icon: "bolt.fill",
+                            iconColor: theme.isDarkMode ? theme.colors.accentOrange : Color(hex: "EC4899"),
+                            gradientColors: theme.isDarkMode
+                                ? [Color.black.opacity(0.35), Color.black.opacity(0.25)]
+                                : [Color(hex: "FCE7F3").opacity(0.7), Color(hex: "FBCFE8").opacity(0.6)],
+                            glowColors: theme.isDarkMode
+                                ? [theme.colors.accentOrangeGlow.opacity(0.25), theme.colors.accentPurpleGlow.opacity(0.18)]
+                                : [Color(hex: "FCE7F3").opacity(0.6), Color(hex: "FBCFE8").opacity(0.5)],
+                            action: quickMatch
+                        )
+                    }
+                    
+                    if let aiMatchmaker = onAIMatchmakerClick {
+                        CrystalFeatureCard(
+                            title: "AI Matchmaker",
+                            subtitle: "Find partners",
+                            icon: "sparkles",
+                            iconColor: theme.colors.accentPurple,
+                            gradientColors: theme.isDarkMode
+                                ? [Color.black.opacity(0.35), Color.black.opacity(0.25)]
+                                : [Color(hex: "E9D5FF").opacity(0.7), Color(hex: "DDD6FE").opacity(0.6)],
+                            glowColors: theme.isDarkMode
+                                ? [theme.colors.accentPurpleGlow.opacity(0.25), theme.colors.accentGreenGlow.opacity(0.18)]
+                                : [Color(hex: "E9D5FF").opacity(0.6), Color(hex: "DDD6FE").opacity(0.5)],
+                            action: aiMatchmaker
+                        )
+                    }
+                }
+                .padding(.horizontal, 16)
+                
+                // Explore More Card
+                if let searchClick = onSearchClick {
+                    CrystalExploreCard(action: searchClick)
+                        .padding(.horizontal, 16)
+                }
+                
+                // Activity Cards
+                ForEach(viewModel.filteredActivities) { activity in
+                    ActivityCrystalCard(
+                        activity: activity,
+                        isSaved: viewModel.isSaved(activity.id),
+                        onToggleSave: {
+                            viewModel.toggleSave(activity.id)
+                            viewModel.trackActivitySave(activity)
+                        },
+                        onJoin: {
+                            viewModel.joinActivity(activity)
+                            viewModel.trackActivityJoin(activity)
+                            onActivityClick(activity)
+                        },
+                        onDetails: onEventDetailsClick
+                    )
+                    .padding(.horizontal, 16)
+                    .environmentObject(theme)
+                    .onAppear {
+                        viewModel.trackActivityView(activity)
+                    }
+                }
+            }
+            .padding(.top, 12)
+            .padding(.bottom, 100)
+        }
+    }
+    
+    // MARK: - Loading View
+    
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
+                .scaleEffect(1.2)
+            Text("Loading activities...")
+                .font(.system(size: 14))
+                .foregroundColor(theme.colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    // MARK: - Empty State View
+    
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 48))
+                .foregroundColor(theme.colors.textSecondary)
+            Text("No activities found")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(theme.colors.textPrimary)
+            Text("Try adjusting your filters or search")
+                .font(.system(size: 14))
+                .foregroundColor(theme.colors.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            HStack(spacing: 12) {
+                if viewModel.isSearching {
+                    Button(action: { viewModel.clearSearch() }) {
+                        Text("Clear Search")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(theme.colors.accentPurple)
+                            .cornerRadius(20)
+                    }
+                }
+                
+                if viewModel.isFiltering {
+                    Button(action: { viewModel.clearFilters() }) {
+                        Text("Clear Filters")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(theme.colors.accentGreen)
+                            .cornerRadius(20)
+                    }
+                }
+            }
+            .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -783,33 +869,12 @@ struct FilterSheet: View {
 
 #Preview {
     HomeFeedView(
-        activities: [
-            Activity(
-                id: "1",
-                title: "Morning Basketball Game",
-                sportType: "Basketball",
-                sportIcon: "🏀",
-                hostName: "John Doe",
-                hostAvatar: "",
-                date: "Today",
-                time: "9:00 AM",
-                location: "Downtown Court",
-                distance: "2.3 mi",
-                spotsTotal: 10,
-                spotsTaken: 7,
-                level: "Intermediate"
-            )
-        ],
-        sportCategories: [
-            SportCategory(name: "Basketball", icon: "🏀"),
-            SportCategory(name: "Tennis", icon: "🎾")
-        ],
         onActivityClick: { _ in },
         onSearchClick: {},
         onQuickMatchClick: {},
         onAIMatchmakerClick: {},
         onCreateClick: {},
-        onNotificationsClick: {} // preview hook
+        onNotificationsClick: {}
     )
     .environmentObject(Theme())
 }

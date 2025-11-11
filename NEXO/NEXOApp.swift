@@ -45,7 +45,8 @@ struct RootView: View {
                     // Decide where to start: direct Login (after logout) or Splash (fresh launch)
                     Group {
                         if router.shouldStartAtLogin {
-                            LoginPage(
+                            LoginView(
+                                authStore: authStore,
                                 onLogin: {
                                     router.reset()
                                     router.isAuthenticated = true
@@ -70,13 +71,14 @@ struct RootView: View {
                     .navigationDestination(for: Route.self) { route in
                         switch route {
                         case .onboarding:
-                            OnboardingScreensView(
+                            OnboardingView(
                                 onComplete: {
                                     authPath.append(.login)
                                 }
                             )
                         case .login:
-                            LoginPage(
+                            LoginView(
+                                authStore: authStore,
                                 onLogin: {
                                     router.reset()
                                     router.isAuthenticated = true
