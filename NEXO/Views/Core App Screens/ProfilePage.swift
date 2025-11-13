@@ -142,6 +142,7 @@ struct ProfilePage: View {
         })
         .onAppear {
             viewModel.trackProfileView()
+            viewModel.loadUserProfile() // keep profile in sync with edits
         }
     }
 
@@ -279,7 +280,7 @@ private struct PopupActionButton: View {
 // MARK: - Profile Glass Card
 private struct ProfileGlassCard: View {
     @EnvironmentObject private var theme: Theme
-    let user: UserProfile
+    let user: ProfileViewData
     let pickedUIImage: UIImage?
     var onPencilTap: () -> Void
 
@@ -448,7 +449,7 @@ private struct StatPill: View {
     }
 }
 
-// MARK: - Achievements Button (missing helper restored)
+// MARK: - Achievements Button (unchanged)
 struct AchievementsButton: View {
     @EnvironmentObject private var theme: Theme
     let action: () -> Void
@@ -512,10 +513,10 @@ struct AchievementsButton: View {
     }
 }
 
-// MARK: - Tabs (Implemented)
+// MARK: - Tabs
 private struct ProfileCrystalTabs: View {
     @EnvironmentObject private var theme: Theme
-    let user: UserProfile
+    let user: ProfileViewData
     @Binding var selectedTab: Int
     let recentActivities: [Activity]
     let achievements: [AchievementData]

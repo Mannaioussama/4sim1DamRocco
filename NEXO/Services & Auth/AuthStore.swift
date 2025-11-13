@@ -10,13 +10,17 @@ import Combine
 
 @MainActor
 final class AuthStore: ObservableObject {
+    // MARK: - Shared Instance
+    static let shared = AuthStore()
+    
     @Published private(set) var isLoggedIn: Bool = false
     @Published private(set) var currentUser: User? = nil
 
     private let tokenStore: TokenStoring
 
-    // Designated initializer without a default argument to avoid evaluating a
-    // main-actor isolated initializer in a nonisolated context.
+    // MARK: - Initializers
+
+    // Designated initializer for testing or custom token store
     init(tokenStore: TokenStoring) {
         self.tokenStore = tokenStore
         // Try restoring previous session
@@ -25,10 +29,9 @@ final class AuthStore: ObservableObject {
         }
     }
 
-    // Convenience initializer that constructs the default token store
-    // within the main-actor-isolated context.
+    // Public convenience initializer for default Keychain-backed store
     convenience init() {
-        self.init(tokenStore: KeychainTokenStore())
+        self.init(tokenStore: KeychainTokenStore.shared)
     }
 
     // MARK: - API Calls

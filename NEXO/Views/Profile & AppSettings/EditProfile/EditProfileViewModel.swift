@@ -2,7 +2,7 @@
 //  EditProfileViewModel.swift
 //  NEXO
 //
-//  Created by ROCCO 4X on 4/11/2025.
+//  Created by ROCCO 4X on 12/11/2025.
 //
 
 import SwiftUI
@@ -13,24 +13,20 @@ class EditProfileViewModel: ObservableObject {
     // MARK: - Published Properties
     
     // Profile form fields
-    @Published var name: String = "Alex Johnson"
-    @Published var email: String = "alex.johnson@email.com"
-    @Published var phone: String = "+1 (555) 123-4567"
-    @Published var bio: String = "Passionate about sports and staying active! Love meeting new people through fitness."
-    @Published var location: String = "San Francisco, CA"
-    @Published var dateOfBirth: Date = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        return f.date(from: "1995-06-15") ?? Calendar.current.date(byAdding: .year, value: -30, to: .now)!
-    }()
+    @Published var name: String = ""
+    @Published var email: String = ""
+    @Published var phone: String = ""
+    @Published var bio: String = ""
+    @Published var location: String = ""
+    @Published var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -30, to: .now) ?? Date()
     
     // Avatar
-    @Published var avatarURL: String = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop"
+    @Published var avatarURL: String = ""
     @Published var pickedItem: PhotosPickerItem?
     @Published var pickedImageData: Data?
     
     // Sports
-    @Published var selectedSports: Set<String> = ["Basketball", "Tennis", "Running", "Swimming"]
+    @Published var selectedSports: Set<String> = []
     
     // Email verification
     @Published var emailVerified: Bool = false
@@ -49,6 +45,11 @@ class EditProfileViewModel: ObservableObject {
     @Published var phoneError: String = ""
     @Published var locationError: String = ""
     
+    // MARK: - Dependencies
+    
+    private let profileAPI = ProfileAPI.shared
+    private let tokenStore = KeychainTokenStore.shared
+    
     // MARK: - Constants
     
     let availableSports: [String] = [
@@ -62,11 +63,8 @@ class EditProfileViewModel: ObservableObject {
     // MARK: - Private Properties
     
     private var cancellables = Set<AnyCancellable>()
-    
-    // MARK: - Simulation Controls
-    
-    // Toggle this in previews/tests to simulate API success/failure without triggering compiler warnings.
-    var simulateNetworkSuccess: Bool = true
+    private var currentUserId: String?
+    private var originalEmail: String = ""  // Track original email to detect changes
     
     // MARK: - Computed Properties
     
@@ -96,7 +94,7 @@ class EditProfileViewModel: ObservableObject {
     
     var displayInitials: String {
         let initials = name.split(separator: " ").compactMap { $0.first }.map(String.init).joined()
-        return initials.isEmpty ? "A" : initials
+        return initials.isEmpty ? "?" : initials.uppercased()
     }
     
     var canSave: Bool {
@@ -129,6 +127,7 @@ class EditProfileViewModel: ObservableObject {
     
     init() {
         setupObservers()
+        loadUserProfile()
     }
     
     // MARK: - Setup
@@ -177,6 +176,48 @@ class EditProfileViewModel: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+    }
+    
+    // MARK: - Load User Profile
+    
+    func loadUserProfile() {
+        Task { @MainActor in
+            guard let token = tokenStore.getAccessToken() else {
+                print("No access token found")
+                return
+            }
+            
+            do {
+                let user = try await profileAPI.getProfile(token: token)
+                
+                // Update UI with user data
+                self.currentUserId = user.id
+                self.name = user.name
+                self.email = user.email
+                self.originalEmail = user.email
+                self.phone = user.phone ?? ""
+                self.bio = user.about ?? ""
+                self.location = user.location
+                self.emailVerified = user.isEmailVerified
+                self.avatarURL = user.profileImageUrl ?? ""
+                
+                // Parse date of birth
+                if let dobString = user.dateOfBirth,
+                   let date = Date.fromBackendDateString(dobString) {
+                    self.dateOfBirth = date
+                }
+                
+                // Parse sports interests
+                if let sports = user.sportsInterests {
+                    self.selectedSports = Set(sports)
+                }
+                
+            } catch {
+                print("Failed to load profile: \(error.localizedDescription)")
+                self.errorMessage = "Failed to load profile. Please try again."
+                self.showErrorAlert = true
+            }
+        }
     }
     
     // MARK: - Photo Management
@@ -297,22 +338,80 @@ class EditProfileViewModel: ObservableObject {
             return
         }
         
+        guard let userId = currentUserId else {
+            errorMessage = "User ID not found. Please log in again."
+            showErrorAlert = true
+            return
+        }
+        
+        guard let token = tokenStore.getAccessToken() else {
+            errorMessage = "Not authenticated. Please log in again."
+            showErrorAlert = true
+            return
+        }
+        
         isLoading = true
         
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            guard let self = self else { return }
-            
-            // Simulate success/failure based on a configurable flag
-            let success = self.simulateNetworkSuccess
-            
-            if success {
+        Task { @MainActor in
+            do {
+                // Step 1: Upload profile image if changed
+                if let imageData = pickedImageData {
+                    _ = try await profileAPI.uploadProfileImage(
+                        userId: userId,
+                        token: token,
+                        imageData: imageData
+                    )
+                }
+                
+                // Step 2: Update profile data
+                let request = UpdateProfileRequest(
+                    name: name.trimmingCharacters(in: .whitespaces),
+                    email: email.trimmingCharacters(in: .whitespaces),
+                    phone: phone.trimmingCharacters(in: .whitespaces).isEmpty ? nil : phone.trimmingCharacters(in: .whitespaces),
+                    dateOfBirth: dateOfBirth.toBackendDateString(),
+                    location: location.trimmingCharacters(in: .whitespaces),
+                    about: bio.trimmingCharacters(in: .whitespaces).isEmpty ? nil : bio.trimmingCharacters(in: .whitespaces),
+                    sportsInterests: Array(selectedSports)
+                )
+                
+                let updatedUser = try await profileAPI.updateProfile(
+                    userId: userId,
+                    token: token,
+                    request: request
+                )
+                
+                // Update local state with response
+                self.avatarURL = updatedUser.profileImageUrl ?? self.avatarURL
+                self.emailVerified = updatedUser.isEmailVerified
+                
+                // Check if email changed (user will need to verify new email)
+                if email != originalEmail {
+                    self.emailVerified = false
+                    self.originalEmail = email
+                }
+                
+                // Clear picked image data after successful upload
+                self.pickedImageData = nil
+                self.pickedItem = nil
+                
                 self.successMessage = "Profile updated successfully!"
                 self.showSuccessAlert = true
                 self.isLoading = false
+                
+                // Notify others (e.g., Profile page) that profile has updated
+                NotificationCenter.default.post(name: .profileDidUpdate, object: updatedUser)
+                
                 onSuccess()
-            } else {
-                self.errorMessage = "Failed to update profile. Please try again."
+                
+            } catch let error as APIError {
+                // Handle APIError specifically
+                self.errorMessage = error.userMessage
+                self.showErrorAlert = true
+                self.isLoading = false
+                onError(self.errorMessage)
+                
+            } catch {
+                self.errorMessage = error.localizedDescription
                 self.showErrorAlert = true
                 self.isLoading = false
                 onError(self.errorMessage)
@@ -329,22 +428,36 @@ class EditProfileViewModel: ObservableObject {
             return
         }
         
+        guard let token = tokenStore.getAccessToken() else {
+            errorMessage = "Not authenticated. Please log in again."
+            showErrorAlert = true
+            return
+        }
+        
         isLoading = true
         
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            
-            let success = self.simulateNetworkSuccess
-            
-            if success {
+        Task { @MainActor in
+            do {
+                let message = try await profileAPI.sendVerificationEmail(
+                    email: email,
+                    token: token
+                )
+                
                 self.showVerificationSent = true
-                self.successMessage = "Verification email sent to \(self.email)"
+                self.successMessage = message
                 self.showSuccessAlert = true
                 self.isLoading = false
+                
                 onSuccess()
-            } else {
-                self.errorMessage = "Failed to send verification email. Please try again."
+                
+            } catch let error as APIError {
+                self.errorMessage = error.userMessage
+                self.showErrorAlert = true
+                self.isLoading = false
+                onError(self.errorMessage)
+                
+            } catch {
+                self.errorMessage = error.localizedDescription
                 self.showErrorAlert = true
                 self.isLoading = false
                 onError(self.errorMessage)
@@ -355,13 +468,7 @@ class EditProfileViewModel: ObservableObject {
     // MARK: - Helper Methods
     
     func resetForm() {
-        name = "Alex Johnson"
-        email = "alex.johnson@email.com"
-        phone = "+1 (555) 123-4567"
-        bio = "Passionate about sports and staying active! Love meeting new people through fitness."
-        location = "San Francisco, CA"
-        dateOfBirth = Calendar.current.date(byAdding: .year, value: -30, to: .now) ?? Date()
-        selectedSports = ["Basketball", "Tennis", "Running", "Swimming"]
+        loadUserProfile()  // Reload from server
         clearPickedPhoto()
         clearAllErrors()
     }
@@ -410,3 +517,4 @@ class EditProfileViewModel: ObservableObject {
         print("Field edited: \(field)")
     }
 }
+

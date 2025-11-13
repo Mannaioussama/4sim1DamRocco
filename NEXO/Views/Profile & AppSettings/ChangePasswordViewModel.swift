@@ -32,6 +32,15 @@ class ChangePasswordViewModel: ObservableObject {
     @Published var showErrorAlert: Bool = false
     @Published var alertMessage: String = ""
     
+    // MARK: - Dependencies
+    
+    private let profileAPI = ProfileAPI.shared
+    private let tokenStore = KeychainTokenStore.shared
+    private let authStore = AuthStore.shared
+    
+    // Cache user id for this screen (helps after app relaunch)
+    private var cachedUserId: String?
+    
     // MARK: - Private Properties
     
     private var cancellables = Set<AnyCancellable>()
@@ -149,6 +158,10 @@ class ChangePasswordViewModel: ObservableObject {
     
     init() {
         setupObservers()
+        // Try to cache user id early (works after relaunch too)
+        Task { @MainActor in
+            await bootstrapUserId()
+        }
     }
     
     // MARK: - Setup
@@ -264,26 +277,32 @@ class ChangePasswordViewModel: ObservableObject {
     // MARK: - Save Action
     
     func savePassword(onSuccess: @escaping () -> Void, onError: @escaping (String) -> Void) {
-        guard validateAll() else {
+        guard validateAll() else { return }
+        
+        guard let token = tokenStore.getAccessToken() else {
+            alertMessage = "Not authenticated. Please log in again."
+            showErrorAlert = true
             return
         }
         
         isLoading = true
         
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            guard let self = self else { return }
-            
-            // Simulate success/failure (replace with actual API call)
-            // Using a runtime value avoids "will never be executed" warnings for the failure branch.
-            #if DEBUG
-            let success = Bool.random()
-            #else
-            let success = true
-            #endif
-            
-            if success {
-                self.alertMessage = "Password changed successfully!"
+        Task { @MainActor in
+            do {
+                let userId = try await getUserId(using: token)
+                
+                let req = ChangePasswordRequest(
+                    currentPassword: currentPassword,
+                    newPassword: newPassword
+                )
+                
+                let message = try await profileAPI.changePassword(
+                    userId: userId,
+                    token: token,
+                    request: req
+                )
+                
+                self.alertMessage = message
                 self.showSuccessAlert = true
                 self.isLoading = false
                 
@@ -291,14 +310,56 @@ class ChangePasswordViewModel: ObservableObject {
                 self.clearAllFields()
                 
                 onSuccess()
-            } else {
-                self.alertMessage = "Failed to change password. Please try again."
+            } catch let apiErr as APIError {
+                let msg = apiErr.userMessage
+                self.alertMessage = msg
+                if msg.localizedCaseInsensitiveContains("current password") ||
+                    msg.localizedCaseInsensitiveContains("incorrect") {
+                    self.currentError = msg
+                } else if msg.localizedCaseInsensitiveContains("password") {
+                    self.newError = msg
+                }
                 self.showErrorAlert = true
                 self.isLoading = false
-                
+                onError(msg)
+            } catch {
+                self.alertMessage = error.localizedDescription
+                self.showErrorAlert = true
+                self.isLoading = false
                 onError(self.alertMessage)
             }
         }
+    }
+    
+    // MARK: - User ID bootstrap / fetch
+    
+    @MainActor
+    private func bootstrapUserId() async {
+        if let id = authStore.currentUser?.id, !id.isEmpty {
+            cachedUserId = id
+            return
+        }
+        guard let token = tokenStore.getAccessToken() else { return }
+        do {
+            let profile = try await profileAPI.getProfile(token: token)
+            cachedUserId = profile.id
+        } catch {
+            // Don’t show an alert here; we’ll handle it on save if needed.
+            print("ChangePassword: failed to prefetch user id: \(error.localizedDescription)")
+        }
+    }
+    
+    @MainActor
+    private func getUserId(using token: String) async throws -> String {
+        if let id = cachedUserId, !id.isEmpty { return id }
+        if let id = authStore.currentUser?.id, !id.isEmpty {
+            cachedUserId = id
+            return id
+        }
+        // Fallback: fetch /users/profile
+        let profile = try await profileAPI.getProfile(token: token)
+        cachedUserId = profile.id
+        return profile.id
     }
     
     // MARK: - Helper Methods
@@ -356,3 +417,4 @@ class ChangePasswordViewModel: ObservableObject {
         print("Visibility toggled for \(field): \(visible)")
     }
 }
+

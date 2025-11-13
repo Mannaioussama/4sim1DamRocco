@@ -302,7 +302,7 @@ struct AppShellView_Previews: PreviewProvider {
     static var previews: some View {
         RootView()
             .environmentObject(Theme())
-            .environmentObject(AuthStore())
+            .environmentObject(AuthStore(tokenStore: KeychainTokenStore.shared))
     }
 }
 #endif

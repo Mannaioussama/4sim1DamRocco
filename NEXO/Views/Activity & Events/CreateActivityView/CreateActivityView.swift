@@ -113,15 +113,40 @@ struct CreateActivityView: View {
                             }
                         }
 
-                        // Location
+                        // Location with Map Picker
                         fieldGroup(title: "Location *") {
                             HStack(spacing: 12) {
                                 Image(systemName: "mappin.circle.fill")
                                     .font(.system(size: 20))
                                     .foregroundColor(theme.colors.textSecondary)
+                                
                                 TextField("Enter address or venue name", text: $viewModel.location)
                                     .font(.system(size: 15))
                                     .foregroundColor(theme.colors.textPrimary)
+                                
+                                // Pick from Map Button
+                                Button(action: {
+                                    viewModel.showMapPicker = true
+                                }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "map.fill")
+                                            .font(.system(size: 14))
+                                        Text("Pick from Map")
+                                            .font(.system(size: 13, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.purple, Color.purple.opacity(0.8)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .cornerRadius(20)
+                                    .shadow(color: Color.purple.opacity(0.3), radius: 4, x: 0, y: 2)
+                                }
                             }
                             .padding(16)
                             .frame(height: 56)
@@ -362,6 +387,12 @@ struct CreateActivityView: View {
             }
             .environmentObject(theme)
         }
+        .sheet(isPresented: $viewModel.showMapPicker) {
+            MapLocationPickerView { location in
+                viewModel.setLocation(name: location.displayName, coordinate: location.coordinate.clCoordinate)
+            }
+            .environmentObject(theme)
+        }
     }
 
     // MARK: - Subview for field group
@@ -499,3 +530,4 @@ struct CreateActivityView_Previews: PreviewProvider {
         }
     }
 }
+

@@ -1,4 +1,3 @@
-
 //
 //  CreateActivityViewModel.swift
 //  NEXO
@@ -8,15 +7,18 @@
 
 import SwiftUI
 import Combine
+import CoreLocation
 
 class CreateActivityViewModel: ObservableObject {
     // MARK: - Published Properties
     
     @Published var showSuccess = false
+    @Published var showMapPicker = false
     @Published var sportType = ""
     @Published var title = ""
     @Published var description = ""
     @Published var location = ""
+    @Published var locationCoordinate: CLLocationCoordinate2D?
     @Published var date = Date()
     @Published var time = Date()
     @Published var participants = 5.0
@@ -77,6 +79,11 @@ class CreateActivityViewModel: ObservableObject {
         self.visibility = type
     }
     
+    func setLocation(name: String, coordinate: CLLocationCoordinate2D) {
+        self.location = name
+        self.locationCoordinate = coordinate
+    }
+    
     func createActivity() {
         guard isFormValid else {
             print("Form validation failed")
@@ -84,7 +91,7 @@ class CreateActivityViewModel: ObservableObject {
         }
         
         // TODO: Send data to backend/database
-        let activityData: [String: Any] = [
+        var activityData: [String: Any] = [
             "sportType": sportType,
             "title": title,
             "description": description,
@@ -95,6 +102,12 @@ class CreateActivityViewModel: ObservableObject {
             "level": level,
             "visibility": visibility
         ]
+        
+        // Add coordinates if available
+        if let coordinate = locationCoordinate {
+            activityData["latitude"] = coordinate.latitude
+            activityData["longitude"] = coordinate.longitude
+        }
         
         print("Creating activity with data: \(activityData)")
         
@@ -107,12 +120,14 @@ class CreateActivityViewModel: ObservableObject {
         title = ""
         description = ""
         location = ""
+        locationCoordinate = nil
         date = Date()
         time = Date()
         participants = 5.0
         level = ""
         visibility = "public"
         showSuccess = false
+        showMapPicker = false
     }
     
     // MARK: - Helper Methods
