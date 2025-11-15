@@ -63,6 +63,13 @@ struct MapLocationPickerView: View {
                 // Map
                 ZStack {
                     MapView(
+                        region: Binding(
+                            get: { viewModel.mapRegion.mkRegion },
+                            set: { newRegion in
+                                // Reflect user panning/zooming back to ViewModel
+                                viewModel.mapRegion = MapRegion(from: newRegion)
+                            }
+                        ),
                         coordinate: Binding(
                             get: { viewModel.selectedCoordinate },
                             set: { _ in }

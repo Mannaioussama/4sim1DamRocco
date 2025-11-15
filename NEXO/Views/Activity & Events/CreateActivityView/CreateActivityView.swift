@@ -10,6 +10,7 @@ import SwiftUI
 struct CreateActivityView: View {
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var activityAPIService: ActivityAPIService
     @StateObject private var viewModel = CreateActivityViewModel()
 
     var body: some View {
@@ -328,23 +329,32 @@ struct CreateActivityView: View {
                             }
 
                             Button(action: {
-                                viewModel.createActivity()
+                                Task {
+                                    await viewModel.createActivity(using: activityAPIService)
+                                }
                             }) {
-                                Text("Create Room")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 56)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [theme.colors.accentGreenFill, theme.colors.accentGreenGlow],
-                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                ZStack {
+                                    Text(viewModel.isSaving ? "Creating..." : "Create Room")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 56)
+                                        .background(
+                                            LinearGradient(
+                                                colors: [theme.colors.accentGreenFill, theme.colors.accentGreenGlow],
+                                                startPoint: .topLeading, endPoint: .bottomTrailing
+                                            )
                                         )
-                                    )
-                                    .cornerRadius(28)
-                                    .shadow(color: theme.colors.accentGreenGlow.opacity(0.35), radius: 8, x: 0, y: 4)
+                                        .cornerRadius(28)
+                                        .shadow(color: theme.colors.accentGreenGlow.opacity(0.35), radius: 8, x: 0, y: 4)
+                                    
+                                    if viewModel.isSaving {
+                                        ProgressView()
+                                            .tint(.white)
+                                    }
+                                }
                             }
-                            .disabled(!viewModel.isFormValid)
+                            .disabled(!viewModel.isFormValid || viewModel.isSaving)
                             .opacity(viewModel.isFormValid ? 1.0 : 0.6)
                         }
                         .padding(.top, 10)
@@ -527,7 +537,7 @@ struct CreateActivityView_Previews: PreviewProvider {
         NavigationStack {
             CreateActivityView()
                 .environmentObject(Theme())
+                .environmentObject(ActivityAPIService())
         }
     }
 }
-

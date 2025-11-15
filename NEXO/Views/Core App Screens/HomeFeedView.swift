@@ -7,9 +7,11 @@
 
 import SwiftUI
 
+// MARK: - Main View
 struct HomeFeedView: View {
     @EnvironmentObject private var theme: Theme
-    @StateObject private var viewModel = HomeFeedViewModel()
+    @EnvironmentObject private var activityAPIService: ActivityAPIService
+    @StateObject private var viewModel = HomeFeedViewModel(activityAPIService: nil)
     
     var onActivityClick: (Activity) -> Void
     var onSearchClick: (() -> Void)?
@@ -19,6 +21,34 @@ struct HomeFeedView: View {
     var onEventDetailsClick: (() -> Void)?
     var onCreateClick: (() -> Void)?
     var onNotificationsClick: (() -> Void)?
+    // New: optional chat action for “Individual” cards
+    var onChatClick: (() -> Void)? = nil
+    
+    // MARK: - Explicit Bindings to avoid dynamicMember issues
+    private var searchQueryBinding: Binding<String> {
+        Binding(
+            get: { viewModel.searchQuery },
+            set: { viewModel.searchQuery = $0 }
+        )
+    }
+    private var showFiltersBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.showFilters },
+            set: { viewModel.showFilters = $0 }
+        )
+    }
+    private var filterSportBinding: Binding<String> {
+        Binding(
+            get: { viewModel.filterSport },
+            set: { viewModel.filterSport = $0 }
+        )
+    }
+    private var filterDistanceBinding: Binding<Double> {
+        Binding(
+            get: { viewModel.filterDistance },
+            set: { viewModel.filterDistance = $0 }
+        )
+    }
     
     var body: some View {
         ZStack {
@@ -113,13 +143,19 @@ struct HomeFeedView: View {
                 }
             }
         }
-        .sheet(isPresented: $viewModel.showFilters) {
+        .sheet(isPresented: showFiltersBinding) {
             FilterSheet(
-                filterSport: $viewModel.filterSport,
-                filterDistance: $viewModel.filterDistance,
+                filterSport: filterSportBinding,
+                filterDistance: filterDistanceBinding,
                 sportCategories: viewModel.sportCategories
             )
             .environmentObject(theme)
+        }
+        .onAppear {
+            // Inject the shared ActivityAPIService into the ViewModel once
+            if viewModel.activityAPIService == nil {
+                viewModel.injectService(activityAPIService)
+            }
         }
     }
     
@@ -148,7 +184,7 @@ struct HomeFeedView: View {
                         .font(.system(size: 18))
                         .foregroundColor(theme.colors.textSecondary)
                     
-                    TextField("Search activities...", text: $viewModel.searchQuery)
+                    TextField("Search activities...", text: searchQueryBinding)
                         .font(.system(size: 15))
                         .foregroundColor(theme.colors.textPrimary)
                         .tint(theme.colors.accentPurple)
@@ -289,21 +325,26 @@ struct HomeFeedView: View {
                         .padding(.horizontal, 16)
                 }
                 
-                // Activity Cards
+                // One static Coach/Group reference card (non-dynamic)
+                CoachReferenceCard()
+                    .padding(.horizontal, 16)
+                
+                // Activity Cards (all dynamic activities use the Individual/session design)
                 ForEach(viewModel.filteredActivities) { activity in
-                    ActivityCrystalCard(
+                    SessionActivityCard(
                         activity: activity,
                         isSaved: viewModel.isSaved(activity.id),
                         onToggleSave: {
                             viewModel.toggleSave(activity.id)
                             viewModel.trackActivitySave(activity)
                         },
-                        onJoin: {
-                            viewModel.joinActivity(activity)
-                            viewModel.trackActivityJoin(activity)
-                            onActivityClick(activity)
-                        },
-                        onDetails: onEventDetailsClick
+                        onChat: {
+                            if let onChatClick {
+                                onChatClick()
+                            } else {
+                                print("Chat Now tapped for: \(activity.title)")
+                            }
+                        }
                     )
                     .padding(.horizontal, 16)
                     .environmentObject(theme)
@@ -314,6 +355,9 @@ struct HomeFeedView: View {
             }
             .padding(.top, 12)
             .padding(.bottom, 100)
+        }
+        .refreshable {
+            viewModel.forceRefreshActivities()
         }
     }
     
@@ -586,7 +630,7 @@ struct CrystalExploreCard: View {
     }
 }
 
-// MARK: - Activity Crystal Card
+// MARK: - Activity Crystal Card (kept for future Coach design)
 
 struct ActivityCrystalCard: View {
     @EnvironmentObject private var theme: Theme
@@ -785,6 +829,416 @@ struct ActivityCrystalCard: View {
     }
 }
 
+// MARK: - Session Activity Card (Individual design)
+
+struct SessionActivityCard: View {
+    @EnvironmentObject private var theme: Theme
+    
+    let activity: Activity
+    let isSaved: Bool
+    let onToggleSave: () -> Void
+    let onChat: () -> Void
+    
+    private var spotsLeft: Int { activity.spotsTotal - activity.spotsTaken }
+    
+    var body: some View {
+        ZStack {
+            // Subtle hover glow (hidden by default)
+            RoundedRectangle(cornerRadius: 14)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: "E9D5FF").opacity(theme.isDarkMode ? 0.18 : 0.4),
+                            Color(hex: "FCE7F3").opacity(theme.isDarkMode ? 0.16 : 0.4)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blur(radius: 8)
+                .padding(-2)
+                .opacity(0)
+            
+            VStack(alignment: .leading, spacing: 0) {
+                // Top highlight
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(theme.isDarkMode ? 0.16 : 0.6),
+                        Color.white.opacity(0)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 48)
+                .cornerRadius(14, corners: [.topLeft, .topRight])
+                
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 0) {
+                // Header
+                HStack(alignment: .top, spacing: 0) {
+                    HStack(spacing: 8) {
+                        AsyncImage(url: URL(string: activity.hostAvatar)) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            Text(String(activity.hostName.prefix(1)))
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                        .frame(width: 40, height: 40)
+                        .background(Color(hex: "60A5FA"))
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.white.opacity(theme.isDarkMode ? 0.6 : 1), lineWidth: 2))
+                        .shadow(color: .black.opacity(theme.isDarkMode ? 0.3 : 0.05), radius: theme.isDarkMode ? 8 : 4, x: 0, y: theme.isDarkMode ? 4 : 2)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(activity.hostName)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(theme.colors.textPrimary)
+                            
+                            HStack(spacing: 6) {
+                                Text(activity.sportIcon)
+                                    .font(.system(size: 12))
+                                
+                                Text(activity.sportType)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(theme.colors.textSecondary)
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 8) {
+                        // Individual badge (blue)
+                        Text("Individual")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(Color(hex: "1E40AF"))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: "DBEAFE"))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(Color(hex: "BFDBFE"), lineWidth: 1)
+                            )
+                            .cornerRadius(20)
+                            .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
+                        
+                        Button(action: onToggleSave) {
+                            Image(systemName: isSaved ? "heart.fill" : "heart")
+                                .font(.system(size: 20))
+                                .foregroundColor(isSaved ? Color(hex: "EF4444") : theme.colors.textSecondary.opacity(0.8))
+                        }
+                        .buttonStyle(ScaleButtonStyle())
+                    }
+                }
+                .padding(.bottom, 10)
+                
+                // Title
+                Text(activity.title)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(theme.colors.textPrimary)
+                    .lineSpacing(2)
+                    .padding(.bottom, 10)
+                
+                // Details
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme.colors.textSecondary)
+                        
+                        Text("\(activity.date) • \(activity.time)")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.colors.textSecondary)
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "mappin")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme.colors.textSecondary)
+                        
+                        Text("\(activity.location) • \(activity.distance)")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.colors.textSecondary)
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.2")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme.colors.textSecondary)
+                        
+                        Text("\(spotsLeft) of \(activity.spotsTotal) spots remaining")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.colors.textSecondary)
+                    }
+                }
+                .padding(.bottom, 10)
+                
+                // Bottom: level badge + Chat Now
+                HStack {
+                    Text(activity.level)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(Color(hex: "4A5568"))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color(hex: "F7FAFC"))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color(hex: "E2E8F0"), lineWidth: 1)
+                        )
+                        .cornerRadius(20)
+                        .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
+                    
+                    Spacer()
+                    
+                    Button(action: onChat) {
+                        Text("Chat Now")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 6)
+                            .background(theme.colors.accentGreen)
+                            .cornerRadius(20)
+                            .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+                }
+            }
+            .padding(16)
+        }
+        .background(theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.85 : 0.95))
+        .background(theme.colors.barMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(theme.colors.cardStroke, lineWidth: 1)
+        )
+        .cornerRadius(14)
+        .shadow(color: .black.opacity(theme.isDarkMode ? 0.4 : 0.05), radius: theme.isDarkMode ? 16 : 8, x: 0, y: theme.isDarkMode ? 8 : 4)
+    }
+}
+
+// MARK: - Static Coach/Group Reference Card
+
+struct CoachReferenceCard: View {
+    @EnvironmentObject private var theme: Theme
+    
+    // Static example content
+    private let activity = Activity(
+        id: "coach_reference",
+        title: "Pro Drills & Skills Clinic",
+        sportType: "Basketball",
+        sportIcon: "🏀",
+        hostName: "Coach Alex",
+        hostAvatar: "https://i.pravatar.cc/150?img=20",
+        date: "Saturday",
+        time: "10:00 AM",
+        location: "Downtown Court",
+        distance: "2.1 mi",
+        spotsTotal: 12,
+        spotsTaken: 6,
+        level: "Intermediate"
+    )
+    
+    private var spotsLeft: Int { activity.spotsTotal - activity.spotsTaken }
+    
+    var body: some View {
+        ZStack {
+            // Subtle hover glow (hidden by default)
+            RoundedRectangle(cornerRadius: 14)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: "E9D5FF").opacity(theme.isDarkMode ? 0.18 : 0.4),
+                            Color(hex: "FCE7F3").opacity(theme.isDarkMode ? 0.16 : 0.4)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blur(radius: 8)
+                .padding(-2)
+                .opacity(0)
+            
+            VStack(alignment: .leading, spacing: 0) {
+                // Top highlight
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(theme.isDarkMode ? 0.16 : 0.6),
+                        Color.white.opacity(0)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 48)
+                .cornerRadius(14, corners: [.topLeft, .topRight])
+                
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 0) {
+                // Header
+                HStack(alignment: .top, spacing: 0) {
+                    HStack(spacing: 8) {
+                        AsyncImage(url: URL(string: activity.hostAvatar)) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            Text(String(activity.hostName.prefix(1)))
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                        .frame(width: 40, height: 40)
+                        .background(Color(hex: "A855F7"))
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.white.opacity(theme.isDarkMode ? 0.6 : 1), lineWidth: 2))
+                        .shadow(color: .black.opacity(theme.isDarkMode ? 0.3 : 0.05), radius: theme.isDarkMode ? 8 : 4, x: 0, y: theme.isDarkMode ? 4 : 2)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(activity.hostName)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(theme.colors.textPrimary)
+                            
+                            HStack(spacing: 6) {
+                                Text(activity.sportIcon)
+                                    .font(.system(size: 12))
+                                
+                                Text(activity.sportType)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(theme.colors.textSecondary)
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 8) {
+                        // Coach badge (purple)
+                        Text("Coach")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: "A855F7"))
+                            .cornerRadius(20)
+                            .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
+                        
+                        // Static heart (non-interactive reference)
+                        Image(systemName: "heart")
+                            .font(.system(size: 20))
+                            .foregroundColor(theme.colors.textSecondary.opacity(0.8))
+                    }
+                }
+                .padding(.bottom, 10)
+                
+                // Title
+                Text(activity.title)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(theme.colors.textPrimary)
+                    .lineSpacing(2)
+                    .padding(.bottom, 10)
+                
+                // Details
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme.colors.textSecondary)
+                        
+                        Text("\(activity.date) • \(activity.time)")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.colors.textSecondary)
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "mappin")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme.colors.textSecondary)
+                        
+                        Text("\(activity.location) • \(activity.distance)")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.colors.textSecondary)
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.2")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme.colors.textSecondary)
+                        
+                        Text("\(spotsLeft) of \(activity.spotsTotal) spots remaining")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.colors.textSecondary)
+                    }
+                }
+                .padding(.bottom, 10)
+                
+                // Badge and Buttons (static reference)
+                HStack {
+                    Text(activity.level)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(theme.colors.textPrimary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.7 : 1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(theme.colors.cardStroke, lineWidth: 1)
+                        )
+                        .cornerRadius(20)
+                        .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 8) {
+                        Button(action: { print("Coach Details (reference)") }) {
+                            Text("Details")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(theme.colors.textPrimary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.7 : 1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(theme.colors.cardStroke, lineWidth: 1)
+                                )
+                                .cornerRadius(20)
+                                .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
+                        }
+                        .buttonStyle(ScaleButtonStyle())
+                        
+                        Button(action: { print("Coach Join (reference)") }) {
+                            Text("Join")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 6)
+                                .background(theme.colors.accentGreen)
+                                .cornerRadius(20)
+                                .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: theme.isDarkMode ? 10 : 4, x: 0, y: theme.isDarkMode ? 6 : 2)
+                        }
+                        .buttonStyle(ScaleButtonStyle())
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.85 : 0.95))
+        .background(theme.colors.barMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(theme.colors.cardStroke, lineWidth: 1)
+        )
+        .cornerRadius(14)
+        .shadow(color: .black.opacity(theme.isDarkMode ? 0.4 : 0.05), radius: theme.isDarkMode ? 16 : 8, x: 0, y: theme.isDarkMode ? 8 : 4)
+        .accessibilityLabel("Coach reference card")
+        .accessibilityHint("Static example for coach/group design")
+    }
+}
+
 // MARK: - Filter Sheet
 
 struct FilterSheet: View {
@@ -874,7 +1328,9 @@ struct FilterSheet: View {
         onQuickMatchClick: {},
         onAIMatchmakerClick: {},
         onCreateClick: {},
-        onNotificationsClick: {}
+        onNotificationsClick: {},
+        onChatClick: {} // New: wire Chat Now in preview
     )
     .environmentObject(Theme())
+    .environmentObject(ActivityAPIService()) // Ensure preview has the shared service
 }

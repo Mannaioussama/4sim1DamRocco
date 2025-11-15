@@ -23,6 +23,10 @@ struct MapScreen: View {
         .toolbar(.hidden, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
+        .onAppear {
+            // Attempt to center on user immediately if permission already granted.
+            viewModel.handleViewAppeared()
+        }
     }
     
     // MARK: - Background & Decorative Views
@@ -912,3 +916,4 @@ struct Triangle: Shape {
     MapScreen(onActivityClick: { _ in })
         .environmentObject(Theme())
 }
+

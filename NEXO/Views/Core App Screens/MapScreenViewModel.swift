@@ -16,7 +16,7 @@ enum ViewMode {
     case list
 }
 
-class MapScreenViewModel: ObservableObject {
+class MapScreenViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
     // MARK: - Published Properties
     
     @Published var aiSuggestions: [Activity] = []
@@ -42,6 +42,8 @@ class MapScreenViewModel: ObservableObject {
     
     private let locationManager = CLLocationManager()
     private var cancellables = Set<AnyCancellable>()
+    private var hasCenteredOnUser = false
+    private let initialSpan = MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
     
     // MARK: - Computed Properties
     
@@ -91,7 +93,8 @@ class MapScreenViewModel: ObservableObject {
     
     // MARK: - Initialization
     
-    init() {
+    override init() {
+        super.init()
         setupLocationManager()
         loadAISuggestions()
         loadSavedActivities()
@@ -100,7 +103,36 @@ class MapScreenViewModel: ObservableObject {
     // MARK: - Location Management
     
     private func setupLocationManager() {
-        locationManager.requestWhenInUseAuthorization()
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.distanceFilter = 10 // meters
+        
+        guard CLLocationManager.locationServicesEnabled() else {
+            // Keep default region if services are disabled
+            return
+        }
+        
+        switch locationManager.authorizationStatus {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            locationManager.startUpdatingLocation()
+            // If we already have a cached location, center immediately.
+            centerOnUserOnceIfNeeded(using: locationManager.location?.coordinate)
+        case .restricted, .denied:
+            break
+        @unknown default:
+            break
+        }
+    }
+    
+    // Called by the View onAppear to try centering immediately if possible.
+    func handleViewAppeared() {
+        if [.authorizedAlways, .authorizedWhenInUse].contains(locationManager.authorizationStatus) {
+            centerOnUserOnceIfNeeded(using: locationManager.location?.coordinate)
+        } else if locationManager.authorizationStatus == .notDetermined {
+            locationManager.requestWhenInUseAuthorization()
+        }
     }
     
     func zoomIn() {
@@ -125,12 +157,64 @@ class MapScreenViewModel: ObservableObject {
         let status = locationManager.authorizationStatus
         if status == .notDetermined {
             locationManager.requestWhenInUseAuthorization()
+            return
         }
-        position = .userLocation(fallback: .automatic)
+        
+        if (status == .authorizedAlways || status == .authorizedWhenInUse),
+           let coord = locationManager.location?.coordinate {
+            currentRegion = MKCoordinateRegion(center: coord, span: initialSpan)
+            position = .region(currentRegion)
+        } else {
+            // Fallback: let MapKit try to center on user when available
+            position = .userLocation(fallback: .automatic)
+        }
     }
     
     func updateRegion(_ region: MKCoordinateRegion) {
         currentRegion = region
+    }
+    
+    // MARK: - CLLocationManagerDelegate
+    
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        switch manager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            manager.startUpdatingLocation()
+            centerOnUserOnceIfNeeded(using: manager.location?.coordinate)
+        case .restricted, .denied:
+            break
+        case .notDetermined:
+            break
+        @unknown default:
+            break
+        }
+    }
+    
+    // For completeness with older delegate signature
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        switch status {
+        case .authorizedWhenInUse, .authorizedAlways:
+            manager.startUpdatingLocation()
+            centerOnUserOnceIfNeeded(using: manager.location?.coordinate)
+        default:
+            break
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        // Center once on the first good fix
+        centerOnUserOnceIfNeeded(using: locations.last?.coordinate)
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("Location manager error: \(error.localizedDescription)")
+    }
+    
+    private func centerOnUserOnceIfNeeded(using coordinate: CLLocationCoordinate2D?) {
+        guard !hasCenteredOnUser, let coord = coordinate else { return }
+        hasCenteredOnUser = true
+        currentRegion = MKCoordinateRegion(center: coord, span: initialSpan)
+        position = .region(currentRegion)
     }
     
     // MARK: - Data Loading
@@ -360,3 +444,4 @@ class MapScreenViewModel: ObservableObject {
         print("Map centered on user")
     }
 }
+

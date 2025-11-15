@@ -28,6 +28,9 @@ struct ChatConversationView: View {
     @StateObject private var viewModel: ChatConversationViewModel
     @FocusState private var isInputFocused: Bool
     
+    // Track edge-swipe to go back
+    @State private var edgeSwipeStartX: CGFloat? = nil
+    
     var onBack: () -> Void
     
     // MARK: - Initialization
@@ -42,6 +45,11 @@ struct ChatConversationView: View {
             // Background Gradient
             theme.colors.backgroundGradient
                 .ignoresSafeArea()
+                .onTapGesture {
+                    // Dismiss keyboard when tapping empty background
+                    isInputFocused = false
+                    viewModel.dismissKeyboard()
+                }
 
             VStack(spacing: 0) {
                 header
@@ -51,7 +59,7 @@ struct ChatConversationView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
-        // Keep VM and local focus state in sync (optional)
+        // Keep VM and local focus state in sync
         .onChange(of: isInputFocused) { _, newValue in
             if viewModel.isInputFocused != newValue {
                 viewModel.isInputFocused = newValue
@@ -62,13 +70,38 @@ struct ChatConversationView: View {
                 isInputFocused = newValue
             }
         }
+        // Allow interactive left-edge swipe to go back in addition to the back button
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 15, coordinateSpace: .local)
+                .onChanged { value in
+                    if edgeSwipeStartX == nil {
+                        edgeSwipeStartX = value.startLocation.x
+                    }
+                }
+                .onEnded { value in
+                    defer { edgeSwipeStartX = nil }
+                    guard let startX = edgeSwipeStartX else { return }
+                    let horizontal = value.translation.width
+                    let vertical = abs(value.translation.height)
+                    // Start near left edge, swipe sufficiently right, not a big vertical drag
+                    if startX < 30, horizontal > 80, vertical < 100 {
+                        isInputFocused = false
+                        viewModel.dismissKeyboard()
+                        onBack()
+                    }
+                }
+        )
     }
 
     // MARK: Header with centered title
     private var header: some View {
         ZStack {
             HStack(spacing: 10) {
-                Button(action: onBack) {
+                Button(action: {
+                    isInputFocused = false
+                    viewModel.dismissKeyboard()
+                    onBack()
+                }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
@@ -77,7 +110,11 @@ struct ChatConversationView: View {
                         .clipShape(Circle())
                 }
                 Spacer()
-                Button(action: {}) {
+                Button(action: {
+                    // Dismiss keyboard if open
+                    isInputFocused = false
+                    viewModel.dismissKeyboard()
+                }) {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(theme.colors.textSecondary)
@@ -136,6 +173,14 @@ struct ChatConversationView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)
+            }
+            // Dismiss keyboard when scrolling the list
+            .scrollDismissesKeyboard(.immediately)
+            // Make the whole scroll area tappable to dismiss keyboard
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isInputFocused = false
+                viewModel.dismissKeyboard()
             }
             .onAppear {
                 if let lastMessageId = viewModel.getLastMessageId() {
@@ -386,3 +431,4 @@ struct MessageBubbleShape: Shape {
     )
     .environmentObject(Theme())
 }
+

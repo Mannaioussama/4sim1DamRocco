@@ -32,7 +32,7 @@ struct AppShellView: View {
         guard let topRoute = router.activeTopRoute else { return true }
         switch topRoute {
         case .activityRoom,
-             .chatConversation,
+             .chatConversation(_),   // match and ignore associated value
              .enhancedEventDetails,
              .aiCoach,
              .settings,
@@ -42,7 +42,7 @@ struct AppShellView: View {
              .quickMatch,
              .searchDiscovery,
              .coachOnboarding,
-             .coachProfile,
+             .coachProfile(_),       // match and ignore associated value
              .createActivity:
             return false
         default:
@@ -102,10 +102,12 @@ struct AppShellView: View {
 
                 // Right 1: Chat
                 NavigationStack(path: $router.chatPath) {
-                    ChatListView(onChatSelect: { _ in router.push(.chatConversation) })
-                        .navigationDestination(for: Route.self) { route in
-                            destinationView(for: route)
-                        }
+                    ChatListView(onChatSelect: { chatId in
+                        router.push(.chatConversation(chatId: chatId)) // pass the selected id
+                    })
+                    .navigationDestination(for: Route.self) { route in
+                        destinationView(for: route)
+                    }
                 }
                 .tabItem {
                     Image(systemName: "message.fill")
@@ -257,13 +259,13 @@ struct AppShellView: View {
                 onBack: { router.pop() },
                 onJoin: { router.push(.activityRoom) },
                 onViewCoach: { coachId in router.push(.coachProfile(coachId: coachId)) },
-                onMessage: { router.push(.chatConversation) }
+                onMessage: { router.push(.chatConversation(chatId: "sampleChat123")) } // supply a real id when available
             )
             .toolbar(.hidden, for: .tabBar)
 
-        case .chatConversation:
+        case .chatConversation(let chatId):
             ChatConversationView(
-                chatId: "sampleChat123",
+                chatId: chatId,
                 onBack: { router.pop() }
             )
             .toolbar(.hidden, for: .tabBar)
@@ -306,3 +308,4 @@ struct AppShellView_Previews: PreviewProvider {
     }
 }
 #endif
+

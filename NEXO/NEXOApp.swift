@@ -2,21 +2,23 @@
 //  NEXOApp.swift
 //  NEXO
 //
-//  Created by ROCCO 4X on 3/11/2025.
-//
-
+//  Created by ROCCO m 404
 import SwiftUI
+import HealthKit
 
 @main
 struct NEXOApp: App {
     @StateObject private var theme = Theme()
     @StateObject private var authStore = AuthStore()
+    @StateObject private var aiCoachService = AICoachService()
+    @StateObject private var activityAPIService = ActivityAPIService() // Shared across the app
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(theme)
                 .environmentObject(authStore)
+                .environmentObject(activityAPIService) // Provide shared ActivityAPIService
                 // Optional: flip system scheme too (status bar/material defaults).
                 // You can comment this out if you only want semantic colors to change.
                 .preferredColorScheme(theme.isDarkMode ? .dark : .light)
@@ -131,3 +133,4 @@ struct RootView: View {
         }
     }
 }
+

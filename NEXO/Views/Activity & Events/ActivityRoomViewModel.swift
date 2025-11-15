@@ -64,11 +64,13 @@ class ActivityRoomViewModel: ObservableObject {
     @Published var message: String = ""
     @Published var messages: [ChatMessage] = []
     @Published var participants: [Participant] = []
-    
-    // States
+    @Published var aiTips: [String] = []
+    @Published var isRefreshing: Bool = false
     @Published var isLoading: Bool = false
     @Published var showLeaveConfirmation: Bool = false
     @Published var showCompleteConfirmation: Bool = false
+    
+    // States
     
     // MARK: - Private Properties
     
@@ -224,6 +226,11 @@ class ActivityRoomViewModel: ObservableObject {
         messages.append(newMessage)
         message = ""
         
+        // Dismiss keyboard after sending
+        DispatchQueue.main.async {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+        
         // TODO: Send to backend
         trackMessageSent()
     }
@@ -304,6 +311,30 @@ class ActivityRoomViewModel: ObservableObject {
         // TODO: Open maps app
         trackDirectionsOpened()
         print("Opening directions to: \(activity.location)")
+    }
+    
+    // MARK: - Refresh Functions
+    
+    @MainActor
+    func refreshMessages() async {
+        print("🔄 Refreshing chat messages...")
+        isRefreshing = true
+        
+        // Simulate network delay
+        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+        
+        // Add a new mock message to show refresh worked
+        let newMessage = ChatMessage(
+            id: UUID().uuidString,
+            sender: "System",
+            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=System",
+            text: "Messages refreshed at \(DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short))",
+            time: DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
+        )
+        
+        messages.append(newMessage)
+        isRefreshing = false
+        print("✅ Messages refreshed successfully")
     }
     
     // MARK: - Analytics

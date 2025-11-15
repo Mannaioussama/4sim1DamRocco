@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import HealthKit
 
 // MARK: - Data Models
 struct Suggestion: Identifiable {
@@ -63,13 +64,27 @@ class AICoachViewModel: ObservableObject {
     @Published var challenges: [Challenge] = []
     @Published var weatherInfo: WeatherInfo?
     
+    // AI Coach Integration
+    @Published var isLoadingAIAnalysis = false
+    @Published var aiAnalysisError: String?
+    @Published var lastAIUpdate: Date?
+    
+    // Services
+    private let aiCoachService: AICoachService
+    private var cancellables = Set<AnyCancellable>()
+    
     // MARK: - Computed Properties
     
     var motivationalMessage: String {
-        return "Progress starts with small steps"
+        return aiCoachService.getMotivationalMessage()
     }
     
     var motivationalSubtext: String {
+        if let lastUpdate = lastAIUpdate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            return "Last updated: \(formatter.string(from: lastUpdate))"
+        }
         return "Keep going! You're doing great 💪"
     }
     
@@ -97,7 +112,9 @@ class AICoachViewModel: ObservableObject {
     
     // MARK: - Initialization
     
-    init() {
+    init(aiCoachService: AICoachService = AICoachService()) {
+        self.aiCoachService = aiCoachService
+        
         // Initialize with default stats
         self.weeklyStats = WeeklyStats(
             workouts: 3,
@@ -107,7 +124,34 @@ class AICoachViewModel: ObservableObject {
             streak: 7
         )
         
+        setupBindings()
         loadData()
+        
+        // Load AI analysis if available
+        Task {
+            await loadAIAnalysis()
+        }
+    }
+    
+    private func setupBindings() {
+        // Bind AI Coach service state
+        aiCoachService.$isAnalyzing
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.isLoadingAIAnalysis, on: self)
+            .store(in: &cancellables)
+        
+        aiCoachService.$error
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.aiAnalysisError, on: self)
+            .store(in: &cancellables)
+        
+        // Update suggestions and tips when AI analysis completes
+        aiCoachService.$lastAnalysis
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] analysis in
+                self?.updateWithAIAnalysis(analysis)
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Data Loading
@@ -117,24 +161,63 @@ class AICoachViewModel: ObservableObject {
         loadWorkoutTips()
         loadChallenges()
         loadWeather()
+        updateHealthStats()
+    }
+    
+    private func updateHealthStats() {
+        print("📊 Updating health stats...")
+        
+        // Update stats from HealthKit if available
+        if let healthMetrics = aiCoachService.getCurrentHealthMetrics() {
+            print("📊 Got health metrics: \(healthMetrics.steps) steps, \(healthMetrics.activeCalories) calories")
+            
+            let workouts = aiCoachService.getRecentWorkouts()
+            let weeklyWorkoutCount = workouts.filter { workout in
+                Calendar.current.isDate(workout.startDate, equalTo: Date(), toGranularity: .weekOfYear)
+            }.count
+            
+            weeklyStats = WeeklyStats(
+                workouts: weeklyWorkoutCount,
+                goal: weeklyStats.goal,
+                calories: healthMetrics.activeCalories,
+                minutes: healthMetrics.workoutMinutes,
+                streak: weeklyStats.streak // Keep existing streak logic
+            )
+            
+            print("📊 Updated stats: \(weeklyWorkoutCount) workouts, \(healthMetrics.activeCalories) calories")
+        } else {
+            print("📊 No health metrics available yet")
+        }
     }
     
     private func loadSuggestions() {
-        // Mock data - In production, fetch from AI/API
-        suggestions = [
-            .init(title: "Try a morning swim", description: "4 swimmers nearby are free tomorrow 7AM", icon: "🏊", time: "Tomorrow 7AM", participants: 4, matchScore: 95),
-            .init(title: "Join evening yoga session", description: "Perfect for recovery after your runs", icon: "🧘", time: "Today 6PM", participants: 8, matchScore: 88),
-            .init(title: "Weekend cycling group", description: "Explore new routes with local cyclists", icon: "🚴", time: "Saturday 8AM", participants: 12, matchScore: 82)
-        ]
+        // Load AI-generated suggestions if available, otherwise use defaults
+        let aiSuggestions = aiCoachService.convertAISuggestionsToViewModels()
+        if !aiSuggestions.isEmpty {
+            suggestions = aiSuggestions
+        } else {
+            // Fallback to default suggestions
+            suggestions = [
+                .init(title: "Try a morning swim", description: "4 swimmers nearby are free tomorrow 7AM", icon: "🏊", time: "Tomorrow 7AM", participants: 4, matchScore: 95),
+                .init(title: "Join evening yoga session", description: "Perfect for recovery after your runs", icon: "🧘", time: "Today 6PM", participants: 8, matchScore: 88),
+                .init(title: "Weekend cycling group", description: "Explore new routes with local cyclists", icon: "🚴", time: "Saturday 8AM", participants: 12, matchScore: 82)
+            ]
+        }
     }
     
     private func loadWorkoutTips() {
-        // Mock data - In production, fetch from API
-        workoutTips = [
-            .init(title: "Warm-up is essential", description: "Spend 5-10 minutes warming up to prevent injuries and improve performance.", icon: "🔥", category: "Basics"),
-            .init(title: "Stay hydrated", description: "Drink water before, during, and after your workout for optimal performance.", icon: "💧", category: "Health"),
-            .init(title: "Progressive overload", description: "Gradually increase intensity to continue seeing improvements.", icon: "📈", category: "Training")
-        ]
+        // Load AI-generated tips if available, otherwise use defaults
+        let aiTips = aiCoachService.convertAITipsToViewModels()
+        if !aiTips.isEmpty {
+            workoutTips = aiTips
+        } else {
+            // Fallback to default tips
+            workoutTips = [
+                .init(title: "Warm-up is essential", description: "Spend 5-10 minutes warming up to prevent injuries and improve performance.", icon: "🔥", category: "Basics"),
+                .init(title: "Stay hydrated", description: "Drink water before, during, and after your workout for optimal performance.", icon: "💧", category: "Health"),
+                .init(title: "Progressive overload", description: "Gradually increase intensity to continue seeing improvements.", icon: "📈", category: "Training")
+            ]
+        }
     }
     
     private func loadChallenges() {
@@ -146,13 +229,18 @@ class AICoachViewModel: ObservableObject {
     }
     
     private func loadWeather() {
-        // Mock data - In production, fetch from weather API
-        weatherInfo = WeatherInfo(
-            temperature: 72,
-            condition: "sunny",
-            description: "ideal for outdoor training",
-            icon: "sun.max.fill"
-        )
+        // Load real weather data from AI Coach service
+        if let realWeather = aiCoachService.getCurrentWeatherInfo() {
+            weatherInfo = realWeather
+        } else {
+            // Fallback to default weather
+            weatherInfo = WeatherInfo(
+                temperature: 72,
+                condition: "sunny",
+                description: "ideal for outdoor training",
+                icon: "sun.max.fill"
+            )
+        }
     }
     
     // MARK: - Tab Management
@@ -187,6 +275,85 @@ class AICoachViewModel: ObservableObject {
     
     func refreshData() {
         loadData()
+        
+        // Refresh AI analysis
+        Task {
+            await refreshAIAnalysis()
+        }
+    }
+    
+    // MARK: - AI Analysis Methods
+    
+    @MainActor
+    func loadAIAnalysis() async {
+        // Check if we need to request HealthKit permission
+        if !aiCoachService.isHealthKitAuthorized() {
+            await aiCoachService.requestHealthKitPermission()
+        }
+        
+        // Load existing analysis or perform new one if needed
+        if aiCoachService.lastAnalysis == nil {
+            await aiCoachService.performFullAnalysis()
+        }
+        
+        lastAIUpdate = Date()
+    }
+    
+    @MainActor
+    func refreshAIAnalysis() async {
+        await aiCoachService.refreshAllData()
+        lastAIUpdate = Date()
+    }
+    
+    private func updateWithAIAnalysis(_ analysis: AICoachResponse?) {
+        guard analysis != nil else { return }
+        
+        // Update suggestions and tips with AI data
+        loadSuggestions()
+        loadWorkoutTips()
+        
+        lastAIUpdate = Date()
+    }
+    
+    // MARK: - Session Tracking
+    
+    func recordUserSession(activityType: String, duration: Int, participants: Int, location: String? = nil) {
+        let session = UserSession(
+            activityType: activityType,
+            duration: duration,
+            participants: participants,
+            location: location
+        )
+        
+        aiCoachService.addUserSession(session)
+        
+        // Trigger a refresh of AI analysis after adding session
+        Task {
+            await refreshAIAnalysis()
+        }
+    }
+    
+    func addUserPreference(_ preference: String) {
+        aiCoachService.addUserPreference(preference)
+    }
+    
+    @MainActor
+    func requestHealthKitPermissionsIfNeeded() async {
+        print("🏥 Requesting HealthKit permissions...")
+        
+        // Always request permission (will use mock data for free accounts)
+        await aiCoachService.requestHealthKitPermission()
+        
+        // Wait a moment for data to be processed
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        
+        // Force refresh all data
+        print("🏥 Force refreshing all data...")
+        updateHealthStats()
+        loadWeather()
+        
+        // Trigger AI analysis with the new data
+        await refreshAIAnalysis()
     }
     
     // MARK: - Helper Methods

@@ -20,6 +20,13 @@ struct ActivityRoomView: View {
 
     var body: some View {
         ZStack {
+            // Background that can be tapped to dismiss keyboard
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    hideKeyboard()
+                }
+            
             theme.colors.backgroundGradient.ignoresSafeArea()
             backgroundOrbs
 
@@ -53,6 +60,15 @@ struct ActivityRoomView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
+        .gesture(
+            DragGesture()
+                .onEnded { value in
+                    // Swipe from left to right to go back
+                    if value.translation.width > 100 && abs(value.translation.height) < 50 {
+                        onBack()
+                    }
+                }
+        )
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: onBack) {
@@ -723,6 +739,11 @@ struct ActivityRoomView: View {
             },
             onError: { _ in }
         )
+    }
+    
+    // MARK: - Helper Functions
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

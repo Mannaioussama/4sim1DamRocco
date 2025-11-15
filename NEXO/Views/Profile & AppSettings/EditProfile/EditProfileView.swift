@@ -340,8 +340,12 @@ struct EditProfileView: View {
                         .font(.system(size: 12))
                         .foregroundColor(theme.colors.textSecondary)
 
-                    WrapHStack(items: viewModel.availableSports) { sport in
-                        sportChip(for: sport)
+                    // Replaced WrapHStack with LazyVGrid so chips wrap and all rows are visible
+                    let columns = [GridItem(.adaptive(minimum: 90), spacing: 10, alignment: .leading)]
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
+                        ForEach(viewModel.availableSports, id: \.self) { sport in
+                            sportChip(for: sport)
+                        }
                     }
                 }
                 .padding(16)

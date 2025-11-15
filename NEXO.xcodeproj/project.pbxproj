@@ -248,6 +248,8 @@
 				DEVELOPMENT_TEAM = 55274D8L89;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "We need access to your health data to provide personalized fitness recommendations and track your workout progress.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We need to update your health data to record workout sessions and fitness activities.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need your location to show nearby sports activities even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to show nearby sports activities and help you find workout buddies.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -282,6 +284,8 @@
 				DEVELOPMENT_TEAM = 55274D8L89;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "We need access to your health data to provide personalized fitness recommendations and track your workout progress.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We need to update your health data to record workout sessions and fitness activities.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need your location to show nearby sports activities even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to show nearby sports activities and help you find workout buddies.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

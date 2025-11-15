@@ -26,6 +26,19 @@ struct AICoachView: View {
                 headerSection
                     .padding(.top, 8)
                 
+                if viewModel.isLoadingAIAnalysis {
+                    aiAnalysisLoadingView
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                }
+                
+                // Debug info for development
+                if viewModel.aiAnalysisError != nil {
+                    errorView
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                }
+                
                 tabSelector
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
@@ -57,11 +70,45 @@ struct AICoachView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(theme.colors.barMaterial, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    viewModel.refreshData()
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(theme.colors.accentPurple)
+                }
+                .disabled(viewModel.isLoadingAIAnalysis)
+            }
+            
+            // User profile or settings could go here
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    // Navigate to user profile or settings
+                    print("👤 User profile tapped")
+                } label: {
+                    Image(systemName: "person.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(theme.colors.textPrimary)
+                }
+            }
+        }
         .navigationDestination(isPresented: $viewModel.navigateToAchievements) {
             AchievementsView()
         }
         .navigationDestination(isPresented: $viewModel.navigateToMatchmaker) {
             AIMatchmakerView()
+        }
+        .onAppear {
+            print("🚀 AI Coach view appeared")
+            Task {
+                await viewModel.requestHealthKitPermissionsIfNeeded()
+            }
+        }
+        .refreshable {
+            print("🔄 Manual refresh triggered")
+            await viewModel.refreshAIAnalysis()
         }
     }
 }
@@ -607,6 +654,70 @@ extension AICoachView {
                 .offset(x: 180, y: 300)
         }
         .allowsHitTesting(false)
+    }
+    
+    private var aiAnalysisLoadingView: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .scaleEffect(0.8)
+                .tint(theme.colors.accentPurple)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Analyzing your health data...")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(theme.colors.textPrimary)
+                
+                Text("Getting personalized recommendations from AI")
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.colors.textSecondary)
+            }
+            
+            Spacer()
+        }
+        .padding(12)
+        .background(theme.colors.cardBackground)
+        .background(theme.colors.barMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(theme.colors.accentPurple.opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
+    }
+    
+    private var errorView: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+                .font(.system(size: 16))
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Debug Info")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(theme.colors.textPrimary)
+                
+                Text(viewModel.aiAnalysisError ?? "Unknown error")
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.colors.textSecondary)
+            }
+            
+            Spacer()
+            
+            Button("Retry") {
+                Task {
+                    await viewModel.refreshAIAnalysis()
+                }
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(theme.colors.accentPurple)
+        }
+        .padding(12)
+        .background(Color.orange.opacity(0.1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(16)
     }
 }
 

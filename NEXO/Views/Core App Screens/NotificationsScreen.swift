@@ -222,7 +222,9 @@ struct NotificationsScreen: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             
-            Button(action: { viewModel.refreshNotifications() }) {
+            Button(action: {
+                Task { await viewModel.refreshNotifications() }
+            }) {
                 Text("Refresh")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)

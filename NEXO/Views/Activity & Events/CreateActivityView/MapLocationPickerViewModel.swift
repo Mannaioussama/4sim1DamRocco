@@ -31,7 +31,7 @@ class MapLocationPickerViewModel: NSObject, ObservableObject {
     /// Check if location can be confirmed
     var canConfirmLocation: Bool {
         guard let location = selectedLocation else { return false }
-        return location.isValid && !isLoadingAddress
+        return location.coordinate.isValid && !isLoadingAddress
     }
     
     /// Get selected coordinate for MapKit
@@ -114,21 +114,16 @@ class MapLocationPickerViewModel: NSObject, ObservableObject {
     
     /// Save location to recent locations
     func saveToRecent(_ location: MapLocationModel) {
-        // Check if location already exists
+        // Check if location already exists (by exact id)
         if let index = recentLocations.firstIndex(where: { $0.location.id == location.id }) {
-            // Update existing with incremented usage
             recentLocations[index] = recentLocations[index].withIncrementedUsage()
         } else {
-            // Add new recent location
             let recent = RecentLocation(location: location)
             recentLocations.insert(recent, at: 0)
-            
-            // Keep only last 10
             if recentLocations.count > 10 {
                 recentLocations = Array(recentLocations.prefix(10))
             }
         }
-        
         persistRecentLocations()
     }
     
@@ -143,22 +138,54 @@ class MapLocationPickerViewModel: NSObject, ObservableObject {
     private func reverseGeocodeLocation(_ coordinate: CLLocationCoordinate2D) {
         isLoadingAddress = true
         
-        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        // First try MKLocalSearch for nearest POI/address
+        let smallSpan = MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+        let region = MKCoordinateRegion(center: coordinate, span: smallSpan)
         
-        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, error in
-            DispatchQueue.main.async {
-                self?.isLoadingAddress = false
-                
-                if let error = error {
-                    print("Reverse geocoding error: \(error.localizedDescription)")
-                    self?.setUnknownLocation(for: coordinate)
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = nil
+        request.resultTypes = [.address, .pointOfInterest]
+        request.region = region
+        
+        let search = MKLocalSearch(request: request)
+        search.start { [weak self] response, error in
+            guard let self = self else { return }
+            
+            if let items = response?.mapItems, !items.isEmpty {
+                // Choose the nearest item
+                let nearest = items.min { lhs, rhs in
+                    let l = lhs.placemark.coordinate
+                    let r = rhs.placemark.coordinate
+                    let dl = hypot(l.latitude - coordinate.latitude, l.longitude - coordinate.longitude)
+                    let dr = hypot(r.latitude - coordinate.latitude, r.longitude - coordinate.longitude)
+                    return dl < dr
+                }
+                if let placemark = nearest?.placemark {
+                    DispatchQueue.main.async {
+                        self.createLocationModel(from: placemark, coordinate: coordinate)
+                        self.isLoadingAddress = false
+                    }
                     return
                 }
-                
+            }
+            
+            // Fallback: CLGeocoder reverse geocode
+            self.reverseGeocodeWithCLGeocoder(coordinate)
+        }
+    }
+    
+    private func reverseGeocodeWithCLGeocoder(_ coordinate: CLLocationCoordinate2D) {
+        geocoder.cancelGeocode()
+        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, error in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.isLoadingAddress = false
                 if let placemark = placemarks?.first {
-                    self?.createLocationModel(from: placemark, coordinate: coordinate)
+                    self.createLocationModel(from: placemark, coordinate: coordinate)
                 } else {
-                    self?.setUnknownLocation(for: coordinate)
+                    // Last-resort: still allow confirming with a readable name
+                    self.setDroppedPinName(for: coordinate)
                 }
             }
         }
@@ -173,31 +200,30 @@ class MapLocationPickerViewModel: NSObject, ObservableObject {
             name: name,
             address: address
         )
-        
         selectedLocation = location
     }
     
     private func extractLocationName(from placemark: CLPlacemark) -> String {
-        // Priority: name > street > city > "Unknown Location"
-        if let name = placemark.name, !name.isEmpty {
-            return name
-        }
-        
+        // Priority: name > street + number > locality > administrativeArea > country
+        if let name = placemark.name, !name.isEmpty { return name }
         if let street = placemark.thoroughfare {
+            if let number = placemark.subThoroughfare, !number.isEmpty {
+                return "\(number) \(street)"
+            }
             return street
         }
-        
-        if let city = placemark.locality {
-            return city
-        }
-        
-        return "Unknown Location"
+        if let city = placemark.locality { return city }
+        if let admin = placemark.administrativeArea { return admin }
+        if let country = placemark.country { return country }
+        return "Dropped Pin"
     }
     
-    private func setUnknownLocation(for coordinate: CLLocationCoordinate2D) {
+    private func setDroppedPinName(for coordinate: CLLocationCoordinate2D) {
+        // Ensure we never block confirmation just because we couldn't resolve a name
+        let pretty = String(format: "Dropped Pin (%.4f, %.4f)", coordinate.latitude, coordinate.longitude)
         let location = MapLocationModel(
             coordinate: Coordinate(from: coordinate),
-            name: "Unknown Location",
+            name: pretty,
             address: nil
         )
         selectedLocation = location
@@ -230,8 +256,6 @@ class MapLocationPickerViewModel: NSObject, ObservableObject {
 extension MapLocationPickerViewModel: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.first else { return }
-        
-        // Update map region to user location on first load if no location selected
         if selectedLocation == nil {
             updateMapRegion(center: Coordinate(from: location.coordinate))
         }
@@ -256,3 +280,4 @@ extension MapLocationPickerViewModel: CLLocationManagerDelegate {
         }
     }
 }
+

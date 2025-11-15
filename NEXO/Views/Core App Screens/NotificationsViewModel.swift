@@ -17,12 +17,24 @@ struct AppNotification: Identifiable {
     let actionText: String?
 }
 
+@MainActor
 class NotificationsViewModel: ObservableObject {
     // MARK: - Published Properties
     
     @Published var notifications: [AppNotification] = []
     @Published var isLoading: Bool = false
     @Published var selectedNotificationId: String?
+    @Published var errorMessage: String?
+
+    // MARK: - Dependencies
+    private let service: QuickMatchServicing
+    
+    // MARK: - Initialization
+    
+    init(service: QuickMatchServicing = QuickMatchService.shared) {
+        self.service = service
+        Task { await refreshNotifications() }
+    }
     
     // MARK: - Computed Properties
     
@@ -57,73 +69,54 @@ class NotificationsViewModel: ObservableObject {
     var emptyStateIcon: String {
         return "🔔"
     }
-    
-    // MARK: - Initialization
-    
-    init() {
-        loadNotifications()
-    }
-    
+
     // MARK: - Data Loading
     
-    private func loadNotifications() {
+    func refreshNotifications() async {
         isLoading = true
-        
-        // Mock data - In production, fetch from API
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.notifications = [
+        errorMessage = nil
+        do {
+            async let likesResp = service.getLikesReceived()
+            async let matchesList = service.getMatches()
+            let (likesReceived, matches) = try await (likesResp, matchesList)
+            
+            let likeCards: [AppNotification] = likesReceived.likes
+                .filter { !$0.isMatch }
+                .map { like in
+                    AppNotification(
+                        id: "like-\(like.likeId)",
+                        icon: "❤️",
+                        message: "\(like.fromUser.name ?? "Someone") liked your profile",
+                        time: relativeTime(from: like.createdAt),
+                        actionText: "View"
+                    )
+                }
+            
+            let matchCards: [AppNotification] = matches.map { match in
                 AppNotification(
-                    id: "1",
-                    icon: "👥",
-                    message: "Sarah Johnson joined your swimming session",
-                    time: "2m ago",
-                    actionText: nil
-                ),
-                AppNotification(
-                    id: "2",
-                    icon: "🏀",
-                    message: "New basketball match near you - Downtown Court",
-                    time: "15m ago",
-                    actionText: "View"
-                ),
-                AppNotification(
-                    id: "3",
-                    icon: "💬",
-                    message: "Michael Chen sent you a message",
-                    time: "1h ago",
-                    actionText: nil
-                ),
-                AppNotification(
-                    id: "4",
-                    icon: "⭐",
-                    message: "You received a 5-star rating from Emma Wilson!",
-                    time: "2h ago",
-                    actionText: nil
-                ),
-                AppNotification(
-                    id: "5",
-                    icon: "🎯",
-                    message: "Achievement unlocked: Marathon Runner 🏃",
-                    time: "3h ago",
-                    actionText: "View"
-                ),
-                AppNotification(
-                    id: "6",
-                    icon: "📅",
-                    message: "Reminder: Yoga session starts in 1 hour",
-                    time: "Yesterday",
-                    actionText: "Details"
-                ),
-                AppNotification(
-                    id: "7",
-                    icon: "👋",
-                    message: "3 new connection requests",
-                    time: "Yesterday",
-                    actionText: "View"
+                    id: "match-\(match.matchId)",
+                    icon: "✨",
+                    message: "It's a match with \(match.user.name ?? "someone")!",
+                    time: relativeTime(from: match.createdAt),
+                    actionText: "Chat"
                 )
-            ]
-            self?.isLoading = false
+            }
+            
+            // Combine and sort newest first (by parsed date)
+            let combined = (likeCards + matchCards)
+                .sorted { lhs, rhs in
+                    parsedDate(from: lhs.time) > parsedDate(from: rhs.time)
+                }
+            
+            notifications = combined
+        } catch let api as APIError {
+            errorMessage = api.userMessage
+            notifications = []
+        } catch {
+            errorMessage = error.localizedDescription
+            notifications = []
         }
+        isLoading = false
     }
     
     // MARK: - Actions
@@ -132,25 +125,22 @@ class NotificationsViewModel: ObservableObject {
         withAnimation(.spring(response: 0.3)) {
             notifications.removeAll { $0.id == notificationId }
         }
-        
-        // TODO: Mark as read on backend
         print("Dismissed notification: \(notificationId)")
     }
     
     func handleNotificationAction(_ notification: AppNotification) {
         selectedNotificationId = notification.id
-        
-        // TODO: Navigate to appropriate screen based on notification type
+        // TODO: Navigate to appropriate screen (e.g., open chat on match)
         print("Handling action for notification: \(notification.id)")
     }
     
     func markAsRead(_ notificationId: String) {
-        // TODO: Mark notification as read on backend
+        // TODO: Mark notification as read on backend (if supported)
         print("Marked notification as read: \(notificationId)")
     }
     
     func markAllAsRead() {
-        // TODO: Mark all notifications as read on backend
+        // TODO: Mark all notifications as read on backend (if supported)
         print("Marked all notifications as read")
     }
     
@@ -158,13 +148,7 @@ class NotificationsViewModel: ObservableObject {
         withAnimation(.spring(response: 0.3)) {
             notifications.removeAll()
         }
-        
-        // TODO: Clear all notifications on backend
         print("Cleared all notifications")
-    }
-    
-    func refreshNotifications() {
-        loadNotifications()
     }
     
     // MARK: - Helper Methods
@@ -199,6 +183,46 @@ class NotificationsViewModel: ObservableObject {
         } else {
             return "Older"
         }
+    }
+    
+    // MARK: - Time Formatting
+    
+    private func relativeTime(from iso: String) -> String {
+        // Try ISO8601 with and without fractional seconds
+        let isoFmt = ISO8601DateFormatter()
+        isoFmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let altIsoFmt = ISO8601DateFormatter()
+        altIsoFmt.formatOptions = [.withInternetDateTime]
+        let date = isoFmt.date(from: iso) ?? altIsoFmt.date(from: iso) ?? Date()
+        let seconds = max(0, Int(Date().timeIntervalSince(date)))
+        let minutes = seconds / 60
+        let hours = minutes / 60
+        let days = hours / 24
+        
+        if minutes < 1 { return "Just now" }
+        if minutes < 60 { return "\(minutes)m ago" }
+        if hours < 24 { return "\(hours)h ago" }
+        if days == 1 { return "Yesterday" }
+        let df = DateFormatter()
+        df.dateFormat = "MMM d"
+        return df.string(from: date)
+    }
+
+    // Used only for sorting newest first; interpret "Just now"/"Xm ago" quickly.
+    private func parsedDate(from display: String) -> Date {
+        if display == "Just now" { return Date() }
+        if display.hasSuffix("m ago"), let m = Int(display.replacingOccurrences(of: "m ago", with: "")) {
+            return Date().addingTimeInterval(TimeInterval(-m * 60))
+        }
+        if display.hasSuffix("h ago"), let h = Int(display.replacingOccurrences(of: "h ago", with: "")) {
+            return Date().addingTimeInterval(TimeInterval(-h * 3600))
+        }
+        if display == "Yesterday" {
+            return Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+        }
+        let df = DateFormatter()
+        df.dateFormat = "MMM d"
+        return df.date(from: display) ?? Date.distantPast
     }
     
     // MARK: - Analytics

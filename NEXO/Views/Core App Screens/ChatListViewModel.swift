@@ -19,17 +19,29 @@ struct Chat: Identifiable {
     let isGroup: Bool
 }
 
+struct UserSearchResult: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let avatar: String?
+}
+
 class ChatListViewModel: ObservableObject {
     // MARK: - Published Properties
     
     @Published var chats: [Chat] = []
+    @Published var userResults: [UserSearchResult] = []
     @Published var searchQuery: String = ""
     @Published var isLoading: Bool = false
+    @Published var isSearchingUsers: Bool = false
     @Published var selectedChatId: String?
+    // New: control focus of the search field from VM (to dismiss on background tap)
+    @Published var isSearchFocused: Bool = false
     
     // MARK: - Private Properties
     
     private var cancellables = Set<AnyCancellable>()
+    private var fetchTask: Task<Void, Never>?
+    private var userSearchTask: Task<Void, Never>?
     
     // MARK: - Computed Properties
     
@@ -43,25 +55,12 @@ class ChatListViewModel: ObservableObject {
         }
     }
     
-    var hasChats: Bool {
-        return !chats.isEmpty
-    }
-    
-    var hasUnreadChats: Bool {
-        return chats.contains { $0.unreadCount > 0 }
-    }
-    
-    var totalUnreadCount: Int {
-        return chats.reduce(0) { $0 + $1.unreadCount }
-    }
-    
-    var hasSearchResults: Bool {
-        return !filteredChats.isEmpty
-    }
-    
-    var isSearching: Bool {
-        return !searchQuery.isEmpty
-    }
+    var hasChats: Bool { !chats.isEmpty }
+    var hasUnreadChats: Bool { chats.contains { $0.unreadCount > 0 } }
+    var totalUnreadCount: Int { chats.reduce(0) { $0 + $1.unreadCount } }
+    var hasSearchResults: Bool { !filteredChats.isEmpty }
+    var isSearching: Bool { !searchQuery.isEmpty }
+    var hasUserResults: Bool { !userResults.isEmpty }
     
     // MARK: - Initialization
     
@@ -73,67 +72,76 @@ class ChatListViewModel: ObservableObject {
     // MARK: - Data Loading
     
     private func loadChats() {
+        fetchTask?.cancel()
         isLoading = true
         
-        // Mock data - In production, fetch from API
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.chats = [
-                Chat(
-                    id: "1",
-                    participantNames: "Sarah Johnson",
-                    participantAvatars: ["https://i.pravatar.cc/150?img=9"],
-                    lastMessage: "See you at the yoga session tomorrow!",
-                    lastMessageTime: "2m",
-                    unreadCount: 2,
-                    isGroup: false
-                ),
-                Chat(
-                    id: "2",
-                    participantNames: "Basketball Squad",
-                    participantAvatars: ["https://i.pravatar.cc/150?img=15", "https://i.pravatar.cc/150?img=12"],
-                    lastMessage: "Who's bringing the ball?",
-                    lastMessageTime: "15m",
-                    unreadCount: 5,
-                    isGroup: true
-                ),
-                Chat(
-                    id: "3",
-                    participantNames: "Michael Chen",
-                    participantAvatars: ["https://i.pravatar.cc/150?img=12"],
-                    lastMessage: "Great run today! Same time next week?",
-                    lastMessageTime: "1h",
-                    unreadCount: 0,
-                    isGroup: false
-                ),
-                Chat(
-                    id: "4",
-                    participantNames: "Tennis Partners",
-                    participantAvatars: ["https://i.pravatar.cc/150?img=5", "https://i.pravatar.cc/150?img=9"],
-                    lastMessage: "Court is booked for Saturday",
-                    lastMessageTime: "3h",
-                    unreadCount: 1,
-                    isGroup: true
-                ),
-                Chat(
-                    id: "5",
-                    participantNames: "Emma Wilson",
-                    participantAvatars: ["https://i.pravatar.cc/150?img=5"],
-                    lastMessage: "Thanks for the volleyball tips!",
-                    lastMessageTime: "Yesterday",
-                    unreadCount: 0,
-                    isGroup: false
-                ),
-                Chat(
-                    id: "6",
-                    participantNames: "James Rodriguez",
-                    participantAvatars: ["https://i.pravatar.cc/150?img=15"],
-                    lastMessage: "Let's do another pickup game soon",
-                    lastMessageTime: "Yesterday",
-                    unreadCount: 0,
-                    isGroup: false
-                )
-            ]
-            self?.isLoading = false
+        fetchTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let dtos = try await ChatAPI.fetchChats(search: self.searchQuery)
+                let mapped = dtos.map {
+                    Chat(
+                        id: $0.id,
+                        participantNames: $0.participantNames,
+                        participantAvatars: $0.participantAvatars,
+                        lastMessage: $0.lastMessage,
+                        lastMessageTime: $0.lastMessageTime,
+                        unreadCount: $0.unreadCount,
+                        isGroup: $0.isGroup
+                    )
+                }
+                await MainActor.run {
+                    self.chats = mapped
+                    self.isLoading = false
+                }
+            } catch let api as APIError {
+                await MainActor.run {
+                    self.isLoading = false
+                    print("Chat list error: \(api.userMessage)")
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoading = false
+                    print("Chat list error: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    // MARK: - User Search
+    
+    private func searchUsers(_ query: String) {
+        userSearchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count < 2 {
+            userResults = []
+            isSearchingUsers = false
+            return
+        }
+        isSearchingUsers = true
+        
+        userSearchTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let dtos = try await ChatAPI.searchUsers(query: trimmed)
+                let mapped = dtos.map { UserSearchResult(id: $0.id, name: $0.name, avatar: $0.avatar) }
+                await MainActor.run {
+                    self.userResults = mapped
+                    self.isSearchingUsers = false
+                }
+            } catch let api as APIError {
+                await MainActor.run {
+                    self.userResults = []
+                    self.isSearchingUsers = false
+                    print("User search error: \(api.userMessage)")
+                }
+            } catch {
+                await MainActor.run {
+                    self.userResults = []
+                    self.isSearchingUsers = false
+                    print("User search error: \(error.localizedDescription)")
+                }
+            }
         }
     }
     
@@ -144,18 +152,16 @@ class ChatListViewModel: ObservableObject {
             .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
             .removeDuplicates()
             .sink { [weak self] query in
-                self?.performSearch(query)
+                guard let self else { return }
+                self.loadChats()          // server-side chat search
+                self.searchUsers(query)   // people search
             }
             .store(in: &cancellables)
     }
     
-    private func performSearch(_ query: String) {
-        // In production, this could trigger a server-side search
-        print("Searching for: \(query)")
-    }
-    
     func clearSearch() {
         searchQuery = ""
+        userResults = []
     }
     
     // MARK: - Actions
@@ -165,47 +171,68 @@ class ChatListViewModel: ObservableObject {
         markChatAsRead(chatId)
     }
     
+    func startDirectChat(with userId: String, onOpen: @escaping (String) -> Void) {
+        Task {
+            do {
+                let detail = try await ChatAPI.createChat(
+                    CreateChatRequest(participantIds: [userId], groupName: nil, groupAvatar: nil)
+                )
+                await MainActor.run {
+                    self.selectedChatId = detail.id
+                    onOpen(detail.id)
+                }
+            } catch let api as APIError {
+                print("Create chat failed: \(api.userMessage)")
+            } catch {
+                print("Create chat failed: \(error.localizedDescription)")
+            }
+        }
+    }
+    
     func markChatAsRead(_ chatId: String) {
-        if let index = chats.firstIndex(where: { $0.id == chatId }) {
-            // In production, update on backend
-            print("Marking chat as read: \(chatId)")
-            
-            // Update local state
-            chats[index] = Chat(
-                id: chats[index].id,
-                participantNames: chats[index].participantNames,
-                participantAvatars: chats[index].participantAvatars,
-                lastMessage: chats[index].lastMessage,
-                lastMessageTime: chats[index].lastMessageTime,
-                unreadCount: 0,
-                isGroup: chats[index].isGroup
-            )
+        Task {
+            do {
+                try await ChatAPI.markChatAsRead(chatId: chatId)
+                await MainActor.run {
+                    if let index = self.chats.firstIndex(where: { $0.id == chatId }) {
+                        let c = self.chats[index]
+                        self.chats[index] = Chat(
+                            id: c.id,
+                            participantNames: c.participantNames,
+                            participantAvatars: c.participantAvatars,
+                            lastMessage: c.lastMessage,
+                            lastMessageTime: c.lastMessageTime,
+                            unreadCount: 0,
+                            isGroup: c.isGroup
+                        )
+                    }
+                }
+            } catch {
+                print("markChatAsRead failed: \(error)")
+            }
         }
     }
     
     func deleteChat(_ chatId: String) {
-        chats.removeAll { $0.id == chatId }
-        // TODO: Delete from backend
-        print("Deleted chat: \(chatId)")
+        Task {
+            do {
+                _ = try await ChatAPI.deleteChat(chatId: chatId)
+                await MainActor.run {
+                    self.chats.removeAll { $0.id == chatId }
+                }
+            } catch {
+                print("deleteChat failed: \(error)")
+            }
+        }
     }
     
-    func refreshChats() {
-        loadChats()
-    }
+    func refreshChats() { loadChats() }
     
     // MARK: - Helper Methods
     
-    func getChat(by id: String) -> Chat? {
-        return chats.first { $0.id == id }
-    }
-    
-    func getChatsByType(isGroup: Bool) -> [Chat] {
-        return chats.filter { $0.isGroup == isGroup }
-    }
-    
-    func getUnreadChats() -> [Chat] {
-        return chats.filter { $0.unreadCount > 0 }
-    }
+    func getChat(by id: String) -> Chat? { chats.first { $0.id == id } }
+    func getChatsByType(isGroup: Bool) -> [Chat] { chats.filter { $0.isGroup == isGroup } }
+    func getUnreadChats() -> [Chat] { chats.filter { $0.unreadCount > 0 } }
     
     func getChatParticipantInitials(_ chat: Chat) -> String {
         let names = chat.participantNames.split(separator: " ")
@@ -218,19 +245,19 @@ class ChatListViewModel: ObservableObject {
     }
     
     func sortChatsByRecent() {
-        // In production, implement actual sorting logic
+        // Sorting handled by backend; add client-side sort if needed
         print("Sorting chats by recent activity")
     }
     
     // MARK: - Analytics
     
-    func trackChatOpened(_ chatId: String) {
-        // TODO: Implement analytics tracking
-        print("Opened chat: \(chatId)")
-    }
+    func trackChatOpened(_ chatId: String) { print("Opened chat: \(chatId)") }
+    func trackSearchPerformed(_ query: String) { print("Search performed: \(query)") }
     
-    func trackSearchPerformed(_ query: String) {
-        // TODO: Implement analytics tracking
-        print("Search performed: \(query)")
+    // MARK: - Keyboard
+    
+    func dismissSearchKeyboard() {
+        isSearchFocused = false
     }
 }
+

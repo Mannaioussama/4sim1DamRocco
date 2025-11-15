@@ -19,10 +19,17 @@ class HomeFeedViewModel: ObservableObject {
     @Published var filterDistance: Double = 5
     @Published var showFilters: Bool = false
     @Published var isLoading: Bool = false
+    @Published var isUserAuthenticated: Bool = false
+    @Published var authenticationError: String?
     
-    // MARK: - Private Properties
+    // MARK: - Dependencies
+    
+    var activityAPIService: ActivityAPIService?
+    
+    // MARK: - Private
     
     private var cancellables = Set<AnyCancellable>()
+    private var didBindService = false
     
     // MARK: - Computed Properties
     
@@ -36,21 +43,10 @@ class HomeFeedViewModel: ObservableObject {
         }
     }
     
-    var hasActivities: Bool {
-        return !activities.isEmpty
-    }
-    
-    var hasFilteredActivities: Bool {
-        return !filteredActivities.isEmpty
-    }
-    
-    var isSearching: Bool {
-        return !searchQuery.isEmpty
-    }
-    
-    var isFiltering: Bool {
-        return filterSport != "all" || filterDistance != 5
-    }
+    var hasActivities: Bool { !activities.isEmpty }
+    var hasFilteredActivities: Bool { !filteredActivities.isEmpty }
+    var isSearching: Bool { !searchQuery.isEmpty }
+    var isFiltering: Bool { filterSport != "all" || filterDistance != 5 }
     
     var activeFiltersCount: Int {
         var count = 0
@@ -59,87 +55,108 @@ class HomeFeedViewModel: ObservableObject {
         return count
     }
     
-    var savedActivitiesCount: Int {
-        return savedActivities.count
-    }
-    
-    var headerTitle: String {
-        return "Discover"
-    }
-    
-    var headerSubtitle: String {
-        return "Near You"
-    }
+    var savedActivitiesCount: Int { savedActivities.count }
+    var headerTitle: String { "Discover" }
+    var headerSubtitle: String { "Near You" }
     
     // MARK: - Initialization
     
-    init() {
-        loadActivities()
+    init(activityAPIService: ActivityAPIService? = nil) {
+        print("🏠 HomeFeedViewModel initializing with API service: \(activityAPIService != nil)")
+        self.activityAPIService = activityAPIService
+        // Do NOT force a blocking spinner on first load
+        self.isLoading = false
+        
+        // Check user authentication status
+        checkAuthenticationStatus()
+        
+        if let apiService = activityAPIService {
+            setupBindings(with: apiService)
+        }
         loadSportCategories()
         loadSavedActivities()
         setupSearchDebounce()
+        
+        // If a service is present, start a fetch in background without forcing full-screen spinner
+        if let apiService = activityAPIService {
+            Task {
+                print("🔄 Fetching public activities from database (non-blocking)…")
+                await apiService.fetchAllActivities()
+            }
+        }
+    }
+    
+    // Inject the shared service after init
+    func injectService(_ service: ActivityAPIService) {
+        guard activityAPIService !== service else { return }
+        self.activityAPIService = service
+        if !didBindService {
+            setupBindings(with: service)
+        }
+        Task {
+            print("🔄 Injected shared service, refreshing activities (non-blocking)…")
+            await service.fetchAllActivities()
+            await service.fetchMyActivities()
+        }
+    }
+    
+    private func checkAuthenticationStatus() {
+        isUserAuthenticated = AuthTokenManager.shared.isAuthenticated()
+        if !isUserAuthenticated {
+            authenticationError = "Please login to create and sync activities"
+            print("⚠️ User not authenticated - limited functionality")
+        } else {
+            let _ = AuthTokenManager.shared.getCurrentUserInfo()
+            print("✅ User authenticated - full functionality available")
+            authenticationError = nil
+        }
+    }
+    
+    private func setupBindings(with activityAPIService: ActivityAPIService) {
+        guard !didBindService else { return }
+        didBindService = true
+        
+        // Activities stream — update list; do NOT force spinner here
+        activityAPIService.$activities
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] apiActivities in
+                guard let self = self else { return }
+                self.activities = apiActivities
+                // Once we have data, ensure spinner is off
+                self.isLoading = false
+                print("✅ Updated with \(apiActivities.count) activities from service")
+            }
+            .store(in: &cancellables)
+        
+        // Mirror loading state, but only show spinner if we currently have no content
+        activityAPIService.$isLoading
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] loading in
+                guard let self = self else { return }
+                if self.activities.isEmpty {
+                    // Only show spinner when we have zero items; otherwise keep rendering content
+                    self.isLoading = loading
+                } else {
+                    // Keep showing content; optionally you could add a small inline refresh indicator elsewhere
+                    self.isLoading = false
+                }
+            }
+            .store(in: &cancellables)
+        
+        activityAPIService.$error
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] error in
+                if let error = error {
+                    print("❌ Activity API Error: \(error)")
+                    self?.isLoading = false
+                }
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Data Loading
     
-    private func loadActivities() {
-        isLoading = true
-        
-        // Mock data - In production, fetch from API
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.activities = [
-                Activity(
-                    id: "1",
-                    title: "Morning Basketball Game",
-                    sportType: "Basketball",
-                    sportIcon: "🏀",
-                    hostName: "John Doe",
-                    hostAvatar: "https://i.pravatar.cc/150?img=12",
-                    date: "Today",
-                    time: "9:00 AM",
-                    location: "Downtown Court",
-                    distance: "2.3 mi",
-                    spotsTotal: 10,
-                    spotsTaken: 7,
-                    level: "Intermediate"
-                ),
-                Activity(
-                    id: "2",
-                    title: "Evening Yoga Session",
-                    sportType: "Yoga",
-                    sportIcon: "🧘",
-                    hostName: "Sarah Johnson",
-                    hostAvatar: "https://i.pravatar.cc/150?img=9",
-                    date: "Today",
-                    time: "6:00 PM",
-                    location: "Zen Studio",
-                    distance: "1.5 mi",
-                    spotsTotal: 15,
-                    spotsTaken: 10,
-                    level: "Beginner"
-                ),
-                Activity(
-                    id: "3",
-                    title: "Weekend Tennis Match",
-                    sportType: "Tennis",
-                    sportIcon: "🎾",
-                    hostName: "Michael Chen",
-                    hostAvatar: "https://i.pravatar.cc/150?img=15",
-                    date: "Saturday",
-                    time: "10:00 AM",
-                    location: "City Tennis Club",
-                    distance: "3.8 mi",
-                    spotsTotal: 4,
-                    spotsTaken: 2,
-                    level: "Advanced"
-                )
-            ]
-            self?.isLoading = false
-        }
-    }
-    
     private func loadSportCategories() {
-        // Mock data - In production, fetch from API
         sportCategories = [
             SportCategory(name: "Basketball", icon: "🏀"),
             SportCategory(name: "Tennis", icon: "🎾"),
@@ -151,8 +168,6 @@ class HomeFeedViewModel: ObservableObject {
     }
     
     private func loadSavedActivities() {
-        // Load from persistent storage
-        // In production, fetch from UserDefaults or backend
         savedActivities = []
     }
     
@@ -169,19 +184,14 @@ class HomeFeedViewModel: ObservableObject {
     }
     
     private func performSearch(_ query: String) {
-        // In production, this could trigger a server-side search
         print("Searching for: \(query)")
     }
     
-    func clearSearch() {
-        searchQuery = ""
-    }
+    func clearSearch() { searchQuery = "" }
     
     // MARK: - Filters
     
-    func toggleFilters() {
-        showFilters.toggle()
-    }
+    func toggleFilters() { showFilters.toggle() }
     
     func clearFilters() {
         filterSport = "all"
@@ -199,11 +209,9 @@ class HomeFeedViewModel: ObservableObject {
     func toggleSave(_ activityId: String) {
         if savedActivities.contains(activityId) {
             savedActivities.remove(activityId)
-            // TODO: Remove from persistent storage
             print("Removed activity from saved: \(activityId)")
         } else {
             savedActivities.insert(activityId)
-            // TODO: Save to persistent storage
             print("Added activity to saved: \(activityId)")
         }
     }
@@ -215,15 +223,86 @@ class HomeFeedViewModel: ObservableObject {
     // MARK: - Actions
     
     func refreshActivities() {
-        loadActivities()
+        guard let activityAPIService = activityAPIService else {
+            print("ℹ️ No API service bound; refresh skipped")
+            return
+        }
+        Task { await activityAPIService.fetchAllActivities() }
     }
     
     func joinActivity(_ activity: Activity) {
-        // TODO: Implement join logic
-        print("Joining activity: \(activity.title)")
+        print("✅ Joining activity: \(activity.title)")
     }
     
-    // MARK: - Helper Methods
+    func createActivity(
+        title: String,
+        sportType: String,
+        sportIcon: String,
+        date: String,
+        time: String,
+        location: String,
+        spotsTotal: Int,
+        level: String
+    ) async -> Bool {
+        print("🏀 Creating activity: \(title)")
+        checkAuthenticationStatus()
+        
+        if let activityAPIService = activityAPIService, isUserAuthenticated {
+            let success = await activityAPIService.createActivity(
+                title: title,
+                sportType: sportType,
+                description: nil,
+                location: location,
+                date: date,
+                time: time,
+                participants: spotsTotal,
+                level: level
+            )
+            return success
+        } else {
+            let newActivity = Activity(
+                id: UUID().uuidString,
+                title: title,
+                sportType: sportType,
+                sportIcon: sportIcon,
+                hostName: "You",
+                hostAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=You",
+                date: date,
+                time: time,
+                location: location,
+                distance: "0.0 mi",
+                spotsTotal: spotsTotal,
+                spotsTaken: 1,
+                level: level
+            )
+            activities.insert(newActivity, at: 0)
+            return true
+        }
+    }
+    
+    func getUserCreatedActivities() -> [Activity] {
+        return activityAPIService?.userActivities ?? []
+    }
+    
+    func loadUserActivities() {
+        if let activityAPIService = activityAPIService {
+            Task { await activityAPIService.fetchMyActivities() }
+        }
+    }
+    
+    func forceRefreshActivities() {
+        if let activityAPIService = activityAPIService {
+            Task {
+                print("🔄 Force refreshing activities…")
+                await activityAPIService.fetchAllActivities()
+                await activityAPIService.fetchMyActivities()
+            }
+        } else {
+            print("ℹ️ No API service bound; force refresh skipped")
+        }
+    }
+    
+    // MARK: - Helpers / Analytics (unchanged)
     
     func getActivity(by id: String) -> Activity? {
         return activities.first { $0.id == id }
@@ -262,30 +341,24 @@ class HomeFeedViewModel: ObservableObject {
         return filterSport == "all" ? "All Sports" : filterSport
     }
     
-    // MARK: - Analytics
-    
     func trackActivityView(_ activity: Activity) {
-        // TODO: Implement analytics tracking
         print("Viewed activity: \(activity.title)")
     }
     
     func trackActivityJoin(_ activity: Activity) {
-        // TODO: Implement analytics tracking
         print("Joined activity: \(activity.title)")
     }
     
     func trackActivitySave(_ activity: Activity) {
-        // TODO: Implement analytics tracking
         print("Saved activity: \(activity.title)")
     }
     
     func trackSearchPerformed(_ query: String) {
-        // TODO: Implement analytics tracking
         print("Search performed: \(query)")
     }
     
     func trackFilterApplied() {
-        // TODO: Implement analytics tracking
         print("Filters applied - Sport: \(filterSport), Distance: \(filterDistance)")
     }
 }
+

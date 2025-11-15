@@ -10,6 +10,7 @@ import SwiftUI
 struct ChatListView: View {
     @EnvironmentObject private var theme: Theme
     @StateObject private var viewModel = ChatListViewModel()
+    @FocusState private var isSearchFocused: Bool
     
     var onChatSelect: (String) -> Void
     
@@ -18,6 +19,11 @@ struct ChatListView: View {
             // Background uses Theme
             theme.colors.backgroundGradient
                 .ignoresSafeArea()
+                .onTapGesture {
+                    // Dismiss keyboard when tapping empty background
+                    isSearchFocused = false
+                    viewModel.dismissSearchKeyboard()
+                }
             
             // Floating Orbs
             FloatingOrb(
@@ -69,14 +75,25 @@ struct ChatListView: View {
                 // Header
                 headerSection
                 
-                // Chat List
+                // Content
                 if viewModel.isLoading {
                     loadingView
-                } else if viewModel.hasSearchResults || !viewModel.isSearching {
-                    chatListContent
+                } else if viewModel.isSearching {
+                    searchResultsContent
                 } else {
-                    emptySearchView
+                    chatListContent
                 }
+            }
+        }
+        // Keep VM and local search focus in sync
+        .onChange(of: isSearchFocused) { _, newValue in
+            if viewModel.isSearchFocused != newValue {
+                viewModel.isSearchFocused = newValue
+            }
+        }
+        .onChange(of: viewModel.isSearchFocused) { _, newValue in
+            if isSearchFocused != newValue {
+                isSearchFocused = newValue
             }
         }
     }
@@ -112,11 +129,13 @@ struct ChatListView: View {
                     .font(.system(size: 18))
                     .foregroundColor(theme.colors.textSecondary)
                 
-                TextField("Search conversations...", text: $viewModel.searchQuery)
+                TextField("Search people or conversations...", text: $viewModel.searchQuery)
                     .font(.system(size: 15))
                     .foregroundColor(theme.colors.textPrimary)
                     .tint(theme.colors.accentPurple)
                     .accentColor(theme.colors.accentPurple)
+                    .focused($isSearchFocused)
+                    .submitLabel(.search)
                 
                 if viewModel.isSearching {
                     Button(action: { viewModel.clearSearch() }) {
@@ -149,6 +168,87 @@ struct ChatListView: View {
         .padding(.bottom, 12)
     }
     
+    // MARK: - Search Results Content (People + Conversations)
+    
+    private var searchResultsContent: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                if viewModel.isSearchingUsers && !viewModel.hasUserResults {
+                    // Searching state
+                    VStack(spacing: 8) {
+                        ProgressView()
+                        Text("Searching people…")
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.colors.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                
+                if viewModel.hasUserResults {
+                    // People section
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("People")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(theme.colors.textPrimary)
+                            Spacer()
+                        }
+                        ForEach(viewModel.userResults) { user in
+                            SearchUserRow(
+                                user: user,
+                                onTap: {
+                                    viewModel.startDirectChat(with: user.id) { chatId in
+                                        viewModel.selectChat(chatId)
+                                        onChatSelect(chatId)
+                                    }
+                                }
+                            )
+                            .environmentObject(theme)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                
+                // Conversations section (still filtered by query)
+                if viewModel.hasSearchResults {
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("Conversations")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(theme.colors.textPrimary)
+                            Spacer()
+                        }
+                        ForEach(viewModel.filteredChats) { chat in
+                            ChatRow(
+                                chat: chat,
+                                onTap: {
+                                    viewModel.selectChat(chat.id)
+                                    viewModel.trackChatOpened(chat.id)
+                                    onChatSelect(chat.id)
+                                }
+                            )
+                            .environmentObject(theme)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 100)
+                }
+                
+                if !viewModel.hasUserResults && !viewModel.hasSearchResults && !viewModel.isSearchingUsers {
+                    emptySearchView
+                        .padding(.top, 24)
+                }
+            }
+        }
+        // Dismiss keyboard on scroll or tap anywhere in the list
+        .scrollDismissesKeyboard(.interactively)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isSearchFocused = false
+            viewModel.dismissSearchKeyboard()
+        }
+    }
+    
     // MARK: - Chat List Content
     
     private var chatListContent: some View {
@@ -168,6 +268,13 @@ struct ChatListView: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 100)
+        }
+        // Dismiss keyboard on scroll or tap anywhere in the list
+        .scrollDismissesKeyboard(.interactively)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isSearchFocused = false
+            viewModel.dismissSearchKeyboard()
         }
     }
     
@@ -192,10 +299,10 @@ struct ChatListView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48))
                 .foregroundColor(theme.colors.textSecondary)
-            Text("No conversations found")
+            Text("No results")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
-            Text("Try searching with different keywords")
+            Text("Try a different name or keyword")
                 .font(.system(size: 14))
                 .foregroundColor(theme.colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -216,7 +323,7 @@ struct ChatListView: View {
     }
 }
 
-// MARK: - Chat Row
+// MARK: - Chat Row (unchanged)
 
 struct ChatRow: View {
     @EnvironmentObject private var theme: Theme
@@ -263,7 +370,7 @@ struct ChatRow: View {
                     .frame(width: 48, height: 48)
                 } else {
                     // Single avatar
-                    AsyncImage(url: URL(string: chat.participantAvatars[0])) { image in
+                    AsyncImage(url: URL(string: chat.participantAvatars.first ?? "")) { image in
                         image
                             .resizable()
                             .scaledToFill()
@@ -332,6 +439,65 @@ struct ChatRow: View {
     }
 }
 
+// MARK: - Search User Row
+
+struct SearchUserRow: View {
+    @EnvironmentObject private var theme: Theme
+    let user: UserSearchResult
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                AsyncImage(url: URL(string: user.avatar ?? "")) { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } placeholder: {
+                    Text(initials(from: user.name))
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                .frame(width: 48, height: 48)
+                .background(theme.colors.accentPurple)
+                .clipShape(Circle())
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(user.name)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(theme.colors.textPrimary)
+                    Text("Tap to chat")
+                        .font(.system(size: 12))
+                        .foregroundColor(theme.colors.textSecondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "message.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(theme.colors.textSecondary)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.colors.cardBackground)
+            .background(theme.colors.barMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+            )
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+        }
+        .buttonStyle(ScaleButtonStyle())
+    }
+    
+    private func initials(from name: String) -> String {
+        let comps = name.split(separator: " ")
+        let letters = comps.prefix(2).compactMap { $0.first }.map(String.init).joined()
+        return letters.isEmpty ? "U" : letters
+    }
+}
+
 // MARK: - Preview
 
 #Preview {
@@ -340,3 +506,4 @@ struct ChatRow: View {
     })
     .environmentObject(Theme())
 }
+

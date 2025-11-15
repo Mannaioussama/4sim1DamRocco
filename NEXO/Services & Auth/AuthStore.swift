@@ -24,7 +24,9 @@ final class AuthStore: ObservableObject {
     init(tokenStore: TokenStoring) {
         self.tokenStore = tokenStore
         // Try restoring previous session
-        if let _ = try? tokenStore.load() {
+        if let token = try? tokenStore.load(), !token.isEmpty {
+            // Mirror into AuthTokenManager so services that read from it can work
+            AuthTokenManager.shared.saveToken(token)
             self.isLoggedIn = true
         }
     }
@@ -39,6 +41,8 @@ final class AuthStore: ObservableObject {
     func login(email: String, password: String) async throws {
         let resp = try await AuthAPI.login(.init(email: email, password: password))
         try tokenStore.save(token: resp.accessToken)
+        // Mirror token so ActivityAPIService can read it
+        AuthTokenManager.shared.saveToken(resp.accessToken)
         currentUser = resp.user
         isLoggedIn = true
     }
@@ -53,6 +57,8 @@ final class AuthStore: ObservableObject {
         }
 
         try tokenStore.save(token: resp.accessToken)
+        // Mirror token so ActivityAPIService can read it
+        AuthTokenManager.shared.saveToken(resp.accessToken)
         currentUser = resp.user
         isLoggedIn = true
     }
@@ -74,6 +80,8 @@ final class AuthStore: ObservableObject {
         try? tokenStore.remove()
         currentUser = nil
         isLoggedIn = false
+        // Keep both stores in sync
+        AuthTokenManager.shared.clearToken()
     }
 
     func accessToken() -> String? {

@@ -23,7 +23,7 @@ enum Route: Hashable {
     case aiSuggestions
     case activityRoom
     case enhancedEventDetails
-    case chatConversation
+    case chatConversation(chatId: String)   // <- carry the chat id
     case coachProfile(coachId: String)
     case quickMatch
     case searchDiscovery

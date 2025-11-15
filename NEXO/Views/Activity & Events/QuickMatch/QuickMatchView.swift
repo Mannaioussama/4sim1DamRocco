@@ -20,16 +20,22 @@ struct QuickMatchView: View {
             theme.colors.backgroundGradient.ignoresSafeArea()
             backgroundOrbs
 
-            VStack(spacing: 0) {
-                Spacer()
+            VStack(spacing: 16) {
+                Spacer(minLength: 0)
                 
                 if let profile = viewModel.currentProfile {
+                    // Responsive card
                     cardStack(profile: profile)
+                    
+                    // Actions placed below the card (no hard-coded offsets)
+                    actionButtons
+                        .padding(.top, 4)
                 } else {
                     emptyState
+                        .padding(.horizontal, 24)
                 }
                 
-                Spacer()
+                Spacer(minLength: 0)
             }
 
             if viewModel.showMatch, let matched = viewModel.matchedProfile {
@@ -146,52 +152,51 @@ private struct LikesBadge: View {
 extension QuickMatchView {
     private func cardStack(profile: MatchProfile) -> some View {
         ZStack {
-            previewStack
-            
-            // Base card (level 0)
-            SwipeCard(profile: profile) { direction in
-                viewModel.handleSwipe(direction, profile)
-            }
-            .environmentObject(theme)
-            .frame(width: 340, height: 530)
-            .zIndex(0)
-            
-            // Likes badge as a sibling above the card (level 1)
-            VStack {
-                HStack {
-                    Spacer()
+            GeometryReader { proxy in
+                let size = proxy.size
+                // Preview stack behind the main card, sized to the same container
+                previewStack
+                    .frame(width: size.width, height: size.height)
+                
+                // Base card (level 0)
+                SwipeCard(profile: profile) { direction in
+                    viewModel.handleSwipe(direction, profile)
+                }
+                .environmentObject(theme)
+                .frame(width: size.width, height: size.height)
+                // Likes badge anchored to the card bounds
+                .overlay(alignment: .topTrailing) {
                     LikesBadge(count: viewModel.likedCount)
                         .environmentObject(theme)
-                        .padding(.top, -70)
+                        .padding(.top, 8)
                         .padding(.trailing, 8)
                 }
-                Spacer()
             }
-            .frame(width: 340, height: 530, alignment: .topTrailing)
-            .allowsHitTesting(false)
-            .zIndex(1)
-            
-            actionButtons
-                .offset(y: 305)
         }
+        // Maintain the original 340x530 aspect, but make it responsive
+        .frame(maxWidth: 380) // cap on large screens
+        .aspectRatio(340.0 / 530.0, contentMode: .fit)
+        .padding(.horizontal, 16) // breathing room on small screens
     }
     
     private var previewStack: some View {
-        ForEach(Array(viewModel.nextProfiles.enumerated()), id: \.element.id) { index, _ in
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(Color.clear, lineWidth: 0)
-                )
-                .shadow(
-                    color: .black.opacity(theme.isDarkMode ? 0.12 : 0.0),
-                    radius: theme.isDarkMode ? 10 : 0,
-                    y: theme.isDarkMode ? 6 : 0
-                )
-                .scaleEffect(1 - CGFloat(index + 1) * 0.05)
-                .offset(y: -CGFloat(index + 1) * 10)
-                .opacity(theme.isDarkMode ? (1 - Double(index + 1) * 0.15) : 0)
+        ZStack {
+            ForEach(Array(viewModel.nextProfiles.enumerated()), id: \.element.id) { index, _ in
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.clear, lineWidth: 0)
+                    )
+                    .shadow(
+                        color: .black.opacity(theme.isDarkMode ? 0.12 : 0.0),
+                        radius: theme.isDarkMode ? 10 : 0,
+                        y: theme.isDarkMode ? 6 : 0
+                    )
+                    .scaleEffect(1 - CGFloat(index + 1) * 0.05)
+                    .offset(y: -CGFloat(index + 1) * 10)
+                    .opacity(theme.isDarkMode ? (1 - Double(index + 1) * 0.15) : 0)
+            }
         }
     }
     

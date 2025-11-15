@@ -14,6 +14,7 @@ class CreateActivityViewModel: ObservableObject {
     
     @Published var showSuccess = false
     @Published var showMapPicker = false
+    @Published var isSaving = false
     @Published var sportType = ""
     @Published var title = ""
     @Published var description = ""
@@ -24,6 +25,7 @@ class CreateActivityViewModel: ObservableObject {
     @Published var participants = 5.0
     @Published var level = ""
     @Published var visibility = "public"
+    @Published var errorMessage: String?
     
     // MARK: - Constants
     
@@ -60,7 +62,6 @@ class CreateActivityViewModel: ObservableObject {
     // MARK: - Initialization
     
     init() {
-        // Set default values if needed
         self.participants = 5.0
         self.visibility = "public"
     }
@@ -84,35 +85,44 @@ class CreateActivityViewModel: ObservableObject {
         self.locationCoordinate = coordinate
     }
     
-    func createActivity() {
+    // MARK: - API
+    
+    func createActivity(using service: ActivityAPIService) async {
         guard isFormValid else {
-            print("Form validation failed")
+            await MainActor.run { self.errorMessage = "Please fill all required fields." }
             return
         }
         
-        // TODO: Send data to backend/database
-        var activityData: [String: Any] = [
-            "sportType": sportType,
-            "title": title,
-            "description": description,
-            "location": location,
-            "date": date,
-            "time": time,
-            "participants": participantsCount,
-            "level": level,
-            "visibility": visibility
-        ]
-        
-        // Add coordinates if available
-        if let coordinate = locationCoordinate {
-            activityData["latitude"] = coordinate.latitude
-            activityData["longitude"] = coordinate.longitude
+        await MainActor.run {
+            self.isSaving = true
+            self.errorMessage = nil
         }
         
-        print("Creating activity with data: \(activityData)")
+        let dateString = formatDateForAPI(date)
+        let timeString = formatTimeForAPI(time)
         
-        // Show success dialog
-        showSuccess = true
+        let success = await service.createActivity(
+            title: title,
+            sportType: sportType,
+            description: description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : description,
+            location: location,
+            date: dateString,
+            time: timeString,
+            participants: participantsCount,
+            level: level,
+            visibility: visibility,
+            latitude: locationCoordinate?.latitude,
+            longitude: locationCoordinate?.longitude
+        )
+        
+        await MainActor.run {
+            self.isSaving = false
+            if success {
+                self.showSuccess = true
+            } else {
+                self.errorMessage = service.error ?? "Failed to create activity."
+            }
+        }
     }
     
     func resetForm() {
@@ -128,19 +138,22 @@ class CreateActivityViewModel: ObservableObject {
         visibility = "public"
         showSuccess = false
         showMapPicker = false
+        isSaving = false
+        errorMessage = nil
     }
     
-    // MARK: - Helper Methods
+    // MARK: - Helpers
     
-    func getFormattedDate() -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: date)
+    private func formatDateForAPI(_ date: Date) -> String {
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+        return df.string(from: date)
     }
     
-    func getFormattedTime() -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: time)
+    private func formatTimeForAPI(_ date: Date) -> String {
+        // ActivityAPIService will convert this display string to ISO internally.
+        let tf = DateFormatter()
+        tf.dateFormat = "h:mm a"
+        return tf.string(from: date)
     }
 }
