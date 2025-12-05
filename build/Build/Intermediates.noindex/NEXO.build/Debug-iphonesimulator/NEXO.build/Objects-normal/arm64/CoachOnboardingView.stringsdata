@@ -1,0 +1,152 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Profile & AppSettings/CoachOnboardingView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Error",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "Back",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "Submitting application...",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 112
+        }
+      },
+      {
+        "comment": "",
+        "key": "I am a *",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 228
+        }
+      },
+      {
+        "comment": "",
+        "key": "Years of Experience *",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 284
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 287
+        }
+      },
+      {
+        "comment": "",
+        "key": "Upload Verification Documents *",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 379
+        }
+      },
+      {
+        "comment": "",
+        "key": "Upload ID, Certifications, or Business License",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 391
+        }
+      },
+      {
+        "comment": "",
+        "key": "PNG, JPG, or HEIC (max 5MB each)",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 394
+        }
+      },
+      {
+        "comment": "",
+        "key": "Selected Documents",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 417
+        }
+      },
+      {
+        "comment": "",
+        "key": "Submit Application",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 469
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reapply",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 576
+        }
+      },
+      {
+        "comment": "",
+        "key": "Go to Dashboard",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 556
+        }
+      },
+      {
+        "comment": "",
+        "key": "Verified Benefits",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 603
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create paid sessions, get priority in search, and build trust with your community.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 606
+        }
+      },
+      {
+        "comment": "",
+        "key": "Upload from",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 654
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 671
+        }
+      }
+    ]
+  },
+  "version": 1
+}

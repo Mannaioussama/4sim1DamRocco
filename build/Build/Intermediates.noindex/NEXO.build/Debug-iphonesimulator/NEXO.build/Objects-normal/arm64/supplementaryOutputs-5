@@ -1,0 +1,65 @@
+{
+  "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/ActivityRoomView.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityRoomView.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityRoomView.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityRoomView.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityRoomView.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityRoomView.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/ActivityRoomViewModel.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityRoomViewModel.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityRoomViewModel.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityRoomViewModel.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityRoomViewModel.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityRoomViewModel.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/ChatConversationView.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatConversationView.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatConversationView.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatConversationView.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatConversationView.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatConversationView.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/ChatConversationViewModel.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatConversationViewModel.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatConversationViewModel.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatConversationViewModel.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatConversationViewModel.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatConversationViewModel.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/EnhancedEventDetailsView.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/EnhancedEventDetailsView.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/EnhancedEventDetailsView.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/EnhancedEventDetailsView.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/EnhancedEventDetailsView.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/EnhancedEventDetailsView.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/EnhancedEventDetailsViewModel.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/EnhancedEventDetailsViewModel.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/EnhancedEventDetailsViewModel.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/EnhancedEventDetailsViewModel.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/EnhancedEventDetailsViewModel.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/EnhancedEventDetailsViewModel.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/SearchDiscovery/SearchDiscoveryModels.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryModels.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryModels.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryModels.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryModels.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryModels.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/SearchDiscovery/SearchDiscoveryView.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryView.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryView.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryView.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryView.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryView.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/SearchDiscovery/SearchDiscoveryViewModel.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryViewModel.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryViewModel.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryViewModel.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryViewModel.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/SearchDiscoveryViewModel.swiftdeps"
+  }
+}

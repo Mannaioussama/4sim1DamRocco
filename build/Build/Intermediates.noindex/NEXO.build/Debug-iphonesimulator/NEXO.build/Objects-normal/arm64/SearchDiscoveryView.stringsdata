@@ -1,0 +1,152 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/SearchDiscovery/SearchDiscoveryView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Explore More",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search sports, people, or places...",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 96
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loading...",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "Featured Coach",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 144
+        }
+      },
+      {
+        "comment": "",
+        "key": "See All",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 151
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 203
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld reviews",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 207
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 211
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld+ sessions",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 215
+        }
+      },
+      {
+        "comment": "",
+        "key": "Browse by Sport",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 246
+        }
+      },
+      {
+        "comment": "",
+        "key": "No activities found for '%@'",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 302
+        }
+      },
+      {
+        "comment": "",
+        "key": "Error loading activities",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 372
+        }
+      },
+      {
+        "comment": "",
+        "key": "No activities available",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 377
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search Results",
+        "location": {
+          "startingColumn": 88,
+          "startingLine": 296
+        }
+      },
+      {
+        "comment": "",
+        "key": "Trending Near You",
+        "location": {
+          "startingColumn": 107,
+          "startingLine": 296
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld/%lld spots",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 355
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 334
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 336
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,184 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Profile & AppSettings/EditProfile/EditProfileView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Success",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "Error",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "Saving profile...",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 74
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Profile",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap to change photo",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 194
+        }
+      },
+      {
+        "comment": "",
+        "key": "Basic Information",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 213
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your name",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 223
+        }
+      },
+      {
+        "comment": "",
+        "key": "email@example.com",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 229
+        }
+      },
+      {
+        "comment": "",
+        "key": "+1 (555) 123-4567",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 237
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 244
+        }
+      },
+      {
+        "comment": "",
+        "key": "City, State",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 249
+        }
+      },
+      {
+        "comment": "",
+        "key": "About Me",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 270
+        }
+      },
+      {
+        "comment": "",
+        "key": "Too long!",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 292
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sports Interests",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 323
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld selected",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 329
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select the sports you're interested in",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 339
+        }
+      },
+      {
+        "comment": "",
+        "key": "Email Verification",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 407
+        }
+      },
+      {
+        "comment": "",
+        "key": "✓ Verified",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 442
+        }
+      },
+      {
+        "comment": "",
+        "key": "Send Verification Email",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 460
+        }
+      }
+    ]
+  },
+  "version": 1
+}

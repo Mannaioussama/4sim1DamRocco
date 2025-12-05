@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 import Combine
 
 class ChatConversationViewModel: ObservableObject {
@@ -15,22 +16,57 @@ class ChatConversationViewModel: ObservableObject {
     @Published var messageText: String = ""
     @Published var isInputFocused: Bool = false
     @Published var isLoading: Bool = false
+    @Published var participants: [ChatParticipant] = []
+    @Published var isGroup: Bool = false
+    @Published var sessionTitle: String = ""
+    @Published var showLeaveConfirmation: Bool = false
     
     // MARK: - Properties
     
     let chatId: String
     private var loadTask: Task<Void, Never>?
+    private var cancellables = Set<AnyCancellable>()
+    private let realtimeService = RealtimeChatService.shared
     
     // MARK: - Initialization
     
     init(chatId: String) {
         self.chatId = chatId
+        setupRealtimeSubscription()
         loadMessages()
         markAsRead()
+        
+        // Check if this is a group chat and load info
+        Task {
+            await loadGroupChatInfo()
+        }
+    }
+    
+    private func loadGroupChatInfo() async {
+        do {
+            let chats = try await ChatAPI.fetchChats(search: nil)
+            if let dto = chats.first(where: { $0.id == chatId }) {
+                await MainActor.run {
+                    self.isGroup = dto.isGroup
+                    // Use participantNames as the display title for the chat (activity or user name)
+                    self.sessionTitle = dto.participantNames
+                }
+                // Always load participants so 1-to-1 chats can resolve the other user
+                await loadParticipants()
+            } else {
+                await MainActor.run {
+                    self.isGroup = false
+                    self.sessionTitle = ""
+                }
+            }
+        } catch {
+            print("loadGroupChatInfo failed: \(error)")
+        }
     }
     
     deinit {
         loadTask?.cancel()
+        realtimeService.unsubscribeFromChat(chatId: chatId)
     }
     
     // MARK: - Data Loading
@@ -70,13 +106,92 @@ class ChatConversationViewModel: ObservableObject {
         }
     }
     
-    private func markAsRead() {
+    func dismissKeyboard() {
+        isInputFocused = false
+    }
+    
+    func markAsRead() {
         Task {
             do {
                 try await ChatAPI.markChatAsRead(chatId: chatId)
             } catch {
                 print("markAsRead failed: \(error)")
             }
+        }
+    }
+    
+    // MARK: - Group Chat Methods
+    
+    func loadParticipants() async {
+        do {
+            participants = try await ChatAPI.getChatParticipants(chatId: chatId)
+        } catch {
+            print("loadParticipants failed: \(error)")
+        }
+    }
+    
+    func leaveGroup() async {
+        guard isGroup else { return }
+        
+        do {
+            _ = try await ChatAPI.leaveGroupChat(chatId: chatId)
+            // Navigate back or update UI will be handled by the view
+        } catch {
+            print("leaveGroup failed: \(error)")
+        }
+    }
+    
+    func setupGroupChat(sessionTitle: String, isGroup: Bool) {
+        self.sessionTitle = sessionTitle
+        self.isGroup = isGroup
+        
+        Task {
+            await loadParticipants()
+        }
+    }
+    
+    // MARK: - Real-time Subscription (HTTP Polling)
+    
+    private func setupRealtimeSubscription() {
+        print("🔥 ViewModel: Setting up realtime subscription for chat \(chatId)")
+        
+        // Connect to polling service
+        realtimeService.connect()
+        print("🔥 ViewModel: Connected to polling service")
+        
+        // Subscribe to new messages for this chat
+        realtimeService.subscribeToChat(chatId: chatId)
+            .sink { [weak self] newMessageDTO in
+                print("🔥 ViewModel: Received message in sink: \(newMessageDTO.text)")
+                self?.handleNewMessage(newMessageDTO)
+            }
+            .store(in: &cancellables)
+        
+        print("🔥 ViewModel: Subscription setup complete")
+    }
+    
+    private func handleNewMessage(_ dto: ChatMessageDTO) {
+        print("🔥 ViewModel: Handling message: \(dto.text)")
+        
+        // Check if this message already exists (avoid duplicates)
+        if messages.contains(where: { $0.id == dto.id }) {
+            print("🔥 ViewModel: Message already exists, skipping")
+            return
+        }
+        
+        let newMessage = Message(
+            id: dto.id,
+            text: dto.text,
+            sender: dto.sender.lowercased() == "me" ? .me : .other,
+            time: dto.time,
+            senderName: dto.senderName,
+            avatar: dto.avatar
+        )
+        
+        DispatchQueue.main.async { [weak self] in
+            print("🔥 ViewModel: Adding message to UI: \(newMessage.text)")
+            self?.messages.append(newMessage)
+            print("🔥 ViewModel: Total messages: \(self?.messages.count ?? 0)")
         }
     }
     
@@ -143,9 +258,43 @@ class ChatConversationViewModel: ObservableObject {
     func getLastMessageId() -> String? {
         return messages.last?.id
     }
-    
-    func dismissKeyboard() {
-        isInputFocused = false
+
+    var otherParticipant: ChatParticipant? {
+        // Only show a profile when we can reliably identify "me" and "the other".
+        guard !participants.isEmpty else { return nil }
+        guard let currentId = AuthTokenManager.shared.getUserId() else { return nil }
+        // For 1:1 chats there should be exactly one participant whose id != current user id.
+        return participants.first(where: { $0.id != currentId })
+    }
+
+    /// Display name for the other side of the conversation in direct chats.
+    /// Prefers the resolved participant name, then the chat title from the list,
+    /// then the first other sender name from messages.
+    var directChatDisplayName: String {
+        if let other = otherParticipant { return other.name }
+        if !sessionTitle.isEmpty { return sessionTitle }
+        if let msg = messages.first(where: { $0.sender == .other }), let name = msg.senderName, !name.isEmpty {
+            return name
+        }
+        return "Conversation"
+    }
+
+    /// Fallback participant used for the profile popup in direct chats.
+    /// If we cannot resolve a real ChatParticipant from the participants API,
+    /// we synthesize one from the display name and the first other-message avatar.
+    var directChatPopupParticipant: ChatParticipant? {
+        if let other = otherParticipant { return other }
+        let name = directChatDisplayName
+        guard name != "Conversation" else { return nil }
+        let avatar = messages.first(where: { $0.sender == .other })?.avatar
+        return ChatParticipant(
+            id: "",
+            name: name,
+            email: nil,
+            profileImageUrl: avatar,
+            avatar: avatar,
+            about: nil,
+            sportsInterests: nil
+        )
     }
 }
-

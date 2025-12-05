@@ -162,7 +162,10 @@ struct OnboardingView: View {
             ZStack {
                 Circle()
                     .fill(theme.colors.cardBackground)
-                    .background(theme.colors.barMaterial)
+                    .background(
+                        Circle()
+                            .fill(theme.colors.barMaterial)
+                    )
                     .overlay(
                         Circle()
                             .stroke(theme.colors.cardStroke, lineWidth: 4)
@@ -291,7 +294,10 @@ struct OnboardingView: View {
                 // Main crystal glass background
                 RoundedRectangle(cornerRadius: 35)
                     .fill(theme.colors.cardBackground)
-                    .background(theme.colors.barMaterial)
+                    .background(
+                        RoundedRectangle(cornerRadius: 35)
+                            .fill(theme.colors.barMaterial)
+                    )
                 
                 // Top crystal shine
                 RoundedRectangle(cornerRadius: 35)
@@ -381,7 +387,10 @@ struct OnboardingView: View {
                         // Crystal glass background
                         RoundedRectangle(cornerRadius: 28)
                             .fill(theme.colors.cardBackground)
-                            .background(theme.colors.barMaterial)
+                            .background(
+                                RoundedRectangle(cornerRadius: 28)
+                                    .fill(theme.colors.barMaterial)
+                            )
                         
                         // Top shine
                         RoundedRectangle(cornerRadius: 28)
@@ -429,8 +438,12 @@ struct OnboardingView: View {
                 .padding(.vertical, 9)
                 .background(
                     ZStack {
-                        theme.colors.cardBackground
-                            .background(theme.colors.barMaterial)
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(theme.colors.cardBackground)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(theme.colors.barMaterial)
+                            )
                         
                         // Top shine
                         LinearGradient(

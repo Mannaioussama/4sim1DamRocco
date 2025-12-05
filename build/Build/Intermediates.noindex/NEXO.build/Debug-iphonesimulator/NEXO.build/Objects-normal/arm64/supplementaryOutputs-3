@@ -1,0 +1,65 @@
+{
+  "/Users/macbook/Desktop/NEXO/NEXO/Services & Auth/APIConfig.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/APIConfig.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/APIConfig.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/APIConfig.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/APIConfig.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/APIConfig.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services & Auth/APIError.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/APIError.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/APIError.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/APIError.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/APIError.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/APIError.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services & Auth/AuthAPI.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthAPI.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthAPI.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthAPI.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthAPI.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthAPI.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services & Auth/AuthModels.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthModels.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthModels.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthModels.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthModels.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthModels.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services & Auth/AuthStore.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthStore.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthStore.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthStore.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthStore.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthStore.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services & Auth/KeychainTokenStore.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/KeychainTokenStore.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/KeychainTokenStore.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/KeychainTokenStore.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/KeychainTokenStore.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/KeychainTokenStore.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Theme/ButtonStyle+Brand.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ButtonStyle+Brand.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ButtonStyle+Brand.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ButtonStyle+Brand.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ButtonStyle+Brand.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ButtonStyle+Brand.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Theme/ColorPalette.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ColorPalette.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ColorPalette.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ColorPalette.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ColorPalette.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ColorPalette.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Theme/Theme.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/Theme.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/Theme.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/Theme.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/Theme.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/Theme.swiftdeps"
+  }
+}

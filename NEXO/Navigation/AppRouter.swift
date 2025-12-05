@@ -29,6 +29,12 @@ enum Route: Hashable {
     case searchDiscovery
     case coachOnboarding
     case createActivity
+    case createSession
+    case coachDashboard
+    case premiumSubscription
+    case premiumAnalytics
+    case premiumBilling
+    case premiumNotifications
 }
 
 // MARK: - Tabs (declared elsewhere in your project)

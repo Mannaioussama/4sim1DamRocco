@@ -1,0 +1,136 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/QuickMatch/QuickMatchView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Quick Match",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "Likes %lld",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 147
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@, %lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 407
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 415
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rating",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 468
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 486
+        }
+      },
+      {
+        "comment": "",
+        "key": "Activities",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 490
+        }
+      },
+      {
+        "comment": "",
+        "key": "Favorite Sports",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 508
+        }
+      },
+      {
+        "comment": "",
+        "key": "Interests",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 556
+        }
+      },
+      {
+        "comment": "",
+        "key": "All caught up!",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 617
+        }
+      },
+      {
+        "comment": "",
+        "key": "You've seen all available profiles. Check back later for more sport buddies!",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 621
+        }
+      },
+      {
+        "comment": "",
+        "key": "Back to Home",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 691
+        }
+      },
+      {
+        "comment": "",
+        "key": "It's a Match!",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 735
+        }
+      },
+      {
+        "comment": "",
+        "key": "You and %@ both like each other",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 739
+        }
+      },
+      {
+        "comment": "",
+        "key": "Starting a conversation...",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 759
+        }
+      }
+    ]
+  },
+  "version": 1
+}

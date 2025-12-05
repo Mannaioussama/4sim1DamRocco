@@ -8,6 +8,8 @@
 import SwiftUI
 import PhotosUI
 import Combine
+import Foundation
+import CoreLocation
 
 // MARK: - Data Models (UI-only models for the Profile page)
 struct ProfileViewData {
@@ -17,6 +19,7 @@ struct ProfileViewData {
     var avatar: String
     var sportsInterests: [String]
     let stats: UserStats
+    let isCoachVerified: Bool
 }
 
 struct UserStats {
@@ -51,7 +54,8 @@ class ProfilePageViewModel: ObservableObject {
     private let imageService = ProfileImageService()
     private let uploader: ProfileImageUploader
     private let profileAPI = ProfileAPI.shared
-    private let tokenStore = KeychainTokenStore.shared
+    private let tokenStore = AuthTokenManager.shared
+    private let activityAPI = ActivityAPIService()
     
     // MARK: - Private
     
@@ -98,15 +102,83 @@ class ProfilePageViewModel: ObservableObject {
             avatar: "https://i.pravatar.cc/150?img=33",
             sportsInterests: ["Running", "Swimming", "Hiking", "Yoga", "Cycling"],
             stats: UserStats(
-                sessionsJoined: 42,
-                sessionsHosted: 15,
-                rating: 4.9,
-                favoriteSports: ["Running", "Swimming", "Hiking", "Yoga", "Cycling"]
-            )
+                sessionsJoined: 0,
+                sessionsHosted: 0,
+                rating: 4.8,
+                favoriteSports: ["Running", "Swimming", "Hiking"]
+            ),
+            isCoachVerified: false
         )
+        
+        // Fetch user activities when the view model is initialized
+        Task {
+            await fetchUserActivities()
+        }
         
         setupObservers()
         loadRecentActivities()
+    }
+    
+    // MARK: - Activity Fetching
+    
+    @MainActor
+    private func fetchUserActivities() async {
+        print("🔍 Fetching user activities...")
+        // Fetch all activities
+        await activityAPI.fetchMyActivities()
+        
+        // Get the current user ID
+        guard let userId = tokenStore.getUserId() else {
+            print("❌ User ID not found in token store")
+            return
+        }
+        
+        print("👤 Current user ID: \(userId)")
+        print("📊 Total activities fetched: \(activityAPI.activities.count)")
+        
+        // Debug: Print all activities and their participant IDs
+        for (index, activity) in activityAPI.activities.enumerated() {
+            print("\nActivity #\(index + 1):")
+            print("  Title: \(activity.title)")
+            print("  Creator ID: \(activity.creator?.id ?? "nil")")
+            print("  Host Name: \(activity.hostName)")
+            print("  Participant IDs: \(activity.participantIds ?? [])")
+        }
+        
+        // Get hosted activities (created by the user)
+        let hostedActivities = activityAPI.userActivities.filter { activity in
+            let isCreator = activity.creator?.id == userId
+            let isHost = activity.hostName.lowercased() == currentUser.name.lowercased()
+            return isCreator || isHost
+        }
+        let hostedCount = hostedActivities.count
+        
+        // Get joined activities (user is a participant)
+        let joinedActivities = activityAPI.userActivities.filter { activity in
+            activity.participantIds?.contains(userId) ?? false
+        }
+        let joinedCount = joinedActivities.count
+        
+        print("🏠 Hosted activities count: \(hostedCount)")
+        print("🤝 Joined activities count: \(joinedCount)")
+        
+        // Update the current user's stats
+        currentUser = ProfileViewData(
+            name: currentUser.name,
+            bio: currentUser.bio,
+            location: currentUser.location,
+            avatar: currentUser.avatar,
+            sportsInterests: currentUser.sportsInterests,
+            stats: UserStats(
+                sessionsJoined: joinedCount,
+                sessionsHosted: hostedCount,
+                rating: currentUser.stats.rating,
+                favoriteSports: currentUser.stats.favoriteSports
+            ),
+            isCoachVerified: currentUser.isCoachVerified
+        )
+        
+        print("✅ Updated profile stats - Hosted: \(hostedCount), Joined: \(joinedCount)")
     }
     
     private func setupObservers() {
@@ -125,9 +197,9 @@ class ProfilePageViewModel: ObservableObject {
     
     // MARK: - Data Loading
     
-    func loadUserProfile() {
+    private func loadUserProfile() {
         Task { @MainActor in
-            guard let token = tokenStore.getAccessToken() else {
+            guard let token = tokenStore.getToken() else {
                 print("No access token available")
                 return
             }
@@ -152,7 +224,8 @@ class ProfilePageViewModel: ObservableObject {
                 sessionsHosted: 0,
                 rating: 0,
                 favoriteSports: user.sportsInterests ?? []
-            )
+            ),
+            isCoachVerified: user.isCoachVerified ?? false
         )
     }
     

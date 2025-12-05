@@ -1,0 +1,80 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Profile & AppSettings/AchievementsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Achievements",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loading achievements...",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your Level",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "XP Progress",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "You",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 309
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld XP",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 305
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld/%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 362
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reward: %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 404
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld/%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 408
+        }
+      }
+    ]
+  },
+  "version": 1
+}

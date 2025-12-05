@@ -57,6 +57,10 @@ class CoachProfileViewModel: ObservableObject {
     // MARK: - Properties
     
     let coachId: String
+    private let activityService = ActivityAPIService()
+    private let authTokenManager = AuthTokenManager.shared
+    private let followService = FollowService()
+    private let reviewsService = ReviewsService()
     
     // MARK: - Computed Properties
     
@@ -92,6 +96,13 @@ class CoachProfileViewModel: ObservableObject {
         return isFollowing ? "Following" : "Follow"
     }
     
+    /// Whether the follow button should be visible.
+    /// Hidden when the current user is the same as the coach.
+    var shouldShowFollowButton: Bool {
+        guard let currentUserId = authTokenManager.getUserId() else { return true }
+        return currentUserId != coachId
+    }
+    
     var hasUpcomingSessions: Bool {
         return !upcomingSessions.isEmpty
     }
@@ -110,59 +121,129 @@ class CoachProfileViewModel: ObservableObject {
     
     init(coachId: String) {
         self.coachId = coachId
-        loadCoachProfile()
-        loadUpcomingSessions()
+        loadDataFromAPI()
         loadReviews()
         checkFollowingStatus()
     }
     
     // MARK: - Data Loading
     
-    private func loadCoachProfile() {
+    /// Loads coach header info and upcoming sessions by filtering activities for this coach.
+    private func loadDataFromAPI() {
         isLoading = true
         
-        // Mock data - In production, fetch from API
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.coach = CoachProfileData(
-                name: "Alex Thompson",
-                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-                isVerified: true,
-                bio: "Certified personal trainer with 8+ years of experience. Specialized in HIIT, strength training, and functional fitness.",
-                rating: 4.8,
-                totalReviews: 124,
-                location: "Los Angeles, CA",
-                specializations: ["HIIT", "Strength Training", "Yoga", "Running"],
-                certifications: ["NASM-CPT", "ACE", "Yoga Alliance RYT-200"],
-                experience: "8 years",
-                totalSessions: 450,
-                followers: 1234
-            )
-            self?.isLoading = false
+        Task {
+            await activityService.fetchAllActivities()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                let all = self.activityService.activities
+                let coachActivities = all.filter { $0.creator?.id == self.coachId }
+                
+                // Build coach profile header from the first activity, if available.
+                if let first = coachActivities.first {
+                    self.coach = CoachProfileData(
+                        name: first.hostName,
+                        avatar: first.hostAvatar,
+                        isVerified: true,
+                        bio: first.description ?? "", // fallback: description of one of the sessions
+                        rating: 4.8,
+                        totalReviews: 124,
+                        location: first.location,
+                        specializations: [],
+                        certifications: [],
+                        experience: "",
+                        totalSessions: coachActivities.count,
+                        followers: 0
+                    )
+                }
+                
+                // Sessions tab: show coach activities that still have available spots.
+                let availableSessions = coachActivities.filter { $0.spotsTaken < $0.spotsTotal }
+                self.upcomingSessions = availableSessions.map { activity in
+                    CoachSession(
+                        id: activity.id,
+                        title: activity.title,
+                        date: activity.date,
+                        time: activity.time,
+                        location: activity.location,
+                        price: activity.price ?? 0,
+                        spotsLeft: activity.spotsTotal - activity.spotsTaken,
+                        sportIcon: activity.sportIcon
+                    )
+                }
+                
+                self.isLoading = false
+            }
         }
     }
     
-    private func loadUpcomingSessions() {
-        // Mock data - In production, fetch from API
-        upcomingSessions = [
-            CoachSession(id: "1", title: "Morning HIIT Bootcamp", date: "Nov 5, 2025", time: "7:00 AM", location: "Central Park", price: 25, spotsLeft: 4, sportIcon: "🏃"),
-            CoachSession(id: "2", title: "Yoga & Meditation", date: "Nov 6, 2025", time: "6:00 PM", location: "Zen Studio", price: 20, spotsLeft: 5, sportIcon: "🧘"),
-            CoachSession(id: "3", title: "Strength & Conditioning", date: "Nov 7, 2025", time: "5:30 PM", location: "FitHub Gym", price: 30, spotsLeft: 2, sportIcon: "💪")
-        ]
-    }
-    
     private func loadReviews() {
-        // Mock data - In production, fetch from API
-        reviews = [
-            CoachReview(id: "1", userName: "Sarah M.", userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah", rating: 5, comment: "Alex is an amazing coach! Motivating, knowledgeable, and really cares about your progress.", date: "Oct 28, 2025"),
-            CoachReview(id: "2", userName: "Mike R.", userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike", rating: 5, comment: "Best trainer I've worked with. Great at explaining proper form and technique.", date: "Oct 25, 2025"),
-            CoachReview(id: "3", userName: "Emma L.", userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma", rating: 4, comment: "Really enjoyed the HIIT sessions. Challenging but fun!", date: "Oct 22, 2025")
-        ]
+        // For now, backend returns reviews for the authenticated coach.
+        // Only load when viewing own coach profile.
+        guard let currentUserId = authTokenManager.getUserId(), currentUserId == coachId else {
+            return
+        }
+
+        Task {
+            do {
+                let response = try await reviewsService.getCoachReviews(limit: 50)
+
+                let mapped: [CoachReview] = response.reviews.map { review in
+                    CoachReview(
+                        id: review.id,
+                        userName: review.userName,
+                        userAvatar: review.userAvatar ?? "",
+                        rating: review.rating,
+                        comment: review.comment ?? "",
+                        date: review.createdAt
+                    )
+                }
+
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.reviews = mapped
+
+                    // Update coach header rating/totalReviews if we already have a coach loaded
+                    if let existingCoach = self.coach {
+                        self.coach = CoachProfileData(
+                            name: existingCoach.name,
+                            avatar: existingCoach.avatar,
+                            isVerified: existingCoach.isVerified,
+                            bio: existingCoach.bio,
+                            rating: response.averageRating,
+                            totalReviews: response.totalReviews,
+                            location: existingCoach.location,
+                            specializations: existingCoach.specializations,
+                            certifications: existingCoach.certifications,
+                            experience: existingCoach.experience,
+                            totalSessions: existingCoach.totalSessions,
+                            followers: existingCoach.followers
+                        )
+                    }
+                }
+            } catch {
+                #if DEBUG
+                print("⚠️ Failed to load coach reviews: \(error)")
+                #endif
+            }
+        }
     }
     
     private func checkFollowingStatus() {
-        // Check if user is already following this coach
-        // In production, fetch from API or local storage
-        isFollowing = false
+        guard let token = authTokenManager.getToken() else { return }
+        
+        Task {
+            do {
+                let response = try await followService.isFollowing(token: token, userId: coachId)
+                await MainActor.run {
+                    self.isFollowing = response.isFollowing
+                }
+            } catch {
+                #if DEBUG
+                print("⚠️ Failed to load follow status: \(error)")
+                #endif
+            }
+        }
     }
     
     // MARK: - Tab Management
@@ -176,13 +257,27 @@ class CoachProfileViewModel: ObservableObject {
     // MARK: - Actions
     
     func toggleFollow() {
-        isFollowing.toggle()
+        Task {
+            await toggleFollowInternal()
+        }
+    }
+    
+    private func toggleFollowInternal() async {
+        guard let token = authTokenManager.getToken() else { return }
         
-        // TODO: Persist to backend
-        if isFollowing {
-            print("Following coach: \(coachId)")
-        } else {
-            print("Unfollowed coach: \(coachId)")
+        let currentlyFollowing = isFollowing
+        do {
+            if currentlyFollowing {
+                _ = try await followService.unfollowUser(token: token, userId: coachId)
+                await MainActor.run { self.isFollowing = false }
+            } else {
+                _ = try await followService.followUser(token: token, userId: coachId)
+                await MainActor.run { self.isFollowing = true }
+            }
+        } catch {
+            #if DEBUG
+            print("⚠️ Follow/unfollow failed: \(error)")
+            #endif
         }
     }
     
@@ -202,8 +297,7 @@ class CoachProfileViewModel: ObservableObject {
     }
     
     func refreshData() {
-        loadCoachProfile()
-        loadUpcomingSessions()
+        loadDataFromAPI()
         loadReviews()
     }
     

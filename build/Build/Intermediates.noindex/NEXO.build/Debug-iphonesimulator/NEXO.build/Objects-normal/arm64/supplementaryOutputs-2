@@ -1,0 +1,65 @@
+{
+  "/Users/macbook/Desktop/NEXO/NEXO/Services/AIMatchmakerAPI.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AIMatchmakerAPI.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AIMatchmakerAPI.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AIMatchmakerAPI.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AIMatchmakerAPI.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AIMatchmakerAPI.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services/ActivityAPIService.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityAPIService.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityAPIService.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityAPIService.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityAPIService.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ActivityAPIService.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services/AuthTokenManager.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthTokenManager.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthTokenManager.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthTokenManager.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthTokenManager.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/AuthTokenManager.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services/ChatAPI.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatAPI.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatAPI.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatAPI.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatAPI.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ChatAPI.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services/Gemini/HealthKitManager.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/HealthKitManager.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/HealthKitManager.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/HealthKitManager.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/HealthKitManager.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/HealthKitManager.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services/Gemini/WeatherKitService.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/WeatherKitService.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/WeatherKitService.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/WeatherKitService.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/WeatherKitService.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/WeatherKitService.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services/ProfileAPI.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ProfileAPI.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ProfileAPI.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ProfileAPI.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ProfileAPI.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/ProfileAPI.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services/QuickMatchService.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/QuickMatchService.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/QuickMatchService.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/QuickMatchService.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/QuickMatchService.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/QuickMatchService.swiftdeps"
+  },
+  "/Users/macbook/Desktop/NEXO/NEXO/Services/RealtimeChatService.swift" : {
+    "const-values" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/RealtimeChatService.swiftconstvalues",
+    "dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/RealtimeChatService.d",
+    "diagnostics" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/RealtimeChatService.dia",
+    "object" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/RealtimeChatService.o",
+    "swift-dependencies" : "/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/Objects-normal/arm64/RealtimeChatService.swiftdeps"
+  }
+}

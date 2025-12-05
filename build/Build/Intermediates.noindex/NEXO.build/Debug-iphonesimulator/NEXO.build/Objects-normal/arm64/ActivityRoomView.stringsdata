@@ -1,0 +1,168 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/ActivityRoomView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Leave Activity",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 111
+        }
+      },
+      {
+        "comment": "",
+        "key": "Complete Activity",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 121
+        }
+      },
+      {
+        "comment": "",
+        "key": "Back",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 82
+        }
+      },
+      {
+        "comment": "",
+        "key": "Share",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 112
+        }
+      },
+      {
+        "comment": "",
+        "key": "Leave",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": "Are you sure you want to leave this activity?",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Complete",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mark this activity as complete?",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 129
+        }
+      },
+      {
+        "comment": "",
+        "key": "Get Directions",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 228
+        }
+      },
+      {
+        "comment": "",
+        "key": "Type a message...",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 352
+        }
+      },
+      {
+        "comment": "",
+        "key": "Host",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 430
+        }
+      },
+      {
+        "comment": "",
+        "key": "Message",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 446
+        }
+      },
+      {
+        "comment": "",
+        "key": "About",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 568
+        }
+      },
+      {
+        "comment": "",
+        "key": "Details",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 587
+        }
+      },
+      {
+        "comment": "",
+        "key": "Skill Level",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 628
+        }
+      },
+      {
+        "comment": "",
+        "key": "Leave",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 672
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mark Complete",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 694
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 803
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,16 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Auth Pages/OnboardingView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Skip",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 434
+        }
+      }
+    ]
+  },
+  "version": 1
+}

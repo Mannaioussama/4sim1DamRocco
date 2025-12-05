@@ -1,0 +1,72 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/CreateActivityView/MapLocationPickerView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Pick Location on Map",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap anywhere on the map to select your location",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "N",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "Selected Location",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coordinates: %@",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 172
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fetching address...",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 161
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 196
+        }
+      },
+      {
+        "comment": "",
+        "key": "Confirm Location",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 217
+        }
+      }
+    ]
+  },
+  "version": 1
+}

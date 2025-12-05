@@ -1,0 +1,136 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Activity & Events/EnhancedEventDetailsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Back",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 67
+        }
+      },
+      {
+        "comment": "",
+        "key": "Event Details",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "✓ Hosted by Verified Coach",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 136
+        }
+      },
+      {
+        "comment": "",
+        "key": "View Profile",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 247
+        }
+      },
+      {
+        "comment": "",
+        "key": "Message",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 250
+        }
+      },
+      {
+        "comment": "",
+        "key": "Availability",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 308
+        }
+      },
+      {
+        "comment": "",
+        "key": "What to bring",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 357
+        }
+      },
+      {
+        "comment": "",
+        "key": "Location",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 385
+        }
+      },
+      {
+        "comment": "",
+        "key": "Map view",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 403
+        }
+      },
+      {
+        "comment": "",
+        "key": "View",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 445
+        }
+      },
+      {
+        "comment": "",
+        "key": "Joined this event",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 440
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 497
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Event",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 523
+        }
+      },
+      {
+        "comment": "",
+        "key": "Manage Participants",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 527
+        }
+      },
+      {
+        "comment": "",
+        "key": "Book Now",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 542
+        }
+      },
+      {
+        "comment": "",
+        "key": "Total",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 533
+        }
+      }
+    ]
+  },
+  "version": 1
+}

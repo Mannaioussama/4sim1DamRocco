@@ -110,6 +110,23 @@ enum ChatAPI {
         let req = try authorizedRequest(url: comps.url!, method: "GET")
         return try await send(req)
     }
+    
+    // MARK: - Group Chat Methods
+    
+    static func createActivityGroupChat(activityId: String) async throws -> ActivityGroupChatResponse {
+        let req = try authorizedRequest(url: APIConfig.endpoint("/activities/\(activityId)/group-chat"), method: "POST")
+        return try await send(req)
+    }
+    
+    static func getChatParticipants(chatId: String) async throws -> [ChatParticipant] {
+        let req = try authorizedRequest(url: APIConfig.endpoint("/chats/\(chatId)/participants"), method: "GET")
+        return try await send(req)
+    }
+    
+    static func leaveGroupChat(chatId: String) async throws -> MessageResponse {
+        let req = try authorizedRequest(url: APIConfig.endpoint("/chats/\(chatId)/leave"), method: "DELETE")
+        return try await send(req)
+    }
 }
 
 // MARK: - DTOs
@@ -149,13 +166,15 @@ struct ChatListItemDTO: Decodable, Identifiable {
     }
 }
 
-struct ChatMessageDTO: Decodable, Identifiable {
+struct ChatMessageDTO: Codable, Identifiable {
     let id: String
     let text: String
     let sender: String       // "me" or "other"
     let time: String         // already formatted or derived from createdAt
     let senderName: String?
     let avatar: String?
+    let chatId: String       // Add chatId for real-time routing
+    let createdAt: String?   // Raw ISO date for polling comparison
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -170,6 +189,8 @@ struct ChatMessageDTO: Decodable, Identifiable {
             self.time = (try? c.decode(String.self, forKey: .time)) ?? ""
             self.senderName = try? c.decodeIfPresent(String.self, forKey: .senderName)
             self.avatar = try? c.decodeIfPresent(String.self, forKey: .avatar)
+            self.chatId = (try? c.decodeIfPresent(String.self, forKey: .chatId)) ?? ""
+            self.createdAt = try? c.decodeIfPresent(String.self, forKey: .createdAt)
             return
         }
 
@@ -189,9 +210,23 @@ struct ChatMessageDTO: Decodable, Identifiable {
 
         let createdAtOpt: String? = try? c.decodeIfPresent(String.self, forKey: .createdAt)
         self.time = createdAtOpt.map { ChatMessageDTO.formatTime($0) } ?? ""
+        self.chatId = (try? c.decodeIfPresent(String.self, forKey: .chatId)) ?? ""
+        self.createdAt = createdAtOpt
 
         // For send responses, assume the current user
         self.sender = "me"
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(text, forKey: .text)
+        try container.encode(sender, forKey: .sender)
+        try container.encode(time, forKey: .time)
+        try container.encodeIfPresent(senderName, forKey: .senderName)
+        try container.encodeIfPresent(avatar, forKey: .avatar)
+        try container.encode(chatId, forKey: .chatId)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
     }
 
     private struct SenderObj: Decodable {
@@ -203,7 +238,7 @@ struct ChatMessageDTO: Decodable, Identifiable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, _id, text, sender, time, senderName, avatar, createdAt
+        case id, _id, text, sender, time, senderName, avatar, createdAt, chatId
     }
 
     private static func formatTime(_ iso: String) -> String {
@@ -268,6 +303,39 @@ struct UserSearchDTO: Decodable, Identifiable {
     private enum CodingKeys: String, CodingKey {
         case id, _id, name, username, profileImageUrl, profileImageThumbnailUrl, avatar
     }
+}
+
+// MARK: - Group Chat Models
+
+struct CreateGroupChatRequest: Codable {
+    let participantIds: [String]
+    let groupName: String
+    let groupAvatar: String?
+}
+
+struct ChatParticipant: Codable, Identifiable {
+    let id: String
+    let name: String
+    let email: String?
+    let profileImageUrl: String?
+    let avatar: String?
+    let about: String?
+    let sportsInterests: [String]?
+}
+
+struct ActivityGroupChatResponse: Codable {
+    let chat: ActivityGroupChat
+    let message: String
+}
+
+struct ActivityGroupChat: Codable, Identifiable {
+    let id: String
+    let groupName: String
+    let groupAvatar: String?
+    let participants: [ChatParticipant]
+    let isGroup: Bool
+    let createdAt: String
+    let updatedAt: String
 }
 
 // Reuse your existing MessageResponse in AuthModels.swift for { message } envelopes

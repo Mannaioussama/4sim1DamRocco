@@ -1,0 +1,168 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Core App Screens/MapScreen/MapScreen.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Choose Maps App",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "Apple Maps",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "Google Maps",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choose which maps app to use for directions to %@",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loading AI suggestions...",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "Map",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 220
+        }
+      },
+      {
+        "comment": "",
+        "key": "List",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 241
+        }
+      },
+      {
+        "comment": "",
+        "key": "+",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 341
+        }
+      },
+      {
+        "comment": "",
+        "key": "−",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 356
+        }
+      },
+      {
+        "comment": "",
+        "key": "Individual",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 706
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 737
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld spots left",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 749
+        }
+      },
+      {
+        "comment": "",
+        "key": "Directions",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 776
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chat Now",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 795
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 905
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 915
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld of %lld spots remaining",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 925
+        }
+      },
+      {
+        "comment": "",
+        "key": "Join",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 952
+        }
+      },
+      {
+        "comment": "",
+        "key": "AI Pick",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 980
+        }
+      }
+    ]
+  },
+  "version": 1
+}

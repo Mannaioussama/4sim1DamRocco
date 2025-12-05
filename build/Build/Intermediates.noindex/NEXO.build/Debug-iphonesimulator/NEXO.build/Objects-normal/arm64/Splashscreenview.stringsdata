@@ -1,0 +1,24 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Auth Pages/Splashscreenview.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "NEXO",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 180
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connect. Play. Excel.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 190
+        }
+      }
+    ]
+  },
+  "version": 1
+}

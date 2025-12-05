@@ -330,11 +330,11 @@ struct CreateActivityView: View {
 
                             Button(action: {
                                 Task {
-                                    await viewModel.createActivity(using: activityAPIService)
+                                    await viewModel.createActivity(using: activityAPIService, isCoachSession: false)
                                 }
                             }) {
                                 ZStack {
-                                    Text(viewModel.isSaving ? "Creating..." : "Create Room")
+                                    Text(viewModel.isSaving ? "Creating..." : "Create Activity")
                                         .font(.system(size: 16, weight: .semibold))
                                         .foregroundColor(.white)
                                         .frame(maxWidth: .infinity)
@@ -355,13 +355,12 @@ struct CreateActivityView: View {
                                 }
                             }
                             .disabled(!viewModel.isFormValid || viewModel.isSaving)
-                            .opacity(viewModel.isFormValid ? 1.0 : 0.6)
                         }
                         .padding(.top, 10)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 40)
                 }
             }
         }
@@ -390,6 +389,11 @@ struct CreateActivityView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(theme.colors.barMaterial, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
+        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+            Button("OK") { viewModel.errorMessage = nil }
+        } message: {
+            Text(viewModel.errorMessage ?? "Unknown error")
+        }
         .sheet(isPresented: $viewModel.showSuccess) {
             SuccessDialog {
                 viewModel.showSuccess = false

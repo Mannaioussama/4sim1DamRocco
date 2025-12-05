@@ -75,6 +75,7 @@ class AchievementsViewModel: ObservableObject {
     }
     
     var xpProgress: Double {
+        guard userStats.nextLevelXp > 0 else { return 0 }
         return Double(userStats.xp) / Double(userStats.nextLevelXp)
     }
     
@@ -130,12 +131,12 @@ class AchievementsViewModel: ObservableObject {
     
     init() {
         self.userStats = AchievementsUserStats(
-            level: 12,
-            xp: 2350,
-            nextLevelXp: 3000,
-            totalBadges: 18,
-            currentStreak: 7,
-            longestStreak: 21
+            level: 0,
+            xp: 0,
+            nextLevelXp: 1,
+            totalBadges: 0,
+            currentStreak: 0,
+            longestStreak: 0
         )
         
         loadAchievementsData()
@@ -146,112 +147,40 @@ class AchievementsViewModel: ObservableObject {
     private func loadAchievementsData() {
         isLoading = true
         
-        // Mock data - In production, fetch from API
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.badges = [
-                BadgeItem(
-                    id: "1",
-                    icon: "🏃",
-                    title: "Marathon Runner",
-                    description: "Completed 5+ running events",
-                    category: "Running",
-                    unlocked: true,
-                    unlockedDate: "Oct 28, 2025",
-                    rarity: "rare"
-                ),
-                BadgeItem(
-                    id: "2",
-                    icon: "🏊",
-                    title: "Water Warrior",
-                    description: "Joined 10+ swimming sessions",
-                    category: "Swimming",
-                    unlocked: true,
-                    unlockedDate: "Oct 15, 2025",
-                    rarity: "common"
-                ),
-                BadgeItem(
-                    id: "3",
-                    icon: "👥",
-                    title: "Social Butterfly",
-                    description: "Connected with 25+ athletes",
-                    category: "Social",
-                    unlocked: true,
-                    unlockedDate: "Oct 10, 2025",
-                    rarity: "uncommon"
-                ),
-                BadgeItem(
-                    id: "4",
-                    icon: "⭐",
-                    title: "Top Host",
-                    description: "Hosted 10+ successful events",
-                    category: "Hosting",
-                    unlocked: true,
-                    unlockedDate: "Oct 5, 2025",
-                    rarity: "rare"
-                ),
-                BadgeItem(
-                    id: "5",
-                    icon: "🔥",
-                    title: "Consistency King",
-                    description: "Maintain a 30-day streak",
-                    category: "Consistency",
-                    unlocked: false,
-                    progress: 7,
-                    total: 30,
-                    rarity: "epic"
-                ),
-                BadgeItem(
-                    id: "6",
-                    icon: "🌟",
-                    title: "Early Bird",
-                    description: "Join 20 morning sessions",
-                    category: "Participation",
-                    unlocked: false,
-                    progress: 12,
-                    total: 20,
-                    rarity: "uncommon"
-                )
-            ]
+        Task {
+            await fetchAchievementsFromBackend()
+        }
+    }
+    
+    @MainActor
+    private func fetchAchievementsFromBackend() async {
+        do {
+            let summary = try await AchievementsAPI.getSummary()
+            let badgesResponse = try await AchievementsAPI.getBadges()
+            let challengesResponse = try await AchievementsAPI.getChallenges()
+            let leaderboardResponse = try await AchievementsAPI.getLeaderboard()
             
-            self?.challenges = [
-                ChallengeItem(
-                    id: "1",
-                    title: "Weekend Warrior",
-                    description: "Complete 4 activities this weekend",
-                    progress: 2,
-                    total: 4,
-                    reward: "100 XP + Weekend Badge",
-                    deadline: "2 days left"
-                ),
-                ChallengeItem(
-                    id: "2",
-                    title: "Variety Seeker",
-                    description: "Try 3 different sports this week",
-                    progress: 1,
-                    total: 3,
-                    reward: "150 XP + Explorer Badge",
-                    deadline: "5 days left"
-                ),
-                ChallengeItem(
-                    id: "3",
-                    title: "Social Sprint",
-                    description: "Connect with 5 new sport buddies",
-                    progress: 3,
-                    total: 5,
-                    reward: "75 XP",
-                    deadline: "7 days left"
-                )
-            ]
+            let stats = AchievementsUserStats(
+                level: summary.level.currentLevel,
+                xp: summary.level.currentLevelXp,
+                nextLevelXp: summary.level.xpForNextLevel,
+                totalBadges: summary.stats.totalBadges,
+                currentStreak: summary.stats.currentStreak,
+                longestStreak: summary.stats.bestStreak
+            )
             
-            self?.leaderboard = [
-                LeaderboardEntry(rank: 1, name: "You", points: 2350, badge: "🥇"),
-                LeaderboardEntry(rank: 2, name: "Sarah M.", points: 2280, badge: "🥈"),
-                LeaderboardEntry(rank: 3, name: "Mike R.", points: 2150, badge: "🥉"),
-                LeaderboardEntry(rank: 4, name: "Emma L.", points: 2020, badge: ""),
-                LeaderboardEntry(rank: 5, name: "Alex T.", points: 1980, badge: "")
-            ]
+            let mappedBadges = mapBadges(from: badgesResponse)
+            let mappedChallenges = mapChallenges(from: challengesResponse)
+            let mappedLeaderboard = mapLeaderboard(from: leaderboardResponse)
             
-            self?.isLoading = false
+            self.userStats = stats
+            self.badges = mappedBadges
+            self.challenges = mappedChallenges
+            self.leaderboard = mappedLeaderboard
+            self.isLoading = false
+        } catch {
+            print("Failed to load achievements: \(error.localizedDescription)")
+            self.isLoading = false
         }
     }
     
@@ -376,6 +305,127 @@ class AchievementsViewModel: ObservableObject {
     }
     
     // MARK: - Helper Methods
+    
+    private func mapBadges(from response: AchievementsAPI.BadgesResponse) -> [BadgeItem] {
+        var items: [BadgeItem] = []
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .none
+        
+        for badge in response.earnedBadges {
+            let dateString = badge.earnedAt.map { df.string(from: $0) }
+            let item = BadgeItem(
+                id: badge.id,
+                icon: emoji(for: badge.category),
+                title: badge.name,
+                description: badge.description,
+                category: badge.category.rawValue,
+                unlocked: true,
+                unlockedDate: dateString,
+                progress: nil,
+                total: nil,
+                rarity: badge.rarity.rawValue
+            )
+            items.append(item)
+        }
+        
+        for progress in response.inProgress {
+            let b = progress.badge
+            let safeTarget = max(progress.target, 1)
+            let safeProgress = min(progress.currentProgress, safeTarget)
+            let item = BadgeItem(
+                id: progress.id,
+                icon: b.iconUrl ?? emoji(for: b.category),
+                title: b.name,
+                description: b.description,
+                category: b.category.rawValue,
+                unlocked: false,
+                unlockedDate: nil,
+                progress: safeProgress,
+                total: safeTarget,
+                rarity: b.rarity.rawValue
+            )
+            items.append(item)
+        }
+        
+        return items.sorted { lhs, rhs in
+            if lhs.unlocked != rhs.unlocked {
+                return lhs.unlocked && !rhs.unlocked
+            }
+            return lhs.title < rhs.title
+        }
+    }
+    
+    private func mapChallenges(from response: AchievementsAPI.ChallengesResponse) -> [ChallengeItem] {
+        return response.activeChallenges.map { challenge in
+            ChallengeItem(
+                id: challenge.id,
+                title: challenge.name,
+                description: challenge.description,
+                progress: challenge.currentProgress,
+                total: challenge.target,
+                reward: "\(challenge.xpReward) XP",
+                deadline: "\(challenge.daysLeft) days left"
+            )
+        }
+    }
+    
+    private func mapLeaderboard(from response: AchievementsAPI.LeaderboardResponse) -> [LeaderboardEntry] {
+        let currentUsername = response.currentUser?.username
+        let currentRank = response.currentUser?.rank
+        var seenRanks = Set<Int>()
+        var result: [LeaderboardEntry] = []
+
+        let sorted = response.leaderboard.sorted { $0.rank < $1.rank }
+        for entry in sorted {
+            // Avoid duplicate rows with the same rank (backend can sometimes repeat entries)
+            if seenRanks.contains(entry.rank) {
+                continue
+            }
+            seenRanks.insert(entry.rank)
+
+            let isCurrentUser = (currentUsername != nil && entry.username == currentUsername) ||
+                (currentRank != nil && entry.rank == currentRank)
+            let displayName = isCurrentUser ? "You" : entry.username
+
+            let badgeSymbol: String
+            if let medal = entry.medal, !medal.isEmpty {
+                badgeSymbol = medal
+            } else {
+                badgeSymbol = rankBadge(for: entry.rank)
+            }
+
+            let uiEntry = LeaderboardEntry(
+                rank: entry.rank,
+                name: displayName,
+                points: entry.totalXp,
+                badge: badgeSymbol
+            )
+            result.append(uiEntry)
+        }
+
+        return result
+    }
+    
+    private func emoji(for category: AchievementsAPI.Badge.BadgeCategory) -> String {
+        switch category {
+        case .streak: return "🔥"
+        case .distance: return "🏃"
+        case .duration: return "⏱"
+        case .sport: return "⚽️"
+        case .creation: return "🎯"
+        case .completion: return "✅"
+        }
+    }
+    
+    private func rankBadge(for rank: Int) -> String {
+        switch rank {
+        case 1: return "🥇"
+        case 2: return "🥈"
+        case 3: return "🥉"
+        default: return ""
+        }
+    }
     
     func getBadge(by id: String) -> BadgeItem? {
         return badges.first { $0.id == id }

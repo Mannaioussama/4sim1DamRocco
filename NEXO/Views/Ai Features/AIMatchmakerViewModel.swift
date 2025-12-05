@@ -8,18 +8,24 @@
 import SwiftUI
 import Combine
 
-// MARK: - Data Models
+// MARK: - AI Match Message Data Model
 struct AIMatchMessage: Identifiable {
     let id: String
     let type: AIMatchMessageType
     let text: String?
     let options: [String]?
+    let suggestedActivities: [SuggestedActivity]?
+    let suggestedUsers: [SuggestedUser]?
+    let suggestedSports: [String]?
 
-    init(id: String, type: AIMatchMessageType, text: String?, options: [String]? = nil) {
+    init(id: String, type: AIMatchMessageType, text: String?, options: [String]? = nil, suggestedActivities: [SuggestedActivity]? = nil, suggestedUsers: [SuggestedUser]? = nil, suggestedSports: [String]? = nil) {
         self.id = id
         self.type = type
         self.text = text
         self.options = options
+        self.suggestedActivities = suggestedActivities
+        self.suggestedUsers = suggestedUsers
+        self.suggestedSports = suggestedSports
     }
 }
 
@@ -72,11 +78,8 @@ class AIMatchmakerViewModel: ObservableObject {
     
     func handleOptionSelect(_ option: String) {
         addUserMessage(option)
-        
-        // Simulate AI processing delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-            self?.generateAIResponse(for: option)
-        }
+        trackOptionSelected(option)
+        sendToBackend(option)
     }
     
     func handleSend() {
@@ -84,45 +87,86 @@ class AIMatchmakerViewModel: ObservableObject {
         
         let userInput = inputText.trimmingCharacters(in: .whitespaces)
         addUserMessage(userInput)
+        trackMessageSent(userInput)
         inputText = ""
         
-        // Simulate AI processing delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-            self?.generateAIResponse(for: userInput)
+        sendToBackend(userInput)
+    }
+    
+    // MARK: - Backend Call
+    
+    private func sendToBackend(_ text: String) {
+        isTyping = true
+        
+        let history = messagesToChatHistory(messages)
+        
+        Task {
+            // Can't 'await' in defer; hop to MainActor via Task instead
+            defer { Task { @MainActor in self.isTyping = false } }
+            do {
+                let response = try await AIMatchmakerAPI.chat(
+                    message: text,
+                    conversationHistory: history
+                )
+                
+                let aiMessage = AIMatchMessage(
+                    id: UUID().uuidString,
+                    type: .ai,
+                    text: response.message,
+                    options: response.options,
+                    suggestedActivities: response.suggestedActivities,
+                    suggestedUsers: response.suggestedUsers,
+                    suggestedSports: response.suggestedActivities?.map { $0.sportType } ?? []
+                )
+                
+                await MainActor.run {
+                    self.messages.append(aiMessage)
+                }
+            } catch {
+                let fallback = AIMatchMessage(
+                    id: UUID().uuidString,
+                    type: .ai,
+                    text: "Sorry, something went wrong. Please try again.",
+                    options: ["Try again", "Find group activities", "Find partners nearby"]
+                )
+                await MainActor.run {
+                    self.messages.append(fallback)
+                }
+                print("AIMatchmaker error: \(error.localizedDescription)")
+            }
         }
     }
     
-    private func generateAIResponse(for input: String) {
-        isTyping = true
+    // MARK: - Formatting Helpers
+    
+    private func composeAIText(from response: ChatResponse) -> String {
+        var text = response.message
         
-        // Simulate typing delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            guard let self = self else { return }
-            self.isTyping = false
-            
-            // Generate contextual response based on input
-            if input.lowercased().contains("running") || input.lowercased().contains("runner") {
-                self.addAIMessage(
-                    "Great! I found 3 runners near you who are free this evening.",
-                    options: ["View profiles", "Schedule a run", "Find more runners"]
-                )
-            } else if input.lowercased().contains("group") || input.lowercased().contains("activity") {
-                self.addAIMessage(
-                    "Here are some group activities near you this week.",
-                    options: ["Yoga class (Tomorrow)", "Basketball game (Friday)", "Cycling tour (Weekend)"]
-                )
-            } else if input.lowercased().contains("discover") || input.lowercased().contains("new") {
-                self.addAIMessage(
-                    "Based on your profile, you might enjoy these sports:",
-                    options: ["Swimming", "Tennis", "Cycling", "Yoga"]
-                )
-            } else {
-                // Default response
-                self.addAIMessage(
-                    "Let me find the best matches for you...",
-                    options: ["Show me runners nearby", "Find group activities", "Something else"]
-                )
+        if let users = response.suggestedUsers, !users.isEmpty {
+            text += "\n\nSuggested partners:"
+            for (idx, u) in users.enumerated() {
+                let score = u.matchScore.map { " • \($0)%" } ?? ""
+                let dist = u.distance.map { " • \($0)" } ?? ""
+                text += "\n\(idx + 1). \(u.name) • \(u.sport)\(dist)\(score)"
             }
+        }
+        
+        if let activities = response.suggestedActivities, !activities.isEmpty {
+            text += "\n\nSuggested activities:"
+            for (idx, a) in activities.enumerated() {
+                let score = a.matchScore.map { " • \($0)%" } ?? ""
+                text += "\n\(idx + 1). \(a.title) • \(a.sportType) • \(a.date) \(a.time) @ \(a.location) • \(a.participants)/\(a.maxParticipants)\(score)"
+            }
+        }
+        
+        return text
+    }
+    
+    private func messagesToChatHistory(_ messages: [AIMatchMessage]) -> [AIMatchmakerChatMessage] {
+        messages.compactMap { msg in
+            guard let text = msg.text, !text.isEmpty else { return nil }
+            let role = (msg.type == .user) ? "user" : "assistant"
+            return AIMatchmakerChatMessage(role: role, content: text)
         }
     }
     
@@ -197,3 +241,4 @@ class AIMatchmakerViewModel: ObservableObject {
         print("User selected option: \(option)")
     }
 }
+

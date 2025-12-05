@@ -1,0 +1,120 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Auth Pages/LoginView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Welcome Back",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 175
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sign in to continue your fitness journey",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 180
+        }
+      },
+      {
+        "comment": "",
+        "key": "Email",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 267
+        }
+      },
+      {
+        "comment": "",
+        "key": "your@email.com",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 276
+        }
+      },
+      {
+        "comment": "",
+        "key": "Password",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 310
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enter your password",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 320
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enter your password",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 329
+        }
+      },
+      {
+        "comment": "",
+        "key": "Forgot password?",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 368
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sign In",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 382
+        }
+      },
+      {
+        "comment": "",
+        "key": "or",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 416
+        }
+      },
+      {
+        "comment": "",
+        "key": "Continue with Google",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 444
+        }
+      },
+      {
+        "comment": "",
+        "key": "Continue with Facebook",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 475
+        }
+      },
+      {
+        "comment": "",
+        "key": "Don't have an account?",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 505
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sign Up",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 510
+        }
+      }
+    ]
+  },
+  "version": 1
+}

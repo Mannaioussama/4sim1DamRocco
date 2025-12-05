@@ -1,0 +1,280 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Core App Screens/HomeFeedView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Search activities...",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 187
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 240
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notifications",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 285
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loading activities...",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 380
+        }
+      },
+      {
+        "comment": "",
+        "key": "No activities found",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 394
+        }
+      },
+      {
+        "comment": "",
+        "key": "Try adjusting your filters or search",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 397
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear Search",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 406
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear Filters",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 418
+        }
+      },
+      {
+        "comment": "",
+        "key": "Explore More",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 594
+        }
+      },
+      {
+        "comment": "",
+        "key": "Browse sports & discover new people",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 598
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 757
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 767
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld of %lld spots remaining",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 777
+        }
+      },
+      {
+        "comment": "",
+        "key": "Details",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 804
+        }
+      },
+      {
+        "comment": "",
+        "key": "Join",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 821
+        }
+      },
+      {
+        "comment": "",
+        "key": "Individual",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 935
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 972
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 982
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld of %lld spots remaining",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 992
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chat Now",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1017
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coach reference card",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 1262
+        }
+      },
+      {
+        "comment": "",
+        "key": "Static example for coach/group design",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1263
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coach",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1143
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1174
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1184
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld of %lld spots remaining",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1194
+        }
+      },
+      {
+        "comment": "",
+        "key": "Details",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1220
+        }
+      },
+      {
+        "comment": "",
+        "key": "Join",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1236
+        }
+      },
+      {
+        "comment": "",
+        "key": "Filters",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1329
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sport Type",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1280
+        }
+      },
+      {
+        "comment": "",
+        "key": "All Sports",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 1285
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ %@",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 1290
+        }
+      },
+      {
+        "comment": "",
+        "key": "Distance: %lld miles",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1317
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1335
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -21,6 +21,7 @@ class ProfileAPI {
         case uploadProfileImage(userId: String)
         case sendVerificationEmail
         case changePassword(userId: String)
+        case updateCoachVerification(userId: String)
         
         func path() -> String {
             switch self {
@@ -34,8 +35,17 @@ class ProfileAPI {
                 return "/auth/send-verification-email"
             case .changePassword(let userId):
                 return "/users/\(userId)/change-password"
+            case .updateCoachVerification(let userId):
+                return "/users/\(userId)/coach-verification"
             }
         }
+    }
+
+    struct CoachVerificationStatusPayload: Codable {
+        let isCoachVerified: Bool
+        let coachName: String
+        let confidenceScore: Double
+        let verificationReasons: [String]
     }
     
     // MARK: - Get User Profile
@@ -273,6 +283,48 @@ class ProfileAPI {
                 throw apiErr
             }
             throw APIError(statusCode: httpResponse.statusCode, message: "Failed to change password")
+        }
+    }
+
+    // MARK: - Update Coach Verification Status
+    func updateCoachVerificationStatus(
+        userId: String,
+        token: String,
+        status: CoachVerificationStatusPayload
+    ) async throws -> UserProfile {
+        let url = APIConfig.endpoint(Endpoint.updateCoachVerification(userId: userId).path())
+        
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "PATCH"
+        urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let encoder = JSONEncoder()
+        urlRequest.httpBody = try encoder.encode(status)
+        
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError(statusCode: nil, message: "Invalid server response.")
+        }
+        
+        #if DEBUG
+        if let bodyStr = String(data: data, encoding: .utf8),
+           let payloadStr = urlRequest.httpBody.flatMap({ String(data: $0, encoding: .utf8) }) {
+            print("➡️ PATCH \(url.absoluteString)")
+            print("Request JSON: \(payloadStr)")
+            print("⬅️ Status: \(httpResponse.statusCode) Body: \(bodyStr)")
+        }
+        #endif
+        
+        if (200..<300).contains(httpResponse.statusCode) {
+            let decoder = JSONDecoder()
+            return try decoder.decode(UserProfile.self, from: data)
+        } else {
+            if let apiErr = try? JSONDecoder().decode(APIError.self, from: data) {
+                throw apiErr
+            }
+            throw APIError(statusCode: httpResponse.statusCode, message: "Failed to update coach verification status")
         }
     }
 }

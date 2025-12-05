@@ -94,6 +94,7 @@ struct CoachOnboardingView: View {
         }
         .onAppear {
             viewModel.trackScreenView()
+            viewModel.checkIfAlreadyVerified()
         }
     }
     
@@ -166,6 +167,24 @@ struct CoachOnboardingView: View {
                 text: $viewModel.formData.name,
                 error: viewModel.nameError
             )
+
+            // Read-only email field pulled from user profile
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Email")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(theme.colors.textPrimary)
+                TextField("Email", text: $viewModel.formData.email)
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.colors.textSecondary)
+                    .padding()
+                    .background(theme.colors.cardBackground, in: RoundedRectangle(cornerRadius: 16))
+                    .background(theme.colors.barMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(theme.colors.cardStroke, lineWidth: 1)
+                    )
+                    .disabled(true)
+            }
             
             textArea(
                 label: "About *",
@@ -217,7 +236,11 @@ struct CoachOnboardingView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             
-            submitButton
+            if viewModel.isCoachAlreadyVerified {
+                alreadyVerifiedButton
+            } else {
+                submitButton
+            }
         }
     }
     
@@ -486,6 +509,33 @@ struct CoachOnboardingView: View {
         .disabled(viewModel.isLoading)
         .opacity(viewModel.isLoading ? 0.6 : 1.0)
     }
+
+    // MARK: - Already Verified Button
+    
+    private var alreadyVerifiedButton: some View {
+        Button {
+            viewModel.status = .approved
+            viewModel.goToStatusStep()
+        } label: {
+            HStack {
+                Image(systemName: "checkmark.seal.fill")
+                Text("Already Verified")
+            }
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(theme.colors.textPrimary)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(theme.colors.cardBackground, in: Capsule())
+            .background(theme.colors.barMaterial, in: Capsule())
+            .overlay(
+                RoundedRectangle(cornerRadius: 50)
+                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+            )
+        }
+        .padding(.top, 8)
+        .buttonStyle(ScaleButtonStyle())
+        .disabled(viewModel.isLoading)
+        .opacity(viewModel.isLoading ? 0.6 : 1.0)
+    }
     
     // MARK: - Status Section
     
@@ -518,6 +568,40 @@ struct CoachOnboardingView: View {
                         .foregroundColor(theme.colors.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
+
+                    if viewModel.status == .approved, let response = viewModel.lastVerificationResponse {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if response.confidenceScore > 0 {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Confidence Score")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(theme.colors.textPrimary)
+                                    Text("\(Int(response.confidenceScore * 100))%")
+                                        .font(.system(size: 22, weight: .bold))
+                                        .foregroundColor(theme.colors.accentGreenFill)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            if !response.verificationReasons.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Verification Reasons")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(theme.colors.textPrimary)
+                                    ForEach(response.verificationReasons, id: \.self) { reason in
+                                        HStack(alignment: .top, spacing: 6) {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(theme.colors.accentGreenFill)
+                                                .font(.system(size: 13))
+                                            Text(reason)
+                                                .font(.system(size: 12))
+                                                .foregroundColor(theme.colors.textSecondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.top, 8)
+                    }
                     
                     if viewModel.status == .approved {
                         approvedActions
@@ -531,7 +615,6 @@ struct CoachOnboardingView: View {
             }
             .padding(.horizontal)
             
-            verifiedBenefits
             Spacer()
         }
         .background(theme.colors.backgroundGradient.ignoresSafeArea())
@@ -553,22 +636,20 @@ struct CoachOnboardingView: View {
                 )
                 .cornerRadius(50)
             
-            Button("Go to Dashboard") {
-                viewModel.trackDashboardNavigation()
-                onComplete?()
+            if viewModel.canModifyData {
+                Button("Modify my data") {
+                    viewModel.reapply()
+                    viewModel.trackReapply()
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(theme.colors.cardBackground, in: Capsule())
+                .background(theme.colors.barMaterial, in: Capsule())
+                .overlay(RoundedRectangle(cornerRadius: 50).stroke(theme.colors.cardStroke, lineWidth: 1))
+                .foregroundColor(theme.colors.textPrimary)
+                .cornerRadius(50)
+                .padding(.horizontal)
+                .buttonStyle(ScaleButtonStyle())
             }
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .background(
-                LinearGradient(
-                    colors: [theme.colors.accentGreenFill, theme.colors.accentGreenGlow],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .foregroundColor(.white)
-            .cornerRadius(50)
-            .padding(.horizontal)
-            .buttonStyle(ScaleButtonStyle())
         }
     }
     
@@ -585,33 +666,6 @@ struct CoachOnboardingView: View {
         .cornerRadius(50)
         .padding(.horizontal)
         .buttonStyle(ScaleButtonStyle())
-    }
-    
-    private var verifiedBenefits: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(theme.colors.cardBackground)
-                    .background(theme.colors.barMaterial, in: RoundedRectangle(cornerRadius: 16))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.colors.cardStroke, lineWidth: 1))
-                    .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
-                
-                HStack(spacing: 8) {
-                    Image(systemName: "rosette")
-                        .foregroundColor(theme.colors.accentPurple)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Verified Benefits")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(theme.colors.textPrimary)
-                        Text("Create paid sessions, get priority in search, and build trust with your community.")
-                            .font(.system(size: 12))
-                            .foregroundColor(theme.colors.textSecondary)
-                    }
-                }
-                .padding()
-            }
-        }
-        .padding(.horizontal)
     }
     
     // MARK: - Actions

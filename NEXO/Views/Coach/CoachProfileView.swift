@@ -210,63 +210,47 @@ struct CoachProfileView: View {
                 .foregroundColor(.white.opacity(0.95))
                 .padding(.bottom, 16)
 
-                // Action Buttons
-                HStack(spacing: 8) {
-                    Button {
-                        viewModel.toggleFollow()
-                        viewModel.trackFollowAction()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: viewModel.isFollowing ? "heart.fill" : "heart")
-                                .font(.system(size: 14))
-                            Text(viewModel.followButtonText)
-                                .font(.system(size: 14, weight: .medium))
+                // Action Button: Follow / Following
+                if viewModel.shouldShowFollowButton {
+                    HStack(spacing: 8) {
+                        Button {
+                            viewModel.toggleFollow()
+                            viewModel.trackFollowAction()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: viewModel.isFollowing ? "heart.fill" : "heart")
+                                    .font(.system(size: 14))
+                                Text(viewModel.followButtonText)
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
+                            .background(
+                                viewModel.isFollowing
+                                    ? Color.white.opacity(0.2)
+                                    : Color.white
+                            )
+                            .foregroundColor(
+                                viewModel.isFollowing
+                                    ? .white
+                                    : theme.colors.accentPurple
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .stroke(
+                                        viewModel.isFollowing
+                                            ? Color.white.opacity(0.3)
+                                            : Color.clear,
+                                        lineWidth: 1
+                                    )
+                            )
+                            .cornerRadius(18)
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .background(
-                            viewModel.isFollowing
-                                ? Color.white.opacity(0.2)
-                                : Color.white
-                        )
-                        .foregroundColor(
-                            viewModel.isFollowing
-                                ? .white
-                                : theme.colors.accentPurple
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18)
-                                .stroke(
-                                    viewModel.isFollowing
-                                        ? Color.white.opacity(0.3)
-                                        : Color.clear,
-                                    lineWidth: 1
-                                )
-                        )
-                        .cornerRadius(18)
+                        .buttonStyle(ScaleButtonStyle())
                     }
-                    .buttonStyle(ScaleButtonStyle())
-
-                    Button {
-                        viewModel.sendMessage()
-                        onMessage?()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "message")
-                                .font(.system(size: 14))
-                            Text("Message")
-                                .font(.system(size: 14, weight: .medium))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .background(Color.white)
-                        .foregroundColor(theme.colors.accentPurple)
-                        .cornerRadius(18)
-                    }
-                    .buttonStyle(ScaleButtonStyle())
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 24)
             }
         }
         .frame(height: 350)

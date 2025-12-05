@@ -1,0 +1,128 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Core App Screens/ProfilePage.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Upload Error",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "Profile",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Profile",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 139
+        }
+      },
+      {
+        "comment": "",
+        "key": "Change profile photo",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 160
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "Saving photo…",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 233
+        }
+      },
+      {
+        "comment": "",
+        "key": "AT",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 415
+        }
+      },
+      {
+        "comment": "",
+        "key": "AT",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 408
+        }
+      },
+      {
+        "comment": "",
+        "key": "Achievements",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 492
+        }
+      },
+      {
+        "comment": "",
+        "key": "View badges & rewards",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 495
+        }
+      },
+      {
+        "comment": "",
+        "key": "Skill Levels",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 597
+        }
+      },
+      {
+        "comment": "",
+        "key": "Interests",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 640
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 705
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld/%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 716
+        }
+      }
+    ]
+  },
+  "version": 1
+}

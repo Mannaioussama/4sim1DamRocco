@@ -6,7 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		548AE7E9153013C450B552FF /* Pods_NEXO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65709D33E186355B91F5B771 /* Pods_NEXO.framework */; };
+		FA1A14CA2ED3CFB200A825F1 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = FA1A14C92ED3CFB200A825F1 /* SocketIO */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		65709D33E186355B91F5B771 /* Pods_NEXO.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NEXO.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		831309147140A03D39F89BAB /* Pods-NEXO.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NEXO.debug.xcconfig"; path = "Target Support Files/Pods-NEXO/Pods-NEXO.debug.xcconfig"; sourceTree = "<group>"; };
+		B651DF3771CF9F22C8C14178 /* Pods-NEXO.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NEXO.release.xcconfig"; path = "Target Support Files/Pods-NEXO/Pods-NEXO.release.xcconfig"; sourceTree = "<group>"; };
 		FAC1AE392EBE64AC00378841 /* NEXO.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NEXO.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -23,17 +31,38 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FA1A14CA2ED3CFB200A825F1 /* SocketIO in Frameworks */,
+				548AE7E9153013C450B552FF /* Pods_NEXO.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4B68B11420BED85DB1E39C84 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				65709D33E186355B91F5B771 /* Pods_NEXO.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		94DA13C413C4A4C1B02917BB /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				831309147140A03D39F89BAB /* Pods-NEXO.debug.xcconfig */,
+				B651DF3771CF9F22C8C14178 /* Pods-NEXO.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		FAAACFD22EB82429003040A5 = {
 			isa = PBXGroup;
 			children = (
 				FAAACFDD2EB82429003040A5 /* NEXO */,
 				FAC1AE392EBE64AC00378841 /* NEXO.app */,
+				94DA13C413C4A4C1B02917BB /* Pods */,
+				4B68B11420BED85DB1E39C84 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -44,9 +73,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = FAAACFE62EB8242A003040A5 /* Build configuration list for PBXNativeTarget "NEXO" */;
 			buildPhases = (
+				D2198A9758B1EA39124E836D /* [CP] Check Pods Manifest.lock */,
 				FAAACFD72EB82429003040A5 /* Sources */,
 				FAAACFD82EB82429003040A5 /* Frameworks */,
 				FAAACFD92EB82429003040A5 /* Resources */,
+				43BFAFCDE2B7676B20AB0CC6 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -57,6 +88,7 @@
 			);
 			name = NEXO;
 			packageProductDependencies = (
+				FA1A14C92ED3CFB200A825F1 /* SocketIO */,
 			);
 			productName = NEXO;
 			productReference = FAC1AE392EBE64AC00378841 /* NEXO.app */;
@@ -83,9 +115,53 @@
 			knownRegions = (
 				en,
 				Base,
+				de,
+				"lt-LT",
+				"zh-Hans",
+				ja,
+				"el-GR",
+				"ms-MY",
+				"zh-HK",
+				mt,
+				nb,
+				"ca-ES",
+				"en-GB",
+				es,
+				da,
+				"es-419",
+				it,
+				"fr-CA",
+				"bg-BG",
+				sv,
+				ko,
+				fil,
+				"zh-Hant",
+				"ro-RO",
+				hu,
+				tr,
+				"et-EE",
+				"pt-BR",
+				"lv-LV",
+				vi,
+				ru,
+				"cs-CZ",
+				"sk-SK",
+				"sl-SI",
+				fr,
+				fi,
+				id,
+				nl,
+				th,
+				"pl-PL",
+				"pt-PT",
+				hr,
+				tk,
 			);
 			mainGroup = FAAACFD22EB82429003040A5;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				FA1A14C82ED3CFB200A825F1 /* XCRemoteSwiftPackageReference "socket" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FAAACFD22EB82429003040A5;
 			projectDirPath = "";
@@ -105,6 +181,52 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		43BFAFCDE2B7676B20AB0CC6 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-NEXO/Pods-NEXO-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-NEXO/Pods-NEXO-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-NEXO/Pods-NEXO-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D2198A9758B1EA39124E836D /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-NEXO-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		FAAACFD72EB82429003040A5 /* Sources */ = {
@@ -154,7 +276,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -218,7 +340,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -240,6 +362,7 @@
 		};
 		FAAACFE72EB8242A003040A5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 831309147140A03D39F89BAB /* Pods-NEXO.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -276,6 +399,7 @@
 		};
 		FAAACFE82EB8242A003040A5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B651DF3771CF9F22C8C14178 /* Pods-NEXO.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -332,6 +456,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FA1A14C82ED3CFB200A825F1 /* XCRemoteSwiftPackageReference "socket" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FA1A14C92ED3CFB200A825F1 /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA1A14C82ED3CFB200A825F1 /* XCRemoteSwiftPackageReference "socket" */;
+			productName = SocketIO;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = FAAACFD32EB82429003040A5 /* Project object */;
 }

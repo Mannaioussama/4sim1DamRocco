@@ -96,6 +96,12 @@ struct ChatListView: View {
                 isSearchFocused = newValue
             }
         }
+        .onAppear {
+            viewModel.startAutoRefresh()
+        }
+        .onDisappear {
+            viewModel.stopAutoRefresh()
+        }
     }
     
     // MARK: - Header Section
@@ -386,12 +392,26 @@ struct ChatRow: View {
                 
                 // Content
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
+                    HStack(spacing: 6) {
                         Text(chat.participantNames)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(theme.colors.textPrimary)
                             .lineLimit(1)
                         
+                        if chat.isGroup {
+                            HStack(spacing: 4) {
+                                Image(systemName: "person.3.fill")
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text("Group")
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(theme.colors.surfaceSecondary.opacity(0.8))
+                            .cornerRadius(8)
+                            .foregroundColor(theme.colors.textSecondary)
+                        }
+
                         Spacer()
                         
                         Text(chat.lastMessageTime)

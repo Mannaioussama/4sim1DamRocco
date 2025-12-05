@@ -1,0 +1,91 @@
+/Users/macbook/Desktop/NEXO/NEXO/App\ Functionalities/AdminAreaSearcher.swift
+/Users/macbook/Desktop/NEXO/NEXO/App\ Functionalities/MapView.swift
+/Users/macbook/Desktop/NEXO/NEXO/App\ Functionalities/MediaPicker.swift
+/Users/macbook/Desktop/NEXO/NEXO/App\ Functionalities/ProfileImageService.swift
+/Users/macbook/Desktop/NEXO/NEXO/Navigation/AppRouter.swift
+/Users/macbook/Desktop/NEXO/NEXO/Navigation/AppShellView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Navigation/AppTab.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/Gemini/AICoachService.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/Gemini/GAPIConfiguration.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/Gemini/GeminiAIService.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/Gemini/HealthKitManager.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/Gemini/WeatherKitService.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/ActivityAPIService.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/AIMatchmakerAPI.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/AuthTokenManager.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/ChatAPI.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/ProfileAPI.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/QuickMatchService.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services/RealtimeChatService.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services\ &\ Auth/APIConfig.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services\ &\ Auth/APIError.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services\ &\ Auth/AuthAPI.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services\ &\ Auth/AuthModels.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services\ &\ Auth/AuthStore.swift
+/Users/macbook/Desktop/NEXO/NEXO/Services\ &\ Auth/KeychainTokenStore.swift
+/Users/macbook/Desktop/NEXO/NEXO/Theme/ButtonStyle+Brand.swift
+/Users/macbook/Desktop/NEXO/NEXO/Theme/ColorPalette.swift
+/Users/macbook/Desktop/NEXO/NEXO/Theme/Theme.swift
+/Users/macbook/Desktop/NEXO/NEXO/Theme/ThemedScreenModifier.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/CreateActivityView/CreateActivityView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/CreateActivityView/CreateActivityViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/CreateActivityView/MapLocationModels.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/CreateActivityView/MapLocationPickerView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/CreateActivityView/MapLocationPickerViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/QuickMatch/QuickMatchModels.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/QuickMatch/QuickMatchView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/QuickMatch/QuickMatchViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/SearchDiscovery/SearchDiscoveryModels.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/SearchDiscovery/SearchDiscoveryView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/SearchDiscovery/SearchDiscoveryViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/ActivityRoomView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/ActivityRoomViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/ChatConversationView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/ChatConversationViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/EnhancedEventDetailsView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Activity\ &\ Events/EnhancedEventDetailsViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Ai\ Features/AICoachView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Ai\ Features/AICoachViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Ai\ Features/AIMatchmakerView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Ai\ Features/AIMatchmakerViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Ai\ Features/AISuggestionsView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Ai\ Features/AISuggestionsViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Auth\ Pages/LoginView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Auth\ Pages/LoginViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Auth\ Pages/OnboardingView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Auth\ Pages/OnboardingViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Auth\ Pages/ResetPasswordPage.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Auth\ Pages/ResetPasswordViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Auth\ Pages/SignUpPage.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Auth\ Pages/SignUpViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Auth\ Pages/Splashscreenview.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Coach/CoachProfileView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Coach/CoachProfileViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/MapScreen/MapScreen.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/MapScreen/MapScreenModels.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/MapScreen/MapScreenViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/ChatListView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/ChatListViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/HomeFeedView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/HomeFeedViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/NotificationsScreen.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/NotificationsViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/ProfilePage.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Core\ App\ Screens/ProfilePageViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Extra/BottomNavView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Extra/FloatingCreateButtonView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Extra/InputField.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Extra/SupportingComponents.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/EditProfile/EditProfileView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/EditProfile/EditProfileViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/EditProfile/ProfileModels.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/AchievementsView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/AchievementsViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/ChangePasswordView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/ChangePasswordViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/CoachOnboardingView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/CoachOnboardingViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/SettingsView.swift
+/Users/macbook/Desktop/NEXO/NEXO/Views/Profile\ &\ AppSettings/SettingsViewModel.swift
+/Users/macbook/Desktop/NEXO/NEXO/NEXOApp.swift
+/Users/macbook/Desktop/NEXO/build/Build/Intermediates.noindex/NEXO.build/Debug-iphonesimulator/NEXO.build/DerivedSources/GeneratedAssetSymbols.swift

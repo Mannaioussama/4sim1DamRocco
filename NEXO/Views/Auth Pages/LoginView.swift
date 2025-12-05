@@ -240,6 +240,7 @@ struct LoginView: View {
                     VStack(spacing: 12) {
                         emailField
                         passwordField
+                        rememberMeRow
                         
                         // API error
                         if let apiError = viewModel.apiError {
@@ -359,6 +360,26 @@ struct LoginView: View {
                     .foregroundColor(.red)
             }
         }
+    }
+
+    private var rememberMeRow: some View {
+        Button(action: {
+            viewModel.rememberMe.toggle()
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: viewModel.rememberMe ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 18))
+                    .foregroundColor(viewModel.rememberMe ? theme.colors.textPrimary : theme.colors.textSecondary)
+
+                Text("Remember me")
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.colors.textPrimary)
+
+                Spacer()
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
     }
     
     private var forgotPasswordButton: some View {

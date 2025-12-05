@@ -1,0 +1,96 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Auth Pages/SignUpPage.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Join NEXO",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create your account and start connecting",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "Location (State/Province)",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 244
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enter your (State/Province)",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 253
+        }
+      },
+      {
+        "comment": "",
+        "key": "I agree to the Terms of Service and Privacy Policy",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 334
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create Account",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 357
+        }
+      },
+      {
+        "comment": "",
+        "key": "or sign up with",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 384
+        }
+      },
+      {
+        "comment": "",
+        "key": "Google",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 406
+        }
+      },
+      {
+        "comment": "",
+        "key": "Facebook",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 428
+        }
+      },
+      {
+        "comment": "",
+        "key": "Already have an account?",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 453
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sign In",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 460
+        }
+      }
+    ]
+  },
+  "version": 1
+}

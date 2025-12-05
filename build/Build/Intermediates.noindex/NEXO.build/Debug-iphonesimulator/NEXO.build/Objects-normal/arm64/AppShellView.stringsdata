@@ -1,0 +1,64 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Navigation/AppShellView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "AI Coach",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 248
+        }
+      },
+      {
+        "comment": "",
+        "key": "Home",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 104
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sessions",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": " ",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 132
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chat",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 148
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dashboard",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 164
+        }
+      },
+      {
+        "comment": "",
+        "key": "AI Coach",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 239
+        }
+      }
+    ]
+  },
+  "version": 1
+}

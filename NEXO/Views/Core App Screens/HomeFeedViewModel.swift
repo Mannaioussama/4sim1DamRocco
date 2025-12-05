@@ -30,6 +30,9 @@ class HomeFeedViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     private var didBindService = false
+    private var searchTask: Task<Void, Never>? = nil
+    private let paymentService = PaymentAPIService()
+    @Published private(set) var joinedStatus: [String: Bool] = [:]
     
     // MARK: - Computed Properties
     
@@ -125,6 +128,11 @@ class HomeFeedViewModel: ObservableObject {
                 // Once we have data, ensure spinner is off
                 self.isLoading = false
                 print("✅ Updated with \(apiActivities.count) activities from service")
+
+                // Refresh joined payment status for paid sessions in the background
+                Task {
+                    await self.refreshJoinedStatus(for: apiActivities)
+                }
             }
             .store(in: &cancellables)
         
@@ -184,10 +192,44 @@ class HomeFeedViewModel: ObservableObject {
     }
     
     private func performSearch(_ query: String) {
-        print("Searching for: \(query)")
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Cancel any in-flight search
+        searchTask?.cancel()
+        
+        guard let service = activityAPIService else {
+            // No service bound yet; just filter locally (already handled by filteredActivities)
+            print("🔎 Local-only search (no API service bound yet): '\(trimmed)'")
+            return
+        }
+        
+        if trimmed.isEmpty {
+            // Empty query -> restore full list
+            searchTask = Task { [weak self] in
+                guard let self else { return }
+                print("🔁 Clearing search; fetching all activities")
+                await service.fetchAllActivities()
+                // Keep isLoading rules via binding
+            }
+            return
+        }
+        
+        // Remote search (and keep local filtering on top for sport)
+        let sportParam = (filterSport == "all") ? nil : filterSport
+        searchTask = Task { [weak self] in
+            guard let self else { return }
+            print("🔎 Searching backend for '\(trimmed)' sport=\(sportParam ?? "any")")
+            await service.searchActivities(query: trimmed, sport: sportParam, distanceMiles: nil)
+            // Results will flow into `activities` via Combine binding
+        }
     }
     
-    func clearSearch() { searchQuery = "" }
+    func clearSearch() {
+        searchQuery = ""
+        // Trigger performSearch("") via debounce, or ensure immediate restore:
+        if let service = activityAPIService {
+            Task { await service.fetchAllActivities() }
+        }
+    }
     
     // MARK: - Filters
     
@@ -196,12 +238,20 @@ class HomeFeedViewModel: ObservableObject {
     func clearFilters() {
         filterSport = "all"
         filterDistance = 5
+        // If user is currently searching, re-run search with cleared filters
+        if isSearching {
+            performSearch(searchQuery)
+        }
     }
     
     func applyFilters(sport: String, distance: Double) {
         filterSport = sport
         filterDistance = distance
         showFilters = false
+        // If user is currently searching, re-run search with updated filters
+        if isSearching {
+            performSearch(searchQuery)
+        }
     }
     
     // MARK: - Save/Unsave Activities
@@ -273,7 +323,8 @@ class HomeFeedViewModel: ObservableObject {
                 distance: "0.0 mi",
                 spotsTotal: spotsTotal,
                 spotsTaken: 1,
-                level: level
+                level: level,
+                visibility: "public"
             )
             activities.insert(newActivity, at: 0)
             return true
@@ -323,6 +374,37 @@ class HomeFeedViewModel: ObservableObject {
     func getSpotsRemainingText(for activity: Activity) -> String {
         let remaining = getSpotsRemaining(for: activity)
         return "\(remaining) of \(activity.spotsTotal) spots remaining"
+    }
+    
+    /// Check if the user has joined/paid for a paid activity based on backend payment status.
+    func hasJoined(_ activity: Activity) -> Bool {
+        // If we have a positive payment/join status cached from backend, trust it
+        if activity.isPaidSession, let cached = joinedStatus[activity.id], cached {
+            return true
+        }
+        // Fallback: rely on participantIds from the activity payload
+        guard let currentUserId = AuthTokenManager.shared.getUserId() else { return false }
+        guard let ids = activity.participantIds else { return false }
+        return ids.contains(currentUserId)
+    }
+
+    // MARK: - Payment / Joined Status
+    
+    private func refreshJoinedStatus(for activities: [Activity]) async {
+        let paidActivities = activities.filter { $0.isPaidSession }
+        guard !paidActivities.isEmpty else { return }
+        
+        for activity in paidActivities {
+            do {
+                let status = try await paymentService.checkPaymentStatus(activityId: activity.id)
+                await MainActor.run {
+                    self.joinedStatus[activity.id] = status.hasPaid || status.isParticipant
+                }
+            } catch {
+                // Ignore individual failures; keep existing status
+                continue
+            }
+        }
     }
     
     func getDateTimeText(for activity: Activity) -> String {

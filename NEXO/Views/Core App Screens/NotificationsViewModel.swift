@@ -107,8 +107,17 @@ class NotificationsViewModel: ObservableObject {
                 .sorted { lhs, rhs in
                     parsedDate(from: lhs.time) > parsedDate(from: rhs.time)
                 }
-            
-            notifications = combined
+
+            // Static reference notification: prompt user to rate their last coach session
+            let ratingPrompt = AppNotification(
+                id: "coach-rating-reference",
+                icon: "⭐️",
+                message: "How was your last coach session? Tap to leave a rating and review.",
+                time: "Just now",
+                actionText: "Rate"
+            )
+
+            notifications = [ratingPrompt] + combined
         } catch let api as APIError {
             errorMessage = api.userMessage
             notifications = []

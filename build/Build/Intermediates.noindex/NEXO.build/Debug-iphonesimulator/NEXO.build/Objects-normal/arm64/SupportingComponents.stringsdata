@@ -1,0 +1,16 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Extra/SupportingComponents.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Create",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 114
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -290,26 +290,36 @@ private struct LeaderboardRow: View {
     let isUser: Bool
     
     var body: some View {
+        let isTopRank = entry.rank == 1
+        
         HStack {
             Text(entry.badge.isEmpty ? "\(entry.rank)" : entry.badge)
                 .font(.headline)
                 .frame(width: 28, height: 28)
-                .background(isUser ? Color.yellow.opacity(0.3) : theme.colors.cardBackground)
+                .background(
+                    isUser
+                    ? Color.green.opacity(0.25)
+                    : (isTopRank ? Color.yellow.opacity(0.3) : theme.colors.cardBackground)
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(theme.colors.cardStroke, lineWidth: 1)
                 )
                 .cornerRadius(14)
             VStack(alignment: .leading) {
-                Text(entry.name).font(.subheadline.bold()).foregroundColor(theme.colors.textPrimary)
-                Text("\(entry.points) XP").font(.caption).foregroundColor(theme.colors.textSecondary)
+                Text(entry.name)
+                    .font(.subheadline.bold())
+                    .foregroundColor(theme.colors.textPrimary)
+                Text("\(entry.points) XP")
+                    .font(.caption)
+                    .foregroundColor(theme.colors.textSecondary)
             }
             Spacer()
             if isUser {
                 Text("You")
                     .font(.caption2.bold())
                     .padding(4)
-                    .background(Color.yellow)
+                    .background(Color.green)
                     .cornerRadius(6)
             }
         }
@@ -318,11 +328,19 @@ private struct LeaderboardRow: View {
             isUser
             ? AnyShapeStyle(
                 LinearGradient(colors: [
-                    Color(hexValue: "#FEF3C7"),
-                    Color(hexValue: "#FDE68A")
+                    Color(hexValue: "#BBF7D0"),
+                    Color(hexValue: "#4ADE80")
                 ], startPoint: .topLeading, endPoint: .bottomTrailing)
               )
-            : AnyShapeStyle(theme.colors.cardBackground)
+            : (isTopRank
+               ? AnyShapeStyle(
+                    LinearGradient(colors: [
+                        Color(hexValue: "#FEF3C7"),
+                        Color(hexValue: "#FDE68A")
+                    ], startPoint: .topLeading, endPoint: .bottomTrailing)
+                 )
+               : AnyShapeStyle(theme.colors.cardBackground)
+              )
         )
         .background(theme.colors.barMaterial)
         .overlay(

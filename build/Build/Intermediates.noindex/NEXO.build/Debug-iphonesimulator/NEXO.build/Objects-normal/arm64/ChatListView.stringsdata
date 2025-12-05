@@ -1,0 +1,128 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Core App Screens/ChatListView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Messages",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search people or conversations...",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 132
+        }
+      },
+      {
+        "comment": "",
+        "key": "Searching people…",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 180
+        }
+      },
+      {
+        "comment": "",
+        "key": "People",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "Conversations",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 216
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loading conversations...",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 288
+        }
+      },
+      {
+        "comment": "",
+        "key": "No results",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 302
+        }
+      },
+      {
+        "comment": "",
+        "key": "Try a different name or keyword",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 305
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear Search",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 312
+        }
+      },
+      {
+        "comment": "",
+        "key": "U",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 345
+        }
+      },
+      {
+        "comment": "",
+        "key": "U",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 360
+        }
+      },
+      {
+        "comment": "",
+        "key": "U",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 378
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 415
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap to chat",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 469
+        }
+      }
+    ]
+  },
+  "version": 1
+}

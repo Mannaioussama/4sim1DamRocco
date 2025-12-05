@@ -11,6 +11,7 @@ struct SettingsView: View {
     var onBack: (() -> Void)?
     var onApplyVerification: (() -> Void)?
     var onLogout: (() -> Void)?
+    var onOpenPremium: (() -> Void)?
 
     @EnvironmentObject private var theme: Theme
     @StateObject private var viewModel = SettingsViewModel()
@@ -108,6 +109,13 @@ struct SettingsView: View {
     
     private var settingsSections: some View {
         VStack(spacing: 20) {
+            SettingsSectionView(title: viewModel.premiumSectionTitle, items: [
+                .navigate("Premium Subscription", systemIcon: "star.fill", extra: nil, action: {
+                    viewModel.openPremiumSubscription()
+                    onOpenPremium?()
+                })
+            ])
+
             SettingsSectionView(title: viewModel.appearanceSectionTitle, items: [
                 .toggle("Night Mode", Binding(
                     get: { theme.isDarkMode },
@@ -495,7 +503,8 @@ private struct PulsingDot: View {
         SettingsView(
             onBack: {},
             onApplyVerification: {},
-            onLogout: {}
+            onLogout: {},
+            onOpenPremium: {}
         )
         .environmentObject(Theme())
     }

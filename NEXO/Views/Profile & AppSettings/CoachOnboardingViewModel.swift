@@ -19,7 +19,7 @@ enum OnboardingStep {
 }
 
 // MARK: - Data Models
-struct FormData {
+struct FormData: Codable {
     var name: String = ""
     var bio: String = ""
     var certifications: String = ""
@@ -27,6 +27,7 @@ struct FormData {
     var specialization: String = ""
     var location: String = ""
     var website: String = ""
+    var email: String = ""
 }
 
 struct StatusConfig {
@@ -66,12 +67,21 @@ class CoachOnboardingViewModel: ObservableObject {
     @Published var certificationsError: String = ""
     @Published var locationError: String = ""
     @Published var documentsError: String = ""
+    @Published var isCoachAlreadyVerified: Bool = false
+    @Published var lastVerificationResponse: CoachVerificationResponse? = nil
+    @Published var lastSubmittedForm: FormData? = nil
+    @Published var canModifyData: Bool = false
     
     // MARK: - Private Properties
     
     private var cancellables = Set<AnyCancellable>()
     
-    // For simulation only: toggle to test success/failure paths without triggering compiler warnings.
+    private let coachVerificationService = CoachVerificationService.shared
+    private let profileAPI = ProfileAPI.shared
+    private let tokenManager = AuthTokenManager.shared
+    private let userDefaults = UserDefaults.standard
+    
+    // For local testing you can flip this, but real logic now goes through the API
     private var simulateAPISubmissionSuccess: Bool = true
     
     // MARK: - Computed Properties
@@ -156,6 +166,95 @@ class CoachOnboardingViewModel: ObservableObject {
     
     init() {
         setupObservers()
+    }
+
+    // MARK: - Local Persistence
+
+    private func formStorageKey(for userId: String) -> String {
+        "coachVerificationForm_\(userId)"
+    }
+
+    private func saveLastForm(_ form: FormData, for userId: String) {
+        let key = formStorageKey(for: userId)
+        if let data = try? JSONEncoder().encode(form) {
+            userDefaults.set(data, forKey: key)
+        }
+    }
+
+    private func loadLastForm(for userId: String) -> FormData? {
+        let key = formStorageKey(for: userId)
+        guard let data = userDefaults.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(FormData.self, from: data)
+    }
+
+    // MARK: - Load Existing Verification Status
+    
+    func checkIfAlreadyVerified() {
+        guard let token = tokenManager.getToken() else { return }
+        
+        Task {
+            do {
+                let profile = try await profileAPI.getProfile(token: token)
+                await MainActor.run {
+                    self.isCoachAlreadyVerified = profile.isCoachVerified ?? false
+                    if self.formData.email.isEmpty {
+                        self.formData.email = profile.email
+                    }
+                    if self.formData.name.isEmpty {
+                        self.formData.name = profile.name
+                    }
+                    if self.isCoachAlreadyVerified {
+                        self.applyExistingVerificationData(profile.coachVerificationData)
+                    }
+                    if let userId = self.tokenManager.getUserId(),
+                       let savedForm = self.loadLastForm(for: userId) {
+                        self.lastSubmittedForm = savedForm
+                        self.canModifyData = true
+                    }
+                }
+            } catch {
+                print("Failed to load coach verification status: \(error)")
+            }
+        }
+    }
+
+    private func applyExistingVerificationData(_ data: CoachVerificationData?) {
+        guard let data = data else { return }
+        let confidence = data.confidenceScore ?? 0
+        let reasons = data.verificationReasons ?? []
+        let response = CoachVerificationResponse(
+            isCoach: true,
+            confidenceScore: confidence,
+            verificationReasons: reasons,
+            aiAnalysis: nil,
+            documentAnalysis: nil
+        )
+        // Prefill form fields from stored verification data when available
+        if let coachName = data.coachName, !coachName.isEmpty {
+            formData.name = coachName
+        }
+        if let about = data.about, !about.isEmpty {
+            formData.bio = about
+        }
+        if let specialization = data.specialization, !specialization.isEmpty {
+            formData.specialization = specialization
+        }
+        if let years = data.yearsOfExperience, !years.isEmpty {
+            formData.experience = years
+        }
+        if let certs = data.certifications, !certs.isEmpty {
+            formData.certifications = certs
+        }
+        if let location = data.location, !location.isEmpty {
+            formData.location = location
+        }
+        if let note = data.note, !note.isEmpty {
+            formData.website = note
+        }
+        lastVerificationResponse = response
+        status = .approved
+        step = .status
+        canModifyData = true
     }
     
     // MARK: - Setup
@@ -328,27 +427,87 @@ class CoachOnboardingViewModel: ObservableObject {
             return
         }
         
-        isLoading = true
+        guard let token = tokenManager.getToken(), let userId = tokenManager.getUserId() else {
+            errorMessage = "Authentication required to submit coach verification."
+            showErrorAlert = true
+            return
+        }
         
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let self = self else { return }
-            
-            // Simulate success (replace with actual API call)
-            let success = self.simulateAPISubmissionSuccess
-            
-            if success {
-                withAnimation {
-                    self.status = .pending
-                    self.step = .status
+        isLoading = true
+        trackApplicationSubmitted()
+        // Remember the form that was just submitted so we can prefill it on 'Modify my data'.
+        lastSubmittedForm = formData
+        canModifyData = true
+        saveLastForm(formData, for: userId)
+        
+        Task {
+            do {
+                // 1) TODO: upload documents when backend endpoint is available.
+                // For now, send an empty documents array so the AI endpoint still works.
+                let documentURLs: [String] = []
+                
+                // 2) Build AI verification request
+                let years = formData.experience.isEmpty ? "" : formData.experience
+                let request = CoachVerificationRequest(
+                    userType: isCoachAccount ? "Coach / Trainer" : "Club Owner",
+                    fullName: formData.name,
+                    email: formData.email,
+                    about: formData.bio,
+                    specialization: formData.specialization,
+                    yearsOfExperience: years,
+                    certifications: formData.certifications,
+                    location: formData.location,
+                    documents: documentURLs,
+                    note: formData.website.isEmpty ? nil : formData.website
+                )
+                
+                // 3) Call AI verification endpoint
+                let response = try await coachVerificationService.verifyCoach(token: token, request: request)
+                
+                if response.isCoach {
+                    // 4) Persist verification status in backend profile
+                    let reasons = response.verificationReasons
+                    let payload = ProfileAPI.CoachVerificationStatusPayload(
+                        isCoachVerified: true,
+                        coachName: formData.name,
+                        confidenceScore: response.confidenceScore,
+                        verificationReasons: reasons
+                    )
+                    _ = try await profileAPI.updateCoachVerificationStatus(userId: userId, token: token, status: payload)
+                    
+                    await MainActor.run {
+                        self.lastVerificationResponse = response
+                        withAnimation {
+                            self.status = .approved
+                            self.step = .status
+                        }
+                        self.isLoading = false
+                        self.trackApplicationSuccess()
+                        onSuccess()
+                    }
+                } else {
+                    await MainActor.run {
+                        self.lastVerificationResponse = response
+                        self.status = .rejected
+                        self.isLoading = false
+                        self.errorMessage = "We could not verify your coach credentials. Please review your details and documents."
+                        self.showErrorAlert = true
+                        self.trackApplicationFailed(error: self.errorMessage)
+                        onError(self.errorMessage)
+                    }
                 }
-                self.isLoading = false
-                onSuccess()
-            } else {
-                self.errorMessage = "Failed to submit application. Please try again."
-                self.showErrorAlert = true
-                self.isLoading = false
-                onError(self.errorMessage)
+            } catch {
+                await MainActor.run {
+                    self.isLoading = false
+                    if let apiErr = error as? APIError {
+                        self.errorMessage = apiErr.userMessage
+                    } else {
+                        self.errorMessage = error.localizedDescription
+                    }
+                    self.showErrorAlert = true
+                    self.trackApplicationFailed(error: self.errorMessage)
+                    onError(self.errorMessage)
+                }
             }
         }
     }
@@ -371,6 +530,9 @@ class CoachOnboardingViewModel: ObservableObject {
         withAnimation {
             step = .application
             status = .notApplied
+            if let saved = lastSubmittedForm {
+                formData = saved
+            }
             clearAllErrors()
         }
     }
@@ -448,7 +610,7 @@ class CoachOnboardingViewModel: ObservableObject {
         clearAllErrors()
         accountType = "coach"
     }
-    
+
     // MARK: - Analytics
     
     func trackScreenView() {

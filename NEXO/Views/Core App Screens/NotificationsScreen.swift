@@ -12,6 +12,9 @@ struct NotificationsScreen: View {
 
     @EnvironmentObject private var theme: Theme
     @StateObject private var viewModel = NotificationsViewModel()
+    @State private var showRatingSheet: Bool = false
+    @State private var ratingStars: Int = 0
+    @State private var ratingText: String = ""
     
     var body: some View {
         ZStack {
@@ -41,7 +44,10 @@ struct NotificationsScreen: View {
                         .foregroundColor(theme.colors.textPrimary)
                         .frame(width: 32, height: 32)
                         .background(theme.colors.cardBackground)
-                        .background(theme.colors.barMaterial)
+                        .background(
+                            Circle()
+                                .fill(theme.colors.barMaterial)
+                        )
                         .clipShape(Circle())
                         .overlay(
                             Circle()
@@ -85,6 +91,21 @@ struct NotificationsScreen: View {
         .onAppear {
             viewModel.trackScreenView()
         }
+        .sheet(isPresented: $showRatingSheet) {
+            RatingSessionSheet(
+                stars: $ratingStars,
+                reviewText: $ratingText,
+                onSubmit: {
+                    // For now just log the rating locally
+                    print("Submitted coach rating: \(ratingStars) stars, review: \(ratingText)")
+                    showRatingSheet = false
+                },
+                onCancel: {
+                    showRatingSheet = false
+                }
+            )
+            .environmentObject(theme)
+        }
     }
     
     // MARK: - Loading View
@@ -110,8 +131,15 @@ struct NotificationsScreen: View {
                     NotificationCard(
                         notification: notification,
                         onPrimaryAction: {
-                            viewModel.handleNotificationAction(notification)
-                            viewModel.trackNotificationAction(notification)
+                            if notification.id == "coach-rating-reference" {
+                                // Show rating popup for static coach session notification
+                                ratingStars = 0
+                                ratingText = ""
+                                showRatingSheet = true
+                            } else {
+                                viewModel.handleNotificationAction(notification)
+                                viewModel.trackNotificationAction(notification)
+                            }
                         },
                         onDismiss: {
                             viewModel.dismissNotification(notification.id)
@@ -256,7 +284,10 @@ struct NotificationCard: View {
                 .font(.system(size: 28))
                 .frame(width: 40, height: 40)
                 .background(theme.colors.cardBackground)
-                .background(theme.colors.barMaterial)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(theme.colors.barMaterial)
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(theme.colors.cardStroke, lineWidth: 1)
@@ -295,7 +326,10 @@ struct NotificationCard: View {
                         .foregroundColor(theme.colors.textPrimary)
                         .frame(width: 28, height: 28)
                         .background(theme.colors.cardBackground)
-                        .background(theme.colors.barMaterial)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(theme.colors.barMaterial)
+                        )
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(theme.colors.cardStroke, lineWidth: 1)
@@ -308,13 +342,96 @@ struct NotificationCard: View {
         }
         .padding(12)
         .background(theme.colors.cardBackground)
-        .background(theme.colors.barMaterial)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(theme.colors.barMaterial)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(theme.colors.cardStroke, lineWidth: 1)
         )
         .cornerRadius(16)
         .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.08), radius: 12, x: 0, y: 6)
+    }
+}
+
+// MARK: - Rating Session Sheet
+
+struct RatingSessionSheet: View {
+    @EnvironmentObject private var theme: Theme
+
+    @Binding var stars: Int
+    @Binding var reviewText: String
+
+    var onSubmit: () -> Void
+    var onCancel: () -> Void
+
+    private let maxStars = 5
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Rate your coach session")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(theme.colors.textPrimary)
+
+                HStack(spacing: 8) {
+                    ForEach(1...maxStars, id: \.self) { value in
+                        Image(systemName: value <= stars ? "star.fill" : "star")
+                            .font(.system(size: 24))
+                            .foregroundColor(value <= stars ? Color.yellow : theme.colors.textSecondary)
+                            .onTapGesture { stars = value }
+                    }
+                }
+
+                Text("Add a short review (optional)")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(theme.colors.textSecondary)
+
+                ZStack(alignment: .topLeading) {
+                    if reviewText.isEmpty {
+                        Text("Share what you liked or what could be better")
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.colors.textSecondary.opacity(0.6))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 10)
+                    }
+
+                    TextEditor(text: $reviewText)
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.colors.textPrimary)
+                        .padding(6)
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear)
+                }
+                .frame(minHeight: 100)
+                .background(
+                    theme.colors.cardBackground.opacity(theme.isDarkMode ? 0.55 : 0.35)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(theme.colors.cardStroke.opacity(0.7), lineWidth: 1)
+                )
+                .cornerRadius(12)
+
+                Spacer()
+
+                HStack(spacing: 12) {
+                    Button("Cancel", action: onCancel)
+                        .buttonStyle(BrandButtonStyle(variant: .outline))
+
+                    Button("Submit") {
+                        onSubmit()
+                    }
+                    .buttonStyle(BrandButtonStyle(variant: .default))
+                    .disabled(stars == 0)
+                }
+            }
+            .padding(16)
+            .background(theme.colors.backgroundGradient.ignoresSafeArea())
+            .navigationTitle("Session Feedback")
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }
 

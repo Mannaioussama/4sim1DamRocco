@@ -1,0 +1,44 @@
+PODS:
+  - StripeApplePay (25.1.1):
+    - StripeCore (= 25.1.1)
+  - StripeCore (25.1.1)
+  - StripePayments (25.1.1):
+    - StripeCore (= 25.1.1)
+    - StripePayments/Stripe3DS2 (= 25.1.1)
+  - StripePayments/Stripe3DS2 (25.1.1):
+    - StripeCore (= 25.1.1)
+  - StripePaymentSheet (25.1.1):
+    - StripeApplePay (= 25.1.1)
+    - StripeCore (= 25.1.1)
+    - StripePayments (= 25.1.1)
+    - StripePaymentsUI (= 25.1.1)
+  - StripePaymentsUI (25.1.1):
+    - StripeCore (= 25.1.1)
+    - StripePayments (= 25.1.1)
+    - StripeUICore (= 25.1.1)
+  - StripeUICore (25.1.1):
+    - StripeCore (= 25.1.1)
+
+DEPENDENCIES:
+  - StripePaymentSheet
+
+SPEC REPOS:
+  trunk:
+    - StripeApplePay
+    - StripeCore
+    - StripePayments
+    - StripePaymentSheet
+    - StripePaymentsUI
+    - StripeUICore
+
+SPEC CHECKSUMS:
+  StripeApplePay: 4428e5826335017151eeff87e9d36f6688eaa593
+  StripeCore: 76440c9bf61bd84149014414ced3470b8d94eb8e
+  StripePayments: ace6def8949ed33434a5db2f8fdd184388636be5
+  StripePaymentSheet: ec3dadf54b470250a40b3c5f7164641a0f1063c3
+  StripePaymentsUI: 702926af8eae0901821907014ab90c72fc3eabab
+  StripeUICore: c3de64fb6ab7ef376128e862f6bc6817e0a964e9
+
+PODFILE CHECKSUM: 303a4f06475d552f8e10be45c4baa608f7ea885f
+
+COCOAPODS: 1.16.2

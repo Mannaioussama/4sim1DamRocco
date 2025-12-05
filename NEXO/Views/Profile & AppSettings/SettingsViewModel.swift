@@ -52,6 +52,8 @@ class SettingsViewModel: ObservableObject {
     // MARK: - Private Properties
     
     private var cancellables = Set<AnyCancellable>()
+    private let profileAPI = ProfileAPI.shared
+    private let tokenManager = AuthTokenManager.shared
     
     // MARK: - Computed Properties
     
@@ -90,7 +92,7 @@ class SettingsViewModel: ObservableObject {
                 color: Color(hex: "2ECC71"),
                 title: "Verified Coach",
                 description: "You can now create paid sessions and access coach features",
-                buttonTitle: nil,
+                buttonTitle: "Check Status",
                 buttonAction: nil,
                 badgeText: "✓ Verified",
                 badgeColor: Color(hex: "2ECC71")
@@ -100,6 +102,7 @@ class SettingsViewModel: ObservableObject {
     
     // MARK: - Section Headers
     
+    var premiumSectionTitle: String { "Premium" }
     var appearanceSectionTitle: String { "Appearance" }
     var accountSectionTitle: String { "Account" }
     var aiPreferencesSectionTitle: String { "AI Preferences" }
@@ -111,6 +114,7 @@ class SettingsViewModel: ObservableObject {
     
     init() {
         setupObservers()
+        Task { await loadVerificationStatus() }
     }
     
     // MARK: - Setup
@@ -259,17 +263,10 @@ class SettingsViewModel: ObservableObject {
     // MARK: - Verification
     
     func applyForVerification(onSuccess: @escaping () -> Void, onError: @escaping (String) -> Void) {
-        isLoading = true
-        
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            
-            // Simulate success
-            self.verificationStatus = .pending
-            self.isLoading = false
-            onSuccess()
-        }
+        // This method now just triggers navigation to the coach onboarding screen.
+        // The real status is driven by the backend isCoachVerified flag.
+        trackVerificationApplied()
+        onSuccess()
     }
     
     // MARK: - Logout
@@ -316,8 +313,27 @@ class SettingsViewModel: ObservableObject {
         // TODO: Load from persistent storage or backend
         print("Loading user settings")
     }
+
+    // MARK: - Verification Status (Backend)
+    
+    @MainActor
+    func loadVerificationStatus() async {
+        guard let token = tokenManager.getToken() else { return }
+        do {
+            let profile = try await profileAPI.getProfile(token: token)
+            verificationStatus = (profile.isCoachVerified ?? false) ? .approved : .none
+        } catch {
+            print("Failed to load verification status: \(error)")
+        }
+    }
     
     // MARK: - Navigation Actions
+    
+    func openPremiumSubscription() {
+        // TODO: Navigate to premium subscription screen
+        print("Opening premium subscription")
+        trackNavigationTo("Premium Subscription")
+    }
     
     func openBlockedUsers() {
         // TODO: Navigate to blocked users screen

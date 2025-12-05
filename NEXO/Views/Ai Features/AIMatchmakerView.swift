@@ -228,40 +228,131 @@ struct AIMatchMessageBubble: View {
 
     var body: some View {
         if message.type == .ai {
-            VStack(alignment: .leading, spacing: 6) {
-                if let text = message.text {
-                    Text(text)
-                        .font(.system(size: 14))
-                        .foregroundColor(theme.colors.textPrimary)
-                        .padding()
-                        .background(theme.colors.cardBackground)
-                        .background(theme.colors.barMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(theme.colors.cardStroke, lineWidth: 1)
-                        )
-                        .cornerRadius(20)
-                        .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
-                }
-
-                if let options = message.options {
-                    AIFlowLayout(spacing: 8) {
-                        ForEach(options, id: \.self) { option in
-                            Button(option) {
-                                onOptionSelect(option)
-                            }
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(theme.colors.textPrimary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(theme.colors.cardBackground)
-                            .background(theme.colors.barMaterial)
+            HStack(alignment: .top, spacing: 10) {
+                // AI Avatar
+                VStack(spacing: 0) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.7))
+                            .frame(width: 32, height: 32)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+                                Circle()
+                                    .stroke(Color.white.opacity(0.8), lineWidth: 2)
                             )
-                            .cornerRadius(20)
-                            .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                        
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(Color(hex: "#8B5CF6"))
+                    }
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    if let text = message.text {
+                        Text(text)
+                            .font(.system(size: 14))
+                            .foregroundColor(.black)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 24)
+                                    .fill(Color.white.opacity(0.7))
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 24)
+                                            .stroke(Color.white.opacity(0.8), lineWidth: 2)
+                                    )
+                                    .background(.ultraThinMaterial)
+                            )
+                            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 24)
+                                    .fill(
+                                        LinearGradient(colors: [
+                                            Color(hex: "#8B5CF6").opacity(0.1),
+                                            Color(hex: "#EC4899").opacity(0.1),
+                                            Color(hex: "#0066FF").opacity(0.1)
+                                        ], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    )
+                                    .blur(radius: 8)
+                            )
+                    }
+
+                    // Activity Cards
+                    if let activities = message.suggestedActivities, !activities.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Suggested Activities")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.black.opacity(0.6))
+                            
+                            ForEach(activities) { activity in
+                                ActivitySuggestionCard(activity: activity, onJoin: onJoinActivity)
+                            }
+                        }
+                    }
+
+                    // User Cards
+                    if let users = message.suggestedUsers, !users.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Suggested Partners")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.black.opacity(0.6))
+                            
+                            ForEach(users) { user in
+                                UserSuggestionCard(user: user, onViewProfile: onViewProfile)
+                            }
+                        }
+                    }
+
+                    // Sport Cards
+                    if let sports = message.suggestedSports, !sports.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Try These Sports")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.black.opacity(0.6))
+                            
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: 8) {
+                                ForEach(sports, id: \.self) { sport in
+                                    SportSuggestionCard(sport: sport, onOptionSelect: onOptionSelect)
+                                }
+                            }
+                        }
+                    }
+
+                    if let options = message.options {
+                        AIFlowLayout(spacing: 8) {
+                            ForEach(options, id: \.self) { option in
+                                Button(action: {
+                                    onOptionSelect(option)
+                                }) {
+                                    Text(option)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(theme.isDarkMode ? .white : .black)
+                                        .padding(.horizontal, 18)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                                .fill(Color.white.opacity(theme.isDarkMode ? 0.12 : 0.7))
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                                        .stroke(
+                                                            LinearGradient(colors: [
+                                                                Color(hex: "#8B5CF6").opacity(0.9),
+                                                                Color(hex: "#EC4899").opacity(0.9)
+                                                            ], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                                            lineWidth: 1.5
+                                                        )
+                                                )
+                                                .background(.ultraThinMaterial)
+                                        )
+                                        .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
+                                }
+                                .buttonStyle(.plain)
+                                .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                                .allowsHitTesting(true)
+                            }
                         }
                     }
                 }
@@ -274,15 +365,269 @@ struct AIMatchMessageBubble: View {
                     .font(.system(size: 14))
                     .padding()
                     .background(
-                        LinearGradient(colors: [Color(hex: "#A855F7"), Color(hex: "#EC4899")],
+                        LinearGradient(colors: [Color(hex: "#8B5CF6"), Color(hex: "#EC4899")],
                                        startPoint: .topLeading,
                                        endPoint: .bottomTrailing)
                     )
                     .foregroundColor(.white)
-                    .cornerRadius(20)
-                    .frame(maxWidth: 260, alignment: .trailing)
+                    .cornerRadius(24)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
             }
         }
+    }
+}
+
+// MARK: - Activity Suggestion Card
+struct ActivitySuggestionCard: View {
+    @EnvironmentObject private var theme: Theme
+    let activity: SuggestedActivity
+    let onJoin: ((String) -> Void)?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(activity.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.black)
+                    
+                    Text(activity.sportType)
+                        .font(.system(size: 12))
+                        .foregroundColor(.black.opacity(0.7))
+                }
+                
+                Spacer()
+                
+                if let score = activity.matchScore {
+                    Text("\(score)% match")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(
+                            LinearGradient(colors: [Color(hex: "#8B5CF6"), Color(hex: "#EC4899")],
+                                           startPoint: .leading,
+                                           endPoint: .trailing)
+                        )
+                        .cornerRadius(10)
+                }
+            }
+            
+            HStack {
+                Label("\(activity.date) • \(activity.time)", systemImage: "calendar")
+                    .font(.system(size: 12))
+                    .foregroundColor(.black.opacity(0.6))
+            }
+            
+            HStack {
+                Label("\(activity.location) • \(activity.participants)/\(activity.maxParticipants) joined", systemImage: "location")
+                    .font(.system(size: 12))
+                    .foregroundColor(.black.opacity(0.6))
+            }
+            
+            Button("Join Activity") {
+                onJoin?(activity.id)
+            }
+            .font(.system(size: 13, weight: .medium))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(Color(hex: "#2ECC71"))
+            .cornerRadius(20)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.white.opacity(0.7))
+                .background(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 2)
+                )
+                .background(.ultraThinMaterial)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(
+                    LinearGradient(colors: [
+                        Color(hex: "#8B5CF6").opacity(0.1),
+                        Color(hex: "#EC4899").opacity(0.1),
+                        Color(hex: "#0066FF").opacity(0.1)
+                    ], startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+                .blur(radius: 8)
+        )
+    }
+}
+
+// MARK: - User Suggestion Card
+struct UserSuggestionCard: View {
+    @EnvironmentObject private var theme: Theme
+    let user: SuggestedUser
+    let onViewProfile: ((String) -> Void)?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                AsyncImage(url: URL(string: user.profileImageUrl ?? "")) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Circle()
+                        .fill(Color.gray.opacity(0.3))
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.6), lineWidth: 2)
+                )
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(user.name)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.black)
+                        
+                        Spacer()
+                        
+                        if let score = user.matchScore {
+                            Text("\(score)% match")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(
+                                    LinearGradient(colors: [Color(hex: "#8B5CF6"), Color(hex: "#EC4899")],
+                                                   startPoint: .leading,
+                                                   endPoint: .trailing)
+                                )
+                                .cornerRadius(10)
+                        }
+                    }
+                    
+                    Text(user.sport)
+                        .font(.system(size: 12))
+                        .foregroundColor(.black.opacity(0.7))
+                    
+                    if let bio = user.bio {
+                        Text(bio)
+                            .font(.system(size: 12))
+                            .foregroundColor(.black.opacity(0.6))
+                            .lineLimit(2)
+                    }
+                }
+            }
+            
+            HStack {
+                if let distance = user.distance {
+                    Label(distance, systemImage: "location")
+                        .font(.system(size: 12))
+                        .foregroundColor(.black.opacity(0.6))
+                }
+                
+                Spacer()
+                
+                if let availability = user.availability {
+                    Label(availability, systemImage: "zap")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(hex: "#2ECC71"))
+                }
+            }
+            
+            HStack(spacing: 8) {
+                Button("View Profile") {
+                    onViewProfile?(user.id)
+                }
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Color.white.opacity(0.6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.6), lineWidth: 2)
+                )
+                .background(.ultraThinMaterial)
+                .cornerRadius(20)
+                
+                Button("Connect") {
+                    // Connect action
+                }
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    LinearGradient(colors: [Color(hex: "#8B5CF6"), Color(hex: "#EC4899")],
+                                   startPoint: .leading,
+                                   endPoint: .trailing)
+                )
+                .cornerRadius(20)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.white.opacity(0.7))
+                .background(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 2)
+                )
+                .background(.ultraThinMaterial)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(
+                    LinearGradient(colors: [
+                        Color(hex: "#8B5CF6").opacity(0.1),
+                        Color(hex: "#EC4899").opacity(0.1),
+                        Color(hex: "#0066FF").opacity(0.1)
+                    ], startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+                .blur(radius: 8)
+        )
+    }
+}
+
+// MARK: - Sport Suggestion Card
+struct SportSuggestionCard: View {
+    @EnvironmentObject private var theme: Theme
+    let sport: String
+    let onOptionSelect: (String) -> Void
+    
+    var body: some View {
+        Button(sport) {
+            onOptionSelect("Tell me more about \(sport)")
+        }
+        .font(.system(size: 13, weight: .medium))
+        .foregroundColor(.black)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.white.opacity(0.7))
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 2)
+                )
+                .background(.ultraThinMaterial)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 1)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(
+                    LinearGradient(colors: [
+                        Color(hex: "#8B5CF6").opacity(0.2),
+                        Color(hex: "#EC4899").opacity(0.2),
+                        Color(hex: "#0066FF").opacity(0.2)
+                    ], startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+                .blur(radius: 4)
+        )
     }
 }
 

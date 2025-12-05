@@ -1,0 +1,72 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Core App Screens/NotificationsScreen.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Notifications",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Back",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mark all as read",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 62
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear all",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loading notifications...",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 100
+        }
+      },
+      {
+        "comment": "",
+        "key": "Refresh",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 231
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ notification",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 295
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dismiss notification",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 315
+        }
+      }
+    ]
+  },
+  "version": 1
+}

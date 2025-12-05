@@ -8,7 +8,14 @@
 import SwiftUI
 
 struct AppShellView: View {
+    @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var activityAPIService: ActivityAPIService
+    @State private var selectedActivityForChat: Activity?
+    @State private var selectedActivityForDetails: Activity?
+    @State private var isCoachVerified: Bool = false
+    @State private var hasLoadedCoachStatus: Bool = false
 
     // Sample RoomActivity (matches correct parameter order)
     private let sampleRoomActivity = RoomActivity(
@@ -23,8 +30,32 @@ struct AppShellView: View {
         hostAvatar: "",
         spotsTotal: 10,
         spotsTaken: 7,
-        level: "Intermediate"
+        level: "Intermediate",
+        latitude: nil,
+        longitude: nil
     )
+
+    private func currentRoomActivity() -> RoomActivity {
+        if let activity = selectedActivityForDetails {
+            return RoomActivity(
+                id: activity.id,
+                sportType: activity.sportType,
+                title: activity.title,
+                description: activity.description ?? activity.title,
+                location: activity.location,
+                date: activity.date,
+                time: activity.time,
+                hostName: activity.hostName,
+                hostAvatar: activity.hostAvatar,
+                spotsTotal: activity.spotsTotal,
+                spotsTaken: activity.spotsTaken,
+                level: activity.level,
+                latitude: activity.latitude,
+                longitude: activity.longitude
+            )
+        }
+        return sampleRoomActivity
+    }
 
     // Decide when the floating AI Coach button should be visible
     private var shouldShowFloatingCoach: Bool {
@@ -43,10 +74,50 @@ struct AppShellView: View {
              .searchDiscovery,
              .coachOnboarding,
              .coachProfile(_),       // match and ignore associated value
-             .createActivity:
+             .createActivity,
+             .createSession,
+             .coachDashboard,
+             .premiumSubscription,
+             .premiumAnalytics,
+             .premiumBilling,
+             .premiumNotifications:
             return false
         default:
             return true
+        }
+    }
+
+    // MARK: - Private Methods
+    
+    private func createGroupChat(for activity: Activity) {
+        Task {
+            do {
+                let response = try await ChatAPI.createActivityGroupChat(activityId: activity.id)
+                // Navigate to the chat conversation with session info
+                await MainActor.run {
+                    router.push(.chatConversation(chatId: response.chat.id))
+                    // Store session info for the chat
+                    // Note: We need to pass this info differently since Route doesn't support it
+                    // For now, we'll fetch it in the ChatConversationView
+                }
+            } catch {
+                print("Failed to create group chat: \(error)")
+                // Handle error - show alert or message
+            }
+        }
+    }
+
+    private func loadCoachVerificationStatus() {
+        Task {
+            guard let token = AuthTokenManager.shared.getToken() else { return }
+            do {
+                let profile = try await ProfileAPI.shared.getProfile(token: token)
+                await MainActor.run {
+                    self.isCoachVerified = profile.isCoachVerified ?? false
+                }
+            } catch {
+                print("Failed to load coach verification status: \(error)")
+            }
         }
     }
 
@@ -58,14 +129,22 @@ struct AppShellView: View {
                 // Left 1: Home
                 NavigationStack(path: $router.homePath) {
                     HomeFeedView(
-                        onActivityClick: { _ in router.push(.activityRoom) },
+                        onActivityClick: { activity in
+                            selectedActivityForDetails = activity
+                            router.push(.enhancedEventDetails)
+                        },
                         onSearchClick: { router.push(.searchDiscovery) },
                         onAISuggestionsClick: { router.push(.aiSuggestions) },
                         onQuickMatchClick: { router.push(.quickMatch) },
                         onAIMatchmakerClick: { router.push(.aiMatchmaker) },
                         onEventDetailsClick: { router.push(.enhancedEventDetails) },
                         onCreateClick: { router.push(.createActivity) },
-                        onNotificationsClick: { router.push(.notifications) }
+                        onNotificationsClick: { router.push(.notifications) },
+                        onCreateSessionClick: isCoachVerified ? { router.push(.createSession) } : nil,
+                        onChatClick: { activity in
+                            selectedActivityForChat = activity
+                            createGroupChat(for: activity)
+                        }
                     )
                     .navigationDestination(for: Route.self) { route in
                         destinationView(for: route)
@@ -79,7 +158,16 @@ struct AppShellView: View {
 
                 // Left 2: Sessions (Map)
                 NavigationStack(path: $router.mapPath) {
-                    MapScreen(onActivityClick: { _ in router.push(.activityRoom) })
+                    MapScreen(
+                        onActivityClick: { activity in
+                            selectedActivityForDetails = activity
+                            router.push(.activityRoom)
+                        },
+                        onChatClick: { activity in
+                            selectedActivityForChat = activity
+                            createGroupChat(for: activity)
+                        }
+                    )
                         .navigationDestination(for: Route.self) { route in
                             destinationView(for: route)
                         }
@@ -119,7 +207,8 @@ struct AppShellView: View {
                 NavigationStack(path: $router.profilePath) {
                     ProfilePage(
                         onSettingsClick: { router.push(.settings) },
-                        onAchievementsClick: { router.push(.achievements) }
+                        onAchievementsClick: { router.push(.achievements) },
+                        onCoachDashboardClick: isCoachVerified ? { router.push(.coachDashboard) } : nil
                     )
                     .navigationDestination(for: Route.self) { route in
                         destinationView(for: route)
@@ -162,6 +251,13 @@ struct AppShellView: View {
                 }
                 .allowsHitTesting(true)
                 .ignoresSafeArea(edges: .bottom)
+            }
+        }
+        .onAppear {
+            // Load coach verification status once when the shell appears
+            if !hasLoadedCoachStatus, AuthTokenManager.shared.getToken() != nil {
+                hasLoadedCoachStatus = true
+                loadCoachVerificationStatus()
             }
         }
     }
@@ -225,7 +321,8 @@ struct AppShellView: View {
                     router.reset()
                     router.shouldStartAtLogin = true
                     router.isAuthenticated = false
-                }
+                },
+                onOpenPremium: { router.push(.premiumSubscription) }
             )
             .toolbar(.hidden, for: .tabBar)
 
@@ -248,20 +345,29 @@ struct AppShellView: View {
 
         case .activityRoom:
             ActivityRoomView(
-                activity: sampleRoomActivity,
+                activity: currentRoomActivity(),
                 onBack: { router.pop() }
             )
             .toolbar(.hidden, for: .tabBar)
 
         case .enhancedEventDetails:
-            EnhancedEventDetailsView(
-                eventId: sampleRoomActivity.id,
-                onBack: { router.pop() },
-                onJoin: { router.push(.activityRoom) },
-                onViewCoach: { coachId in router.push(.coachProfile(coachId: coachId)) },
-                onMessage: { router.push(.chatConversation(chatId: "sampleChat123")) } // supply a real id when available
-            )
-            .toolbar(.hidden, for: .tabBar)
+            if let activity = selectedActivityForDetails {
+                EnhancedEventDetailsView(
+                    activity: activity,
+                    onBack: { router.pop() },
+                    onJoin: { router.push(.activityRoom) },
+                    onViewCoach: { coachId in router.push(.coachProfile(coachId: coachId)) }
+                )
+                .toolbar(.hidden, for: .tabBar)
+            } else {
+                EnhancedEventDetailsView(
+                    eventId: sampleRoomActivity.id,
+                    onBack: { router.pop() },
+                    onJoin: { router.push(.activityRoom) },
+                    onViewCoach: { coachId in router.push(.coachProfile(coachId: coachId)) }
+                )
+                .toolbar(.hidden, for: .tabBar)
+            }
 
         case .chatConversation(let chatId):
             ChatConversationView(
@@ -291,6 +397,30 @@ struct AppShellView: View {
 
         case .createActivity:
             CreateActivityView()
+                .toolbar(.hidden, for: .tabBar)
+
+        case .createSession:
+            CreateSessionView()
+                .toolbar(.hidden, for: .tabBar)
+
+        case .coachDashboard:
+            CoachDashboardView(onBack: { router.pop() })
+                .toolbar(.hidden, for: .tabBar)
+
+        case .premiumSubscription:
+            PremiumSubscriptionView()
+                .toolbar(.hidden, for: .tabBar)
+
+        case .premiumAnalytics:
+            PremiumAnalyticsView()
+                .toolbar(.hidden, for: .tabBar)
+
+        case .premiumBilling:
+            PremiumBillingView()
+                .toolbar(.hidden, for: .tabBar)
+
+        case .premiumNotifications:
+            PremiumNotificationsView()
                 .toolbar(.hidden, for: .tabBar)
 
         case .splash, .onboarding, .login, .signUp, .resetPassword:

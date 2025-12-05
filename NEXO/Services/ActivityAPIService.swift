@@ -11,7 +11,7 @@ import Combine
 // MARK: - API Models (matching your backend schema)
 struct APIActivity: Codable, Identifiable {
     let _id: String
-    let creator: APICreator
+    let creator: APICreator?        // Backend sometimes returns null
     let sportType: String
     let title: String
     let description: String?
@@ -21,8 +21,10 @@ struct APIActivity: Codable, Identifiable {
     let date: String
     let time: String
     let participants: Int
+    let participantIds: [String]?   // Optional list of participant IDs
     let level: String
     let visibility: String
+    let price: Double?              // Optional, only for coach sessions
     let createdAt: String?
     let updatedAt: String?
     
@@ -48,6 +50,7 @@ struct CreateActivityRequest: Codable {
     let participants: Int
     let level: String
     let visibility: String
+    let price: Double?
 }
 
 struct APIResponse<T: Codable>: Codable {
@@ -64,9 +67,14 @@ class ActivityAPIService: ObservableObject {
     
     private let session = URLSession.shared
     private var cancellables = Set<AnyCancellable>()
+    private let fallbackEnabled: Bool
     
-    init() {
-        Task { await loadFallbackData() }
+    // Backend-only by default. Previews/tests can pass fallbackEnabled: true to see mock items.
+    init(fallbackEnabled: Bool = false) {
+        self.fallbackEnabled = fallbackEnabled
+        if fallbackEnabled {
+            Task { await loadFallbackData() }
+        }
     }
     
     // MARK: - API Endpoints
@@ -76,7 +84,6 @@ class ActivityAPIService: ObservableObject {
     private func activityEndpoint(id: String) -> URL { APIConfig.endpoint("activities/\(id)") }
     
     // MARK: - Authentication
-    // IMPORTANT: We read the token from AuthTokenManager, which AuthStore now mirrors into on login/register.
     private func getAuthToken() -> String? { AuthTokenManager.shared.getToken() }
     
     private func createAuthHeaders() -> [String: String] {
@@ -90,6 +97,11 @@ class ActivityAPIService: ObservableObject {
         return headers
     }
     
+    // MARK: - Logging
+    private func log(_ message: String) {
+        print("🌐 [ActivityAPI] \(message)")
+    }
+    
     // MARK: - Public Methods
     
     func fetchAllActivities() async {
@@ -99,20 +111,45 @@ class ActivityAPIService: ObservableObject {
         }
         
         do {
-            var request = URLRequest(url: activitiesEndpoint())
-            request.httpMethod = "GET"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            var components = URLComponents(url: activitiesEndpoint(), resolvingAgainstBaseURL: false)!
+            // Uncomment if you want to restrict to public
+            // components.queryItems = [URLQueryItem(name: "visibility", value: "public")]
             
+            var request = URLRequest(url: components.url!)
+            request.httpMethod = "GET"
+            createAuthHeaders().forEach { header, value in
+                request.setValue(value, forHTTPHeaderField: header)
+            }
+            
+            log("GET \(request.url?.absoluteString ?? "")")
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw ActivityAPIError.invalidResponse }
+            log("Status \(http.statusCode) for /activities")
+            
             if http.statusCode == 200 {
-                let apiActivities = try JSONDecoder().decode([APIActivity].self, from: data)
+                let decoder = JSONDecoder()
+                let apiActivities: [APIActivity]
+                if let direct = try? decoder.decode([APIActivity].self, from: data) {
+                    apiActivities = direct
+                } else if
+                    let wrapped = try? decoder.decode(APIResponse<[APIActivity]>.self, from: data),
+                    let wrappedData = wrapped.data {
+                    apiActivities = wrappedData
+                } else {
+                    if let raw = String(data: data, encoding: .utf8) {
+                        log("Decoding failed. Raw response:\n\(raw)")
+                    }
+                    throw ActivityAPIError.decodingError
+                }
                 let converted = apiActivities.map { convertToActivity($0) }
                 await MainActor.run {
                     self.activities = converted
                     self.isLoading = false
                 }
             } else {
+                if let raw = String(data: data, encoding: .utf8) {
+                    log("Non-200 response body:\n\(raw)")
+                }
                 if let apiError = try? JSONDecoder().decode(APIError.self, from: data) { throw apiError }
                 throw APIError(statusCode: http.statusCode, message: String(data: data, encoding: .utf8) ?? "Unknown error")
             }
@@ -121,35 +158,160 @@ class ActivityAPIService: ObservableObject {
                 self.error = "Failed to fetch activities: \(error.localizedDescription)"
                 self.isLoading = false
             }
-            await loadFallbackData()
+            if fallbackEnabled {
+                await loadFallbackData()
+            }
         }
     }
     
     func fetchMyActivities() async {
-        guard getAuthToken() != nil else { return }
+        guard let token = getAuthToken() else {
+            print("❌ No auth token found")
+            return 
+        }
+        
+        print("🔑 Using auth token: \(token.prefix(10))...")
+        
         await MainActor.run { self.isLoading = true }
         
         do {
-            var request = URLRequest(url: myActivitiesEndpoint())
+            let url = myActivitiesEndpoint()
+            print("🌐 Fetching activities from: \(url.absoluteString)")
+            
+            var request = URLRequest(url: url)
             request.httpMethod = "GET"
-            createAuthHeaders().forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+            let headers = createAuthHeaders()
+            headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+            
+            log("GET \(url.absoluteString)")
+            print("Headers: \(headers)")
             
             let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse else { throw ActivityAPIError.invalidResponse }
+            guard let http = response as? HTTPURLResponse else { 
+                print("❌ Invalid response type")
+                throw ActivityAPIError.invalidResponse 
+            }
+            
+            log("Status \(http.statusCode) for /activities/my-activities")
+            print("Response status code: \(http.statusCode)")
+            
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("📦 Raw response: \(responseString.prefix(1000))...") // Print first 1000 chars
+            }
+            
             if http.statusCode == 200 {
-                let apiActivities = try JSONDecoder().decode([APIActivity].self, from: data)
+                let decoder = JSONDecoder()
+                let apiActivities: [APIActivity]
+                
+                // First try direct array decode
+                if let direct = try? decoder.decode([APIActivity].self, from: data) {
+                    apiActivities = direct
+                    print("✅ Successfully decoded \(direct.count) user activities directly")
+                } 
+                // Then try wrapped in APIResponse
+                else if let wrapped = try? decoder.decode(APIResponse<[APIActivity]>.self, from: data),
+                          let wrappedData = wrapped.data {
+                    apiActivities = wrappedData
+                    print("✅ Successfully decoded \(wrappedData.count) user activities from wrapped response")
+                } 
+                // If both fail, log the error
+                else {
+                    if let raw = String(data: data, encoding: .utf8) {
+                        log("❌ Decoding failed for my-activities. Raw response:\n\(raw)")
+                        print("❌ Failed to decode user activities. Raw response: \(raw.prefix(500))...")
+                    }
+                    throw ActivityAPIError.decodingError
+                }
+                
                 let converted = apiActivities.map { convertToActivity($0) }
+                print("🔄 Converted \(converted.count) user activities to local model")
+                
                 await MainActor.run {
                     self.userActivities = converted
                     self.isLoading = false
                 }
             } else {
+                if let raw = String(data: data, encoding: .utf8) {
+                    log("Non-200 response body:\n\(raw)")
+                }
                 if let apiError = try? JSONDecoder().decode(APIError.self, from: data) { throw apiError }
                 throw APIError(statusCode: http.statusCode, message: "Failed to fetch user activities")
             }
         } catch {
             await MainActor.run {
                 self.error = "Failed to fetch user activities: \(error.localizedDescription)"
+                self.isLoading = false
+            }
+        }
+    }
+    
+    // Backend search: fetch all, then filter locally by query/sport (compatible with your guide)
+    func searchActivities(query: String, sport: String? = nil, distanceMiles: Double? = nil) async {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            await fetchAllActivities()
+            return
+        }
+        
+        await MainActor.run {
+            self.isLoading = true
+            self.error = nil
+        }
+        
+        do {
+            var components = URLComponents(url: activitiesEndpoint(), resolvingAgainstBaseURL: false)!
+            var request = URLRequest(url: components.url!)
+            request.httpMethod = "GET"
+            createAuthHeaders().forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+            
+            log("GET \(request.url?.absoluteString ?? "") [search locally]")
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ActivityAPIError.invalidResponse }
+            log("Status \(http.statusCode) for /activities (search)")
+            
+            if http.statusCode == 200 {
+                let decoder = JSONDecoder()
+                let apiActivities: [APIActivity]
+                if let direct = try? decoder.decode([APIActivity].self, from: data) {
+                    apiActivities = direct
+                } else if let wrapped = try? decoder.decode(APIResponse<[APIActivity]>.self, from: data),
+                          let wrappedData = wrapped.data {
+                    apiActivities = wrappedData
+                } else {
+                    if let raw = String(data: data, encoding: .utf8) {
+                        log("Decoding failed. Raw response:\n\(raw)")
+                    }
+                    throw ActivityAPIError.decodingError
+                }
+                
+                // Convert then filter locally
+                let allConverted = apiActivities.map { convertToActivity($0) }
+                let q = trimmed.lowercased()
+                let filtered = allConverted.filter { a in
+                    let matchesQuery =
+                        a.title.lowercased().contains(q) ||
+                        a.sportType.lowercased().contains(q) ||
+                        a.location.lowercased().contains(q) ||
+                        a.hostName.lowercased().contains(q)
+                    let matchesSport = (sport == nil || sport == "all") ? true : (a.sportType == sport)
+                    return matchesQuery && matchesSport
+                }
+                
+                await MainActor.run {
+                    self.activities = filtered
+                    self.isLoading = false
+                }
+            } else {
+                if let raw = String(data: data, encoding: .utf8) {
+                    log("Non-200 response body:\n\(raw)")
+                }
+                if let apiError = try? JSONDecoder().decode(APIError.self, from: data) { throw apiError }
+                let msg = String(data: data, encoding: .utf8) ?? "Unknown error"
+                throw APIError(statusCode: http.statusCode, message: msg)
+            }
+        } catch {
+            await MainActor.run {
+                self.error = "Search failed: \(error.localizedDescription)"
                 self.isLoading = false
             }
         }
@@ -166,7 +328,8 @@ class ActivityAPIService: ObservableObject {
         level: String,
         visibility: String = "public",
         latitude: Double? = nil,
-        longitude: Double? = nil
+        longitude: Double? = nil,
+        price: Double? = nil
     ) async -> Bool {
         guard getAuthToken() != nil else {
             await MainActor.run { self.error = "Authentication required to create activities" }
@@ -183,9 +346,9 @@ class ActivityAPIService: ObservableObject {
             let validSportTypes = ["Football", "Basketball", "Running", "Cycling"]
             let backendSportType = validSportTypes.contains(sportType) ? sportType : "Football"
             
-            // Convert both date and time to ISO strings (backend returns both as ISO)
-            let isoDate = convertToISODateOnly(date: date)           // yyyy-MM-dd -> yyyy-MM-dd'T'00:00:00.000Z
-            let isoTime = convertToISODateTime(date: date, time: time) // date+time -> yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+            // Convert both date and time to ISO strings (backend expects: date yyyy-MM-dd, time ISO 8601)
+            let isoDate = convertToISODateOnly(date: date)
+            let isoTime = convertToISODateTime(date: date, time: time)
             
             let createRequest = CreateActivityRequest(
                 sportType: backendSportType,
@@ -198,7 +361,8 @@ class ActivityAPIService: ObservableObject {
                 time: isoTime,
                 participants: participants,
                 level: level,
-                visibility: visibility
+                visibility: visibility,
+                price: price
             )
             
             var request = URLRequest(url: activitiesEndpoint())
@@ -207,24 +371,22 @@ class ActivityAPIService: ObservableObject {
             let body = try JSONEncoder().encode(createRequest)
             request.httpBody = body
             
-            // Debug: print outgoing JSON
             if let json = String(data: body, encoding: .utf8) {
-                print("📤 Create Activity Request JSON: \(json)")
+                log("📤 Create Activity Request JSON: \(json)")
             }
             
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw ActivityAPIError.invalidResponse }
             
+            log("Status \(http.statusCode) for POST /activities")
             if http.statusCode == 201 {
                 await MainActor.run { self.isLoading = false }
-                // Refresh after creation so Home updates
                 await fetchAllActivities()
                 await fetchMyActivities()
                 return true
             } else {
-                // Debug: print server response
                 let responseString = String(data: data, encoding: .utf8) ?? "<no body>"
-                print("❌ Create Activity failed: status=\(http.statusCode), body=\(responseString)")
+                log("❌ Create Activity failed: status=\(http.statusCode), body=\(responseString)")
                 
                 if let apiError = try? JSONDecoder().decode(APIError.self, from: data) {
                     throw apiError
@@ -252,9 +414,11 @@ class ActivityAPIService: ObservableObject {
             request.httpMethod = "DELETE"
             createAuthHeaders().forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
             
+            log("DELETE \(request.url?.absoluteString ?? "")")
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw ActivityAPIError.invalidResponse }
             
+            log("Status \(http.statusCode) for DELETE /activities/:id")
             if http.statusCode == 200 {
                 await fetchAllActivities()
                 await fetchMyActivities()
@@ -303,71 +467,130 @@ class ActivityAPIService: ObservableObject {
     }
     
     // MARK: - Helpers
-    private func convertToActivity(_ api: APIActivity) -> Activity {
+    
+    // Robust ISO8601 parsing (with and without fractional seconds)
+    private func parseISO8601(_ string: String) -> Date? {
+        let isoFrac = ISO8601DateFormatter()
+        isoFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = isoFrac.date(from: string) { return d }
+        let iso = ISO8601DateFormatter()
+        if let d = iso.date(from: string) { return d }
+        // Fallback DateFormatters (some servers omit 'Z' or use milliseconds inconsistently)
+        let fmts = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd"
+        ]
         let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        for f in fmts {
+            df.dateFormat = f
+            if let d = df.date(from: string) { return d }
+        }
+        return nil
+    }
+    
+    private func convertToActivity(_ apiActivity: APIActivity) -> Activity {
+        let dateObj = parseISO8601(apiActivity.date)
+        let timeObj = parseISO8601(apiActivity.time)
         
-        let displayDate: String
-        let displayTime: String
+        let dateText: String = {
+            if let d = dateObj {
+                let out = DateFormatter()
+                out.dateStyle = .medium
+                out.timeStyle = .none
+                return out.string(from: d)
+            } else {
+                return "TBD"
+            }
+        }()
         
-        if let date = df.date(from: api.date) {
-            let out = DateFormatter()
-            out.dateFormat = "MMM dd"
-            displayDate = out.string(from: date)
+        let timeText: String = {
+            if let t = timeObj {
+                let out = DateFormatter()
+                out.dateStyle = .none
+                out.timeStyle = .short
+                return out.string(from: t)
+            } else {
+                return "TBD"
+            }
+        }()
+        
+        // Create creator object if available
+        let creator: Activity.ActivityCreator?
+        if let apiCreator = apiActivity.creator {
+            creator = Activity.ActivityCreator(
+                id: apiCreator._id,
+                name: apiCreator.name ?? "Unknown",
+                email: apiCreator.email,
+                profileImageUrl: apiCreator.profileImageUrl
+            )
         } else {
-            displayDate = "TBD"
+            creator = nil
         }
         
-        if let t = df.date(from: api.time) {
-            let out = DateFormatter()
-            out.dateFormat = "h:mm a"
-            displayTime = out.string(from: t)
-        } else {
-            displayTime = "TBD"
-        }
+        // Get host name and avatar
+        let hostName = apiActivity.creator?.name ?? "Unknown"
+        let hostAvatar = apiActivity.creator?.profileImageUrl ?? "https://api.dicebear.com/7.x/avataaars/svg?seed=\(hostName)"
         
-        let icon: String
-        switch api.sportType {
-        case "Football": icon = "⚽"
-        case "Basketball": icon = "🏀"
-        case "Running": icon = "🏃"
-        case "Cycling": icon = "🚴"
-        default: icon = "🏃"
-        }
+        // A paid session is any activity with a non-nil price (only coaches can set this)
+        let isPaidSession = apiActivity.price != nil
         
-        let hostName = api.creator.name ?? "Unknown User"
-        let hostAvatar = api.creator.profileImageUrl ?? "https://api.dicebear.com/7.x/avataaars/svg?seed=\(hostName)"
+        // Emoji icon per sport type (matches previous design: 🏀, ⚽, etc.)
+        let sportIcon: String
+        switch apiActivity.sportType.lowercased() {
+        case "basketball":
+            sportIcon = "🏀"
+        case "football":
+            sportIcon = "⚽"
+        case "running":
+            sportIcon = "🏃"
+        case "cycling":
+            sportIcon = "🚴"
+        default:
+            sportIcon = "🏃"
+        }
         
         return Activity(
-            id: api._id,
-            title: api.title,
-            sportType: api.sportType,
-            sportIcon: icon,
+            id: apiActivity._id,
+            title: apiActivity.title,
+            sportType: apiActivity.sportType,
+            sportIcon: sportIcon,
             hostName: hostName,
             hostAvatar: hostAvatar,
-            date: displayDate,
-            time: displayTime,
-            location: api.location,
-            distance: "0.0 mi",
-            spotsTotal: api.participants,
-            spotsTaken: 1,
-            level: api.level
+            date: dateText,
+            time: timeText,
+            location: apiActivity.location,
+            distance: "1.2 mi", // This would come from location services
+            spotsTotal: apiActivity.participants,
+            spotsTaken: apiActivity.participantIds?.count ?? 0,
+            level: apiActivity.level,
+            visibility: apiActivity.visibility,
+            latitude: apiActivity.latitude,
+            longitude: apiActivity.longitude,
+            creator: creator,
+            participantIds: apiActivity.participantIds,
+            isPaidSession: isPaidSession,
+            price: apiActivity.price,
+            description: apiActivity.description
         )
     }
     
     private func convertToISODateOnly(date: String) -> String {
-        // Expecting input like "yyyy-MM-dd" from the form; fallback to a safe ISO with midnight if unknown
+        // Input like "yyyy-MM-dd"; output ISO at midnight UTC
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
-        let iso = DateFormatter()
-        iso.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
-        iso.timeZone = TimeZone(abbreviation: "UTC")
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        iso.timeZone = TimeZone(secondsFromGMT: 0)
         
         if let d = df.date(from: date) {
-            var comps = Calendar.current.dateComponents([.year, .month, .day], from: d)
-            comps.hour = 0
-            comps.minute = 0
-            comps.second = 0
+            var comps = Calendar.current.dateComponents(in: TimeZone(secondsFromGMT: 0)!, from: d)
+            comps.hour = 0; comps.minute = 0; comps.second = 0
             let final = Calendar.current.date(from: comps) ?? d
             return iso.string(from: final)
         } else {
@@ -376,13 +599,20 @@ class ActivityAPIService: ObservableObject {
     }
     
     private func convertToISODateTime(date: String, time: String) -> String {
+        // date: "yyyy-MM-dd", time: either "h:mm a" or "HH:mm"
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        
         let tf = DateFormatter()
+        tf.locale = Locale(identifier: "en_US_POSIX")
+        tf.timeZone = TimeZone(secondsFromGMT: 0)
         tf.dateFormat = "h:mm a"
-        let iso = DateFormatter()
-        iso.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
-        iso.timeZone = TimeZone(abbreviation: "UTC")
+        
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        iso.timeZone = TimeZone(secondsFromGMT: 0)
         
         guard let d = df.date(from: date) else { return "2000-01-01T12:00:00.000Z" }
         var t: Date? = tf.date(from: time)
@@ -392,8 +622,8 @@ class ActivityAPIService: ObservableObject {
         }
         guard let tt = t else { return "2000-01-01T12:00:00.000Z" }
         
-        var comp = Calendar.current.dateComponents([.year, .month, .day], from: d)
-        let tcomp = Calendar.current.dateComponents([.hour, .minute], from: tt)
+        var comp = Calendar.current.dateComponents(in: TimeZone(secondsFromGMT: 0)!, from: d)
+        let tcomp = Calendar.current.dateComponents(in: TimeZone(secondsFromGMT: 0)!, from: tt)
         comp.hour = tcomp.hour
         comp.minute = tcomp.minute
         comp.second = 0
@@ -477,7 +707,11 @@ class ActivityAPIService: ObservableObject {
             distance: "2.3 mi",
             spotsTotal: participants,
             spotsTaken: Int.random(in: 1...max(1, participants - 1)),
-            level: level
+            level: level,
+            visibility: "public",
+            isPaidSession: false,
+            price: nil,
+            description: nil
         )
     }
 }
@@ -498,3 +732,4 @@ enum ActivityAPIError: Error, LocalizedError {
         }
     }
 }
+

@@ -14,6 +14,7 @@ class LoginViewModel: ObservableObject {
     @Published var email: String = ""
     @Published var password: String = ""
     @Published var showPassword: Bool = false
+    @Published var rememberMe: Bool = true
     
     // Validation state
     @Published var emailError: String? = nil
@@ -65,7 +66,7 @@ class LoginViewModel: ObservableObject {
         
         Task {
             do {
-                try await authStore.login(email: email, password: password)
+                try await authStore.login(email: email, password: password, rememberMe: rememberMe)
                 isLoading = false
                 onSuccess()
             } catch {

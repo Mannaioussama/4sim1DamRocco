@@ -42,6 +42,7 @@ class ChatListViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var fetchTask: Task<Void, Never>?
     private var userSearchTask: Task<Void, Never>?
+    private var refreshTimerCancellable: AnyCancellable?
     
     // MARK: - Computed Properties
     
@@ -71,9 +72,11 @@ class ChatListViewModel: ObservableObject {
     
     // MARK: - Data Loading
     
-    private func loadChats() {
+    private func loadChats(showLoading: Bool = true) {
         fetchTask?.cancel()
-        isLoading = true
+        if showLoading {
+            isLoading = true
+        }
         
         fetchTask = Task { [weak self] in
             guard let self else { return }
@@ -92,16 +95,22 @@ class ChatListViewModel: ObservableObject {
                 }
                 await MainActor.run {
                     self.chats = mapped
-                    self.isLoading = false
+                    if showLoading {
+                        self.isLoading = false
+                    }
                 }
             } catch let api as APIError {
                 await MainActor.run {
-                    self.isLoading = false
+                    if showLoading {
+                        self.isLoading = false
+                    }
                     print("Chat list error: \(api.userMessage)")
                 }
             } catch {
                 await MainActor.run {
-                    self.isLoading = false
+                    if showLoading {
+                        self.isLoading = false
+                    }
                     print("Chat list error: \(error.localizedDescription)")
                 }
             }
@@ -227,6 +236,29 @@ class ChatListViewModel: ObservableObject {
     }
     
     func refreshChats() { loadChats() }
+    
+    // MARK: - Auto Refresh
+    
+    func startAutoRefresh(interval: TimeInterval = 5.0) {
+        // Avoid creating multiple timers
+        refreshTimerCancellable?.cancel()
+        
+        refreshTimerCancellable = Timer
+            .publish(every: interval, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self else { return }
+                // Only refresh when not already loading to avoid overlapping calls
+                if !self.isLoading {
+                    self.loadChats(showLoading: false)
+                }
+            }
+    }
+    
+    func stopAutoRefresh() {
+        refreshTimerCancellable?.cancel()
+        refreshTimerCancellable = nil
+    }
     
     // MARK: - Helper Methods
     

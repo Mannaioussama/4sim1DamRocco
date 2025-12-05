@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>colors</key>
+	<array/>
+	<key>images</key>
+	<array>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/macbook/Desktop/NEXO/NEXO/Views/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageName_NEXO_LOGO</string>
+			<key>relativePath</key>
+			<string>./NEXO LOGO.imageset</string>
+			<key>swiftSymbol</key>
+			<string>NEXO_LOGO</string>
+		</dict>
+		<dict>
+			<key>catalogPath</key>
+			<string>/Users/macbook/Desktop/NEXO/NEXO/Views/Assets.xcassets</string>
+			<key>objcSymbol</key>
+			<string>ACImageNameScreenshot20251103At94650AMRemovebgPreview</string>
+			<key>relativePath</key>
+			<string>./Screenshot_2025-11-03_at_9.46.50_AM-removebg-preview.imageset</string>
+			<key>swiftSymbol</key>
+			<string>screenshot20251103At94650AMRemovebgPreview</string>
+		</dict>
+	</array>
+	<key>symbols</key>
+	<array/>
+</dict>
+</plist>

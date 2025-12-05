@@ -22,6 +22,10 @@ struct NEXOApp: App {
                 // Optional: flip system scheme too (status bar/material defaults).
                 // You can comment this out if you only want semantic colors to change.
                 .preferredColorScheme(theme.isDarkMode ? .dark : .light)
+                .onAppear {
+                    // Configure Stripe once at app startup
+                    StripeConfig.shared.configure()
+                }
         }
     }
 }
@@ -30,6 +34,7 @@ struct NEXOApp: App {
 struct RootView: View {
     @EnvironmentObject private var theme: Theme
     @EnvironmentObject private var authStore: AuthStore
+    @EnvironmentObject private var activityAPIService: ActivityAPIService
     @StateObject private var router = AppRouter()
     // Separate path for the auth flow so it never contaminates the app shell
     @State private var authPath: [Route] = []
@@ -41,6 +46,7 @@ struct RootView: View {
                 AppShellView()
                     .environmentObject(router)
                     .environmentObject(theme) // FIX: forward Theme to AppShellView and all its children
+                    .environmentObject(activityAPIService) // Forward ActivityAPIService to MapScreen
             } else {
                 // Auth flow stack
                 NavigationStack(path: $authPath) {
@@ -65,8 +71,16 @@ struct RootView: View {
                             )
                         } else {
                             SplashScreenView {
-                                authPath.removeAll()
-                                authPath.append(.onboarding)
+                                // If we already have a valid session (Remember Me), skip onboarding/login
+                                if authStore.isLoggedIn {
+                                    router.reset()
+                                    router.isAuthenticated = true
+                                    router.select(.home)
+                                    router.shouldStartAtLogin = false
+                                } else {
+                                    authPath.removeAll()
+                                    authPath.append(.onboarding)
+                                }
                             }
                         }
                     }

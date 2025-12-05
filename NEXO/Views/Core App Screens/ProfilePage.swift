@@ -14,6 +14,7 @@ struct ProfilePage: View {
 
     var onSettingsClick: () -> Void
     var onAchievementsClick: (() -> Void)?
+    var onCoachDashboardClick: (() -> Void)?
 
     var body: some View {
         ZStack {
@@ -77,8 +78,7 @@ struct ProfilePage: View {
                     // Profile Card
                     ProfileGlassCard(
                         user: viewModel.currentUser,
-                        pickedUIImage: viewModel.pickedUIImage,
-                        onPencilTap: { viewModel.openSourcePicker() }
+                        pickedUIImage: viewModel.pickedUIImage
                     )
                     .environmentObject(theme)
                     .padding(.horizontal, 16)
@@ -86,6 +86,11 @@ struct ProfilePage: View {
 
                     // Quick Actions
                     VStack(spacing: 12) {
+                        if let coachDashboard = onCoachDashboardClick {
+                            CoachDashboardButton(action: coachDashboard)
+                                .environmentObject(theme)
+                        }
+
                         if let achievements = onAchievementsClick {
                             AchievementsButton(action: {
                                 viewModel.trackAchievementsOpened()
@@ -116,134 +121,12 @@ struct ProfilePage: View {
                 }
             }
         }
-        // Sheet pickers
-        .sheet(isPresented: $viewModel.showPhotoPicker) {
-            PhotoLibraryPicker(
-                onPick: { viewModel.handlePickedImage($0) },
-                onCancel: {}
-            )
-            .ignoresSafeArea()
-        }
-        .sheet(isPresented: $viewModel.showFilesPicker) {
-            FilesImagePicker(
-                onPick: { viewModel.handlePickedImage($0) },
-                onCancel: {}
-            )
-            .ignoresSafeArea()
-        }
-        // Centered source picker popup
-        .overlay(sourcePickerPopup)
-        // Upload overlay + error
-        .overlay(uploadOverlay)
-        .alert("Upload Error", isPresented: .constant(viewModel.uploadError != nil), actions: {
-            Button("OK") { viewModel.uploadError = nil }
-        }, message: {
-            Text(viewModel.uploadError ?? "")
-        })
         .onAppear {
             viewModel.trackProfileView()
-            viewModel.loadUserProfile() // keep profile in sync with edits
+            viewModel.refreshProfile() // keep profile in sync with edits
         }
     }
 
-    // MARK: - Centered source picker popup
-    private var sourcePickerPopup: some View {
-        Group {
-            if viewModel.showSourceSheet {
-                ZStack {
-                    // Dim background tap to dismiss
-                    Color.black.opacity(0.35)
-                        .ignoresSafeArea()
-                        .onTapGesture { viewModel.closeSourcePicker() }
-
-                    VStack(spacing: 12) {
-                        Text("Change profile photo")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(theme.colors.textPrimary)
-                            .padding(.top, 12)
-
-                        VStack(spacing: 8) {
-                            PopupActionButton(
-                                title: "Choose from Library",
-                                systemImage: "photo.on.rectangle",
-                                action: { viewModel.openPhotoPicker() }
-                            )
-                            PopupActionButton(
-                                title: "Choose from Files",
-                                systemImage: "folder",
-                                action: { viewModel.openFilesPicker() }
-                            )
-                            if viewModel.hasAvatar {
-                                PopupActionButton(
-                                    title: "Remove Photo",
-                                    systemImage: "trash",
-                                    roleDestructive: true,
-                                    action: {
-                                        viewModel.removeAvatar()
-                                        viewModel.trackImageRemoved()
-                                    }
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 8)
-
-                        Button(action: { viewModel.closeSourcePicker() }) {
-                            Text("Cancel")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(theme.colors.textPrimary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(theme.colors.cardBackground)
-                                .background(.ultraThinMaterial)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(theme.colors.cardStroke, lineWidth: 2)
-                                )
-                                .cornerRadius(16)
-                        }
-                        .buttonStyle(ScaleButtonStyle())
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 12)
-                    }
-                    .frame(maxWidth: 360)
-                    .background(theme.colors.cardBackground)
-                    .background(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(theme.colors.cardStroke, lineWidth: 2)
-                    )
-                    .cornerRadius(24)
-                    .shadow(color: .black.opacity(0.25), radius: 30, x: 0, y: 15)
-                    .transition(.scale.combined(with: .opacity))
-                }
-            }
-        }
-        .animation(.spring(response: 0.25, dampingFraction: 0.9), value: viewModel.showSourceSheet)
-    }
-
-    // MARK: - Upload overlay
-    private var uploadOverlay: some View {
-        Group {
-            if viewModel.isUploading {
-                ZStack {
-                    Color.black.opacity(0.25).ignoresSafeArea()
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text("Saving photo…")
-                            .foregroundColor(.white)
-                            .font(.system(size: 15, weight: .semibold))
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.black.opacity(0.6))
-                    .cornerRadius(14)
-                }
-                .transition(.opacity)
-            }
-        }
-        .animation(.easeInOut, value: viewModel.isUploading)
-    }
 }
 
 // MARK: - PopupActionButton
@@ -282,7 +165,6 @@ private struct ProfileGlassCard: View {
     @EnvironmentObject private var theme: Theme
     let user: ProfileViewData
     let pickedUIImage: UIImage?
-    var onPencilTap: () -> Void
 
     var body: some View {
         ZStack {
@@ -325,23 +207,25 @@ private struct ProfileGlassCard: View {
                             .clipShape(Circle())
                             .overlay(Circle().stroke(.white, lineWidth: 4))
                             .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
-
-                        Button(action: onPencilTap) {
-                            Image(systemName: "pencil")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(width: 32, height: 32)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color(hex: "8B5CF6"), Color(hex: "C4B5FD")],
-                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                        if user.isCoachVerified {
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color(hex: "22C55E"), Color(hex: "16A34A")],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
                                     )
-                                )
-                                .clipShape(Circle())
-                                .overlay(Circle().stroke(.white, lineWidth: 2))
-                                .shadow(color: Color(hex: "8B5CF6").opacity(0.4), radius: 8, x: 0, y: 4)
+                                    .overlay(Circle().stroke(.white, lineWidth: 2))
+
+                                Image(systemName: "figure.strengthtraining.traditional")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(width: 32, height: 32)
+                            .shadow(color: Color(hex: "16A34A").opacity(0.4), radius: 8, x: 0, y: 4)
                         }
-                        .buttonStyle(ScaleButtonStyle())
                     }
                     .padding(.top, 20)
                     .padding(.bottom, 16)
@@ -446,6 +330,70 @@ private struct StatPill: View {
         )
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+    }
+}
+
+// MARK: - Coach Dashboard Button
+struct CoachDashboardButton: View {
+    @EnvironmentObject private var theme: Theme
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "22C55E").opacity(0.35), Color(hex: "16A34A").opacity(0.35)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .blur(radius: 12)
+                    .opacity(0.75)
+                    .padding(-4)
+
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "22C55E"), Color(hex: "16A34A")],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.white.opacity(0.6), lineWidth: 2)
+                            )
+                        Image(systemName: "chart.bar.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.white)
+                    }
+                    .frame(width: 48, height: 48)
+                    .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Coach Dashboard")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(theme.colors.textPrimary)
+                        Text("Manage events & track earnings")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.colors.textSecondary)
+                    }
+                    Spacer()
+                }
+                .padding(16)
+            }
+            .background(theme.colors.cardBackground)
+            .background(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(theme.colors.cardStroke, lineWidth: 2)
+            )
+            .cornerRadius(24)
+            .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
+        }
+        .buttonStyle(ScaleButtonStyle())
     }
 }
 
@@ -590,72 +538,48 @@ private struct ProfileCrystalTabs: View {
     }
 
     // MARK: - About
-    private var aboutTab: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Skill levels
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Skill Levels")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(theme.colors.textPrimary)
-                ForEach(skillLevels.indices, id: \.self) { idx in
-                    HStack {
-                        Text(skillLevels[idx].sport)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(theme.colors.textPrimary)
-                        Spacer()
-                        Text(skillLevels[idx].level)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color(hex: "A855F7"))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(theme.colors.cardBackground)
-                            .background(theme.colors.barMaterial)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(theme.colors.cardStroke, lineWidth: 1)
-                            )
-                            .cornerRadius(12)
-                    }
-                    .padding(10)
-                    .background(theme.colors.cardBackground)
-                    .background(theme.colors.barMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(theme.colors.cardStroke, lineWidth: 1)
-                    )
-                    .cornerRadius(14)
-                }
-            }
-            .padding(12)
-            .background(theme.colors.cardBackground)
-            .background(theme.colors.barMaterial)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(theme.colors.cardStroke, lineWidth: 1)
-            )
-            .cornerRadius(16)
-
-            // Interests
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Interests")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(theme.colors.textPrimary)
-                Text(interests)
+private var aboutTab: some View {
+    VStack(alignment: .leading, spacing: 12) {
+        // Interests
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Interests")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(theme.colors.textPrimary)
+            
+            if user.sportsInterests.isEmpty {
+                Text("No interests added yet")
                     .font(.system(size: 13))
                     .foregroundColor(theme.colors.textSecondary)
-                    .lineSpacing(3)
+            } else {
+                // First row of interests
+                HStack(spacing: 8) {
+                    ForEach(0..<min(3, user.sportsInterests.count), id: \.self) { index in
+                        InterestBadge(interest: user.sportsInterests[index])
+                    }
+                }
+                
+                // Second row if there are more than 3 interests
+                if user.sportsInterests.count > 3 {
+                    HStack(spacing: 8) {
+                        ForEach(3..<min(6, user.sportsInterests.count), id: \.self) { index in
+                            InterestBadge(interest: user.sportsInterests[index])
+                        }
+                    }
+                }
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(theme.colors.cardBackground)
-            .background(theme.colors.barMaterial)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(theme.colors.cardStroke, lineWidth: 1)
-            )
-            .cornerRadius(16)
         }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.colors.cardBackground)
+        .background(theme.colors.barMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(theme.colors.cardStroke, lineWidth: 1)
+        )
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
+}
 
     // MARK: - Activities
     private var activitiesTab: some View {
@@ -759,6 +683,56 @@ private struct AchievementTile: View {
         )
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
+    }
+}
+
+// MARK: - Interest Badge
+private struct InterestBadge: View {
+    let interest: String
+    
+    private var icon: String {
+        let lowercased = interest.lowercased()
+        if lowercased.contains("run") {
+            return "figure.run"
+        } else if lowercased.contains("swim") {
+            return "figure.pool.swim"
+        } else if lowercased.contains("hike") || lowercased.contains("trek") {
+            return "figure.hiking"
+        } else if lowercased.contains("yoga") {
+            return "figure.yoga"
+        } else if lowercased.contains("cycl") || lowercased.contains("bike") {
+            return "bicycle"
+        } else if lowercased.contains("football") || lowercased.contains("soccer") {
+            return "soccerball"
+        } else if lowercased.contains("basket") {
+            return "basketball"
+        } else if lowercased.contains("tennis") {
+            return "tennis.racket"
+        } else {
+            return "sportscourt"
+        }
+    }
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(Color(hex: "6B21A8"))
+            
+            Text(interest)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(Color(hex: "6B21A8"))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            Capsule()
+                .fill(Color(hex: "F3E8FF"))
+        )
+        .overlay(
+            Capsule()
+                .stroke(Color(hex: "D8B4FE"), lineWidth: 1)
+        )
     }
 }
 

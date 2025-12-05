@@ -1,0 +1,88 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Ai Features/AIMatchmakerView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "AI Matchmaker",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 94
+        }
+      },
+      {
+        "comment": "",
+        "key": "AI Matchmaker",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ask me anything...",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 256
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 344
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ at %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 364
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld/%lld participants",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 385
+        }
+      },
+      {
+        "comment": "",
+        "key": "Suggested Partners",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 440
+        }
+      },
+      {
+        "comment": "",
+        "key": "Suggested Activities",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 455
+        }
+      }
+    ]
+  },
+  "version": 1
+}

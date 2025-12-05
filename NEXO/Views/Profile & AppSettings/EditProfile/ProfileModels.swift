@@ -7,6 +7,21 @@
 
 import Foundation
 
+// MARK: - Coach Verification Models
+struct CoachVerificationData: Codable {
+    let coachName: String?
+    let confidenceScore: Double?
+    let verificationReasons: [String]?
+    let verifiedAt: String?
+    // Optional stored fields from the verification form so we can prefill it later
+    let about: String?
+    let specialization: String?
+    let yearsOfExperience: String?
+    let certifications: String?
+    let location: String?
+    let note: String?
+}
+
 // MARK: - User Model (matches backend User schema)
 struct UserProfile: Codable {
     let id: String
@@ -22,6 +37,9 @@ struct UserProfile: Codable {
     let profileImageThumbnailUrl: String?
     let createdAt: String?
     let updatedAt: String?
+    // Coach verification
+    let isCoachVerified: Bool?
+    let coachVerificationData: CoachVerificationData?
     
     enum CodingKeys: String, CodingKey {
         case id = "_id"
@@ -37,6 +55,8 @@ struct UserProfile: Codable {
         case profileImageThumbnailUrl
         case createdAt
         case updatedAt
+        case isCoachVerified
+        case coachVerificationData
     }
 }
 

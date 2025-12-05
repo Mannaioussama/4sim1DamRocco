@@ -7,24 +7,9 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 // MARK: - Models
-
-struct Activity: Identifiable {
-    let id: String
-    let title: String
-    let sportType: String
-    let sportIcon: String
-    let hostName: String
-    let hostAvatar: String
-    let date: String
-    let time: String
-    let location: String
-    let distance: String
-    let spotsTotal: Int
-    let spotsTaken: Int
-    let level: String
-}
 
 struct SportCategory: Identifiable {
     let id = UUID()
@@ -78,6 +63,7 @@ struct ScaleButtonStyle: ButtonStyle {
 
 struct FloatingCreateButton: View {
     @EnvironmentObject private var theme: Theme
+    let icon: String
     let action: () -> Void
 
     // Size constants to ensure perfect centering and consistent visuals
@@ -106,14 +92,17 @@ struct FloatingCreateButton: View {
                 ZStack {
                     Circle()
                         .fill(theme.colors.cardBackground)
-                        .background(theme.colors.barMaterial)
+                        .background(
+                            Circle()
+                                .fill(theme.colors.barMaterial)
+                        )
                         .overlay(
                             Circle()
                                 .stroke(theme.colors.cardStroke, lineWidth: strokeWidth)
                         )
 
-                    // Centered plus icon
-                    Image(systemName: "plus")
+                    // Centered icon (default: plus)
+                    Image(systemName: icon)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(theme.colors.textPrimary)
                         .frame(width: buttonSize, height: buttonSize, alignment: .center)
@@ -148,7 +137,8 @@ let mockActivities: [Activity] = [
         distance: "2.3 mi",
         spotsTotal: 10,
         spotsTaken: 7,
-        level: "Intermediate"
+        level: "Intermediate",
+        visibility: "public"
     ),
     Activity(
         id: "2",
@@ -162,8 +152,9 @@ let mockActivities: [Activity] = [
         location: "Zen Studio",
         distance: "1.5 mi",
         spotsTotal: 15,
-        spotsTaken: 12,
-        level: "All Levels"
+        spotsTaken: 10,
+        level: "All Levels",
+        visibility: "public"
     ),
     Activity(
         id: "3",
@@ -178,7 +169,8 @@ let mockActivities: [Activity] = [
         distance: "3.1 mi",
         spotsTotal: 4,
         spotsTaken: 2,
-        level: "Advanced"
+        level: "Advanced",
+        visibility: "public"
     ),
     Activity(
         id: "4",
@@ -193,7 +185,8 @@ let mockActivities: [Activity] = [
         distance: "5.2 mi",
         spotsTotal: 12,
         spotsTaken: 8,
-        level: "Intermediate"
+        level: "Intermediate",
+        visibility: "public"
     ),
     Activity(
         id: "5",
@@ -208,7 +201,8 @@ let mockActivities: [Activity] = [
         distance: "0.8 mi",
         spotsTotal: 20,
         spotsTaken: 15,
-        level: "All Levels"
+        level: "All Levels",
+        visibility: "public"
     ),
     Activity(
         id: "6",
@@ -223,7 +217,8 @@ let mockActivities: [Activity] = [
         distance: "7.5 mi",
         spotsTotal: 8,
         spotsTaken: 5,
-        level: "Intermediate"
+        level: "Intermediate",
+        visibility: "public"
     )
 ]
 
@@ -246,13 +241,18 @@ struct SupportingComponents_Previews: PreviewProvider {
         HomeFeedView(
             onActivityClick: { _ in },
             onSearchClick: {},
+            onAISuggestionsClick: {},
             onQuickMatchClick: {},
             onAIMatchmakerClick: {},
             onEventDetailsClick: {},
             onCreateClick: {},
-            onNotificationsClick: {}
+            onNotificationsClick: {},
+            onCreateSessionClick: {},
+            onChatClick: { _ in }
         )
         .environmentObject(Theme())
+        .environmentObject(ActivityAPIService(fallbackEnabled: true)) // Preview uses mock data
     }
 }
 #endif
+

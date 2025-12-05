@@ -1,0 +1,184 @@
+{
+  "source": "/Users/macbook/Desktop/NEXO/NEXO/Views/Ai Features/AICoachView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "AI Coach",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "Overview",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 149
+        }
+      },
+      {
+        "comment": "",
+        "key": "Suggestions",
+        "location": {
+          "startingColumn": 86,
+          "startingLine": 149
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tips",
+        "location": {
+          "startingColumn": 102,
+          "startingLine": 149
+        }
+      },
+      {
+        "comment": "",
+        "key": "This Week",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 186
+        }
+      },
+      {
+        "comment": "",
+        "key": "🔥",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 193
+        }
+      },
+      {
+        "comment": "",
+        "key": "Weekly goal",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 211
+        }
+      },
+      {
+        "comment": "",
+        "key": "Active Challenges",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 304
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reward: %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 363
+        }
+      },
+      {
+        "comment": "",
+        "key": "Progress",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 340
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Challenge",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 389
+        }
+      },
+      {
+        "comment": "",
+        "key": "Find Partner",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 413
+        }
+      },
+      {
+        "comment": "",
+        "key": "Based on your activity history and preferences",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "Personalized for you",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 433
+        }
+      },
+      {
+        "comment": "",
+        "key": "Join Now",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 514
+        }
+      },
+      {
+        "comment": "",
+        "key": "Watch expert-led tutorials and form guides",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 550
+        }
+      },
+      {
+        "comment": "",
+        "key": "Workout Video Library",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 545
+        }
+      },
+      {
+        "comment": "",
+        "key": "Browse Videos",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 555
+        }
+      },
+      {
+        "comment": "",
+        "key": "Analyzing your health data...",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 666
+        }
+      },
+      {
+        "comment": "",
+        "key": "Getting personalized recommendations from AI",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 670
+        }
+      },
+      {
+        "comment": "",
+        "key": "Retry",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 706
+        }
+      },
+      {
+        "comment": "",
+        "key": "Debug Info",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 695
+        }
+      }
+    ]
+  },
+  "version": 1
+}

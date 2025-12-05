@@ -25,6 +25,7 @@ class CreateActivityViewModel: ObservableObject {
     @Published var participants = 5.0
     @Published var level = ""
     @Published var visibility = "public"
+    @Published var price = ""
     @Published var errorMessage: String?
     
     // MARK: - Constants
@@ -41,6 +42,8 @@ class CreateActivityViewModel: ObservableObject {
     // MARK: - Computed Properties
     
     var isFormValid: Bool {
+        // Core validation used by both CreateActivityView (individual) and CreateSessionView (coach)
+        // Price validation is handled per-flow so we don't include it here.
         return !sportType.isEmpty &&
                !title.isEmpty &&
                !location.isEmpty &&
@@ -87,10 +90,24 @@ class CreateActivityViewModel: ObservableObject {
     
     // MARK: - API
     
-    func createActivity(using service: ActivityAPIService) async {
+    func createActivity(using service: ActivityAPIService, isCoachSession: Bool) async {
         guard isFormValid else {
             await MainActor.run { self.errorMessage = "Please fill all required fields." }
             return
+        }
+        
+        // Determine price behavior based on flow:
+        // - Coach sessions (CreateSessionView): price is required and makes it a paid session.
+        // - Regular activities (CreateActivityView): treated as individual/free, so price is nil.
+        var priceValue: Double? = nil
+        if isCoachSession {
+            let trimmedPrice = price.trimmingCharacters(in: .whitespacesAndNewlines)
+            let normalizedPrice = trimmedPrice.replacingOccurrences(of: ",", with: ".")
+            guard !trimmedPrice.isEmpty, let parsed = Double(normalizedPrice), parsed >= 0 else {
+                await MainActor.run { self.errorMessage = "Please enter a valid price for the session." }
+                return
+            }
+            priceValue = parsed
         }
         
         await MainActor.run {
@@ -112,7 +129,8 @@ class CreateActivityViewModel: ObservableObject {
             level: level,
             visibility: visibility,
             latitude: locationCoordinate?.latitude,
-            longitude: locationCoordinate?.longitude
+            longitude: locationCoordinate?.longitude,
+            price: priceValue
         )
         
         await MainActor.run {
