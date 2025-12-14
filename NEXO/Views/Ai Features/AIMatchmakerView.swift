@@ -13,6 +13,7 @@ struct AIMatchmakerView: View {
     var onViewProfile: ((String) -> Void)?
 
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = AIMatchmakerViewModel()
 
     var body: some View {
@@ -42,6 +43,7 @@ struct AIMatchmakerView: View {
                                 )
                                 .environment(\.colorScheme, theme.isDarkMode ? .dark : .light)
                                 .environmentObject(theme)
+                                .environmentObject(localizationManager)
                             }
                             
                             // Typing indicator
@@ -80,18 +82,19 @@ struct AIMatchmakerView: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("common.back"))
                 }
             }
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 16, weight: .semibold))
-                    Text("AI Matchmaker")
+                    Text(localizationManager.localized("aiMatchmaker.nav.title"))
                         .font(.system(size: 16, weight: .semibold))
                 }
                 .foregroundColor(theme.colors.accentPurple)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("AI Matchmaker")
+                .accessibilityLabel(localizationManager.localized("aiMatchmaker.nav.title"))
             }
         }
         .toolbarBackground(.visible, for: .navigationBar)
@@ -102,7 +105,7 @@ struct AIMatchmakerView: View {
     // MARK: - Input Bar
     private var inputBar: some View {
         HStack(spacing: 8) {
-            TextField("Ask me anything...", text: $viewModel.inputText)
+            TextField(localizationManager.localized("aiMatchmaker.input.placeholder"), text: $viewModel.inputText)
                 .font(.system(size: 14))
                 .foregroundColor(theme.colors.textPrimary)
                 .padding(.horizontal, 14)
@@ -221,6 +224,7 @@ struct TypingIndicator: View {
 // MARK: - Message Bubble
 struct AIMatchMessageBubble: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let message: AIMatchMessage
     var onOptionSelect: (String) -> Void
     var onJoinActivity: ((String) -> Void)?
@@ -263,6 +267,7 @@ struct AIMatchMessageBubble: View {
                                     )
                                     .background(.ultraThinMaterial)
                             )
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
                             .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 24)
@@ -280,7 +285,7 @@ struct AIMatchMessageBubble: View {
                     // Activity Cards
                     if let activities = message.suggestedActivities, !activities.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Suggested Activities")
+                            Text(localizationManager.localized("aiMatchmaker.section.suggestedActivities"))
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.black.opacity(0.6))
                             
@@ -293,7 +298,7 @@ struct AIMatchMessageBubble: View {
                     // User Cards
                     if let users = message.suggestedUsers, !users.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Suggested Partners")
+                            Text(localizationManager.localized("aiMatchmaker.section.suggestedPartners"))
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.black.opacity(0.6))
                             
@@ -306,7 +311,7 @@ struct AIMatchMessageBubble: View {
                     // Sport Cards
                     if let sports = message.suggestedSports, !sports.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Try These Sports")
+                            Text(localizationManager.localized("aiMatchmaker.section.tryTheseSports"))
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.black.opacity(0.6))
                             
@@ -314,7 +319,8 @@ struct AIMatchMessageBubble: View {
                                 GridItem(.flexible()),
                                 GridItem(.flexible())
                             ], spacing: 8) {
-                                ForEach(sports, id: \.self) { sport in
+                                // Use stable, index-based IDs to avoid duplicate-ID runtime warnings
+                                ForEach(Array(sports.enumerated()), id: \.offset) { _, sport in
                                     SportSuggestionCard(sport: sport, onOptionSelect: onOptionSelect)
                                 }
                             }
@@ -333,10 +339,10 @@ struct AIMatchMessageBubble: View {
                                         .padding(.horizontal, 18)
                                         .padding(.vertical, 10)
                                         .background(
-                                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                            RoundedRectangle(cornerRadius: 24, style: .continuous)
                                                 .fill(Color.white.opacity(theme.isDarkMode ? 0.12 : 0.7))
                                                 .background(
-                                                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                                                         .stroke(
                                                             LinearGradient(colors: [
                                                                 Color(hex: "#8B5CF6").opacity(0.9),
@@ -347,10 +353,11 @@ struct AIMatchMessageBubble: View {
                                                 )
                                                 .background(.ultraThinMaterial)
                                         )
+                                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                                         .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
                                 }
                                 .buttonStyle(.plain)
-                                .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                                .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                                 .allowsHitTesting(true)
                             }
                         }
@@ -381,6 +388,7 @@ struct AIMatchMessageBubble: View {
 // MARK: - Activity Suggestion Card
 struct ActivitySuggestionCard: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let activity: SuggestedActivity
     let onJoin: ((String) -> Void)?
     
@@ -400,7 +408,7 @@ struct ActivitySuggestionCard: View {
                 Spacer()
                 
                 if let score = activity.matchScore {
-                    Text("\(score)% match")
+                    Text(String(format: localizationManager.localized("aiMatchmaker.match.scoreFormat"), score))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
@@ -421,12 +429,20 @@ struct ActivitySuggestionCard: View {
             }
             
             HStack {
-                Label("\(activity.location) • \(activity.participants)/\(activity.maxParticipants) joined", systemImage: "location")
+                Label(
+                    "\(activity.location) • " +
+                    String(
+                        format: localizationManager.localized("aiMatchmaker.activity.participantsFormat"),
+                        activity.participants,
+                        activity.maxParticipants
+                    ),
+                    systemImage: "location"
+                )
                     .font(.system(size: 12))
                     .foregroundColor(.black.opacity(0.6))
             }
             
-            Button("Join Activity") {
+            Button(localizationManager.localized("aiMatchmaker.activity.joinButton")) {
                 onJoin?(activity.id)
             }
             .font(.system(size: 13, weight: .medium))
@@ -446,6 +462,7 @@ struct ActivitySuggestionCard: View {
                 )
                 .background(.ultraThinMaterial)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 24))
         .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 24)
@@ -457,6 +474,7 @@ struct ActivitySuggestionCard: View {
                     ], startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
                 .blur(radius: 8)
+                .allowsHitTesting(false)
         )
     }
 }
@@ -464,6 +482,7 @@ struct ActivitySuggestionCard: View {
 // MARK: - User Suggestion Card
 struct UserSuggestionCard: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let user: SuggestedUser
     let onViewProfile: ((String) -> Void)?
     
@@ -494,7 +513,7 @@ struct UserSuggestionCard: View {
                         Spacer()
                         
                         if let score = user.matchScore {
-                            Text("\(score)% match")
+                            Text(String(format: localizationManager.localized("aiMatchmaker.match.scoreFormat"), score))
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
@@ -531,14 +550,15 @@ struct UserSuggestionCard: View {
                 Spacer()
                 
                 if let availability = user.availability {
-                    Label(availability, systemImage: "zap")
+                    // Use a widely supported symbol to avoid runtime warnings
+                    Label(availability, systemImage: "bolt.fill")
                         .font(.system(size: 12))
                         .foregroundColor(Color(hex: "#2ECC71"))
                 }
             }
             
             HStack(spacing: 8) {
-                Button("View Profile") {
+                Button(localizationManager.localized("aiMatchmaker.user.viewProfileButton")) {
                     onViewProfile?(user.id)
                 }
                 .font(.system(size: 13, weight: .medium))
@@ -553,7 +573,7 @@ struct UserSuggestionCard: View {
                 .background(.ultraThinMaterial)
                 .cornerRadius(20)
                 
-                Button("Connect") {
+                Button(localizationManager.localized("aiMatchmaker.user.connectButton")) {
                     // Connect action
                 }
                 .font(.system(size: 13, weight: .medium))
@@ -578,6 +598,7 @@ struct UserSuggestionCard: View {
                 )
                 .background(.ultraThinMaterial)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 24))
         .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 24)
@@ -589,6 +610,7 @@ struct UserSuggestionCard: View {
                     ], startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
                 .blur(radius: 8)
+                .allowsHitTesting(false)
         )
     }
 }
@@ -596,12 +618,14 @@ struct UserSuggestionCard: View {
 // MARK: - Sport Suggestion Card
 struct SportSuggestionCard: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let sport: String
     let onOptionSelect: (String) -> Void
     
     var body: some View {
         Button(sport) {
-            onOptionSelect("Tell me more about \(sport)")
+            let prompt = String(format: localizationManager.localized("aiMatchmaker.sport.tellMeMoreFormat"), sport)
+            onOptionSelect(prompt)
         }
         .font(.system(size: 13, weight: .medium))
         .foregroundColor(.black)
@@ -616,6 +640,7 @@ struct SportSuggestionCard: View {
                 )
                 .background(.ultraThinMaterial)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 1)
         .overlay(
             RoundedRectangle(cornerRadius: 20)
@@ -627,6 +652,7 @@ struct SportSuggestionCard: View {
                     ], startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
                 .blur(radius: 4)
+                .allowsHitTesting(false)
         )
     }
 }

@@ -48,6 +48,7 @@ class ProfilePageViewModel: ObservableObject {
     @Published var isUploading: Bool = false
     @Published var uploadError: String?
     @Published var recentActivities: [Activity] = []
+    @Published private var realAchievements: [AchievementData] = []
     
     // MARK: - Dependencies
     
@@ -73,22 +74,7 @@ class ProfilePageViewModel: ObservableObject {
     }
     
     var achievements: [AchievementData] {
-        [
-            AchievementData(icon: "🏃", title: "Marathon Runner", description: "Completed 5+ running events", color: "3498DB"),
-            AchievementData(icon: "🏊", title: "Water Warrior", description: "Joined 10+ swimming sessions", color: "2ECC71"),
-            AchievementData(icon: "👥", title: "Social Butterfly", description: "Connected with 25+ athletes", color: "9B59B6"),
-            AchievementData(icon: "⭐", title: "Top Host", description: "Hosted 10+ successful events", color: "F39C12"),
-            AchievementData(icon: "💪", title: "Consistency King", description: "30-day activity streak", color: "E74C3C"),
-            AchievementData(icon: "🎯", title: "Goal Crusher", description: "Achieved 5 personal goals", color: "1ABC9C")
-        ]
-    }
-    
-    var skillLevels: [(sport: String, level: String)] {
-        [
-            ("Running", "Intermediate"),
-            ("Swimming", "Advanced"),
-            ("Hiking", "Intermediate")
-        ]
+        realAchievements
     }
     
     // MARK: - Initialization
@@ -96,16 +82,16 @@ class ProfilePageViewModel: ObservableObject {
     init(uploader: ProfileImageUploader = StubProfileImageUploader()) {
         self.uploader = uploader
         self.currentUser = ProfileViewData(
-            name: "Alex Thompson",
-            bio: "Fitness enthusiast | Marathon runner | Yoga lover 🧘‍♀️",
-            location: "San Francisco, CA",
-            avatar: "https://i.pravatar.cc/150?img=33",
-            sportsInterests: ["Running", "Swimming", "Hiking", "Yoga", "Cycling"],
+            name: "",
+            bio: "",
+            location: "",
+            avatar: "",
+            sportsInterests: [],
             stats: UserStats(
                 sessionsJoined: 0,
                 sessionsHosted: 0,
-                rating: 4.8,
-                favoriteSports: ["Running", "Swimming", "Hiking"]
+                rating: 0,
+                favoriteSports: []
             ),
             isCoachVerified: false
         )
@@ -116,25 +102,25 @@ class ProfilePageViewModel: ObservableObject {
         }
         
         setupObservers()
-        loadRecentActivities()
+        loadAchievements()
     }
     
     // MARK: - Activity Fetching
     
     @MainActor
     private func fetchUserActivities() async {
-        print("🔍 Fetching user activities...")
+        print(" Fetching user activities...")
         // Fetch all activities
         await activityAPI.fetchMyActivities()
         
         // Get the current user ID
         guard let userId = tokenStore.getUserId() else {
-            print("❌ User ID not found in token store")
+            print(" User ID not found in token store")
             return
         }
         
-        print("👤 Current user ID: \(userId)")
-        print("📊 Total activities fetched: \(activityAPI.activities.count)")
+        print(" Current user ID: \(userId)")
+        print(" Total activities fetched: \(activityAPI.activities.count)")
         
         // Debug: Print all activities and their participant IDs
         for (index, activity) in activityAPI.activities.enumerated() {
@@ -159,8 +145,8 @@ class ProfilePageViewModel: ObservableObject {
         }
         let joinedCount = joinedActivities.count
         
-        print("🏠 Hosted activities count: \(hostedCount)")
-        print("🤝 Joined activities count: \(joinedCount)")
+        print(" Hosted activities count: \(hostedCount)")
+        print(" Joined activities count: \(joinedCount)")
         
         // Update the current user's stats
         currentUser = ProfileViewData(
@@ -178,7 +164,10 @@ class ProfilePageViewModel: ObservableObject {
             isCoachVerified: currentUser.isCoachVerified
         )
         
-        print("✅ Updated profile stats - Hosted: \(hostedCount), Joined: \(joinedCount)")
+        let upcomingHosted = hostedActivities.filter { isOnOrAfterToday($0) }
+        recentActivities = upcomingHosted
+        
+        print(" Updated profile stats - Hosted: \(hostedCount), Joined: \(joinedCount)")
     }
     
     private func setupObservers() {
@@ -212,7 +201,67 @@ class ProfilePageViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Achievements Loading
+    
+    private func loadAchievements() {
+        Task { @MainActor in
+            do {
+                let badgesResponse = try await AchievementsAPI.getBadges()
+                let earnedBadges = badgesResponse.earnedBadges
+                let mapped: [AchievementData] = earnedBadges.map { badge in
+                    AchievementData(
+                        icon: emoji(for: badge.category),
+                        title: badge.name,
+                        description: badge.description,
+                        color: colorHex(for: badge.rarity)
+                    )
+                }
+                self.realAchievements = mapped
+            } catch {
+                print("Failed to load profile achievements: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func emoji(for category: AchievementsAPI.Badge.BadgeCategory) -> String {
+        switch category {
+        case .streak: return "🔥"
+        case .distance: return "🏃"
+        case .duration: return "⏱"
+        case .sport: return "⚽️"
+        case .creation: return "🎯"
+        case .completion: return "✅"
+        }
+    }
+    
+    private func colorHex(for rarity: AchievementsAPI.Badge.BadgeRarity) -> String {
+        switch rarity {
+        case .common: return "3498DB"      // blue
+        case .uncommon: return "2ECC71"   // green
+        case .rare: return "9B59B6"       // purple
+        case .epic: return "F39C12"       // orange
+        case .legendary: return "E74C3C"  // red
+        }
+    }
+    
+    private func isOnOrAfterToday(_ activity: Activity) -> Bool {
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .none
+        df.locale = Locale.current
+
+        guard let date = df.date(from: activity.date) else {
+            return true
+        }
+
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        return date >= startOfToday
+    }
+    
     private func apply(user: UserProfile) {
+        // Preserve activity-based stats (joined/hosted/rating) that were computed
+        // from the user's activities, and only refresh profile fields from backend.
+        let existingStats = currentUser.stats
         currentUser = ProfileViewData(
             name: user.name,
             bio: user.about ?? "",
@@ -220,18 +269,13 @@ class ProfilePageViewModel: ObservableObject {
             avatar: user.profileImageUrl ?? "",
             sportsInterests: user.sportsInterests ?? [],
             stats: UserStats(
-                sessionsJoined: 0,
-                sessionsHosted: 0,
-                rating: 0,
-                favoriteSports: user.sportsInterests ?? []
+                sessionsJoined: existingStats.sessionsJoined,
+                sessionsHosted: existingStats.sessionsHosted,
+                rating: existingStats.rating,
+                favoriteSports: user.sportsInterests ?? existingStats.favoriteSports
             ),
-            isCoachVerified: user.isCoachVerified ?? false
+            isCoachVerified: user.isCoachVerified ?? currentUser.isCoachVerified
         )
-    }
-    
-    private func loadRecentActivities() {
-        // Mock data - In production, fetch from API
-        recentActivities = Array(mockActivities.prefix(5))
     }
     
     func refreshProfile() {

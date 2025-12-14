@@ -44,6 +44,7 @@ class AIMatchmakerViewModel: ObservableObject {
     // MARK: - Private Properties
     
     private var conversationContext: [String: Any] = [:]
+    private let localization = LocalizationManager.shared
     
     // MARK: - Computed Properties
     
@@ -68,8 +69,12 @@ class AIMatchmakerViewModel: ObservableObject {
             AIMatchMessage(
                 id: "1",
                 type: .ai,
-                text: "Hi! I'm your AI matchmaker. I can help you find the perfect sport partners or activities. What would you like to do today?",
-                options: ["Find a running partner", "Join a group activity", "Discover new sports"]
+                text: localization.localized("aiMatchmaker.initial.text"),
+                options: [
+                    localization.localized("aiMatchmaker.initial.option.running"),
+                    localization.localized("aiMatchmaker.initial.option.groupActivity"),
+                    localization.localized("aiMatchmaker.initial.option.discoverSports")
+                ]
             )
         ]
     }
@@ -126,8 +131,12 @@ class AIMatchmakerViewModel: ObservableObject {
                 let fallback = AIMatchMessage(
                     id: UUID().uuidString,
                     type: .ai,
-                    text: "Sorry, something went wrong. Please try again.",
-                    options: ["Try again", "Find group activities", "Find partners nearby"]
+                    text: localization.localized("aiMatchmaker.error.genericMessage"),
+                    options: [
+                        localization.localized("aiMatchmaker.error.option.retry"),
+                        localization.localized("aiMatchmaker.error.option.groupActivities"),
+                        localization.localized("aiMatchmaker.error.option.partnersNearby")
+                    ]
                 )
                 await MainActor.run {
                     self.messages.append(fallback)
@@ -195,14 +204,12 @@ class AIMatchmakerViewModel: ObservableObject {
     // MARK: - Actions
     
     func joinActivity(_ activityId: String) {
-        // TODO: Implement join activity logic
-        print("Joining activity: \(activityId)")
-        addAIMessage("Great! I've added you to the activity. You'll receive a confirmation shortly.")
+        addAIMessage(localization.localized("aiMatchmaker.activity.joinConfirmation"))
+        trackActivityJoined(activityId)
     }
     
     func viewProfile(_ profileId: String) {
-        // TODO: Navigate to profile view
-        print("Viewing profile: \(profileId)")
+        trackProfileViewed(profileId)
     }
     
     func clearChat() {
@@ -239,6 +246,16 @@ class AIMatchmakerViewModel: ObservableObject {
     func trackOptionSelected(_ option: String) {
         // TODO: Implement analytics tracking
         print("User selected option: \(option)")
+    }
+
+    func trackActivityJoined(_ activityId: String) {
+        // TODO: Implement analytics tracking
+        print("AI Matchmaker activity joined: \(activityId)")
+    }
+
+    func trackProfileViewed(_ profileId: String) {
+        // TODO: Implement analytics tracking
+        print("AI Matchmaker profile viewed: \(profileId)")
     }
 }
 

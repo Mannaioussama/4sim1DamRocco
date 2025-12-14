@@ -3,6 +3,7 @@ import SwiftUI
 struct PremiumNotificationsView: View {
     @EnvironmentObject private var theme: Theme
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var localizationManager: LocalizationManager
     
     var body: some View {
         ZStack {
@@ -11,17 +12,17 @@ struct PremiumNotificationsView: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Premium Notifications")
+                    Text(localizationManager.localized("premium.notifications.title"))
                         .font(.system(size: 26, weight: .bold))
                         .foregroundColor(theme.colors.textPrimary)
                         .padding(.top, 4)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Coming Soon")
+                        Text(localizationManager.localized("premium.notifications.comingSoonTitle"))
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(theme.colors.textPrimary)
                         
-                        Text("Premium notifications feature will be available soon. This will include subscription reminders, limit warnings, and payment updates.")
+                        Text(localizationManager.localized("premium.notifications.comingSoonDescription"))
                             .font(.system(size: 13))
                             .foregroundColor(theme.colors.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -56,7 +57,7 @@ struct PremiumNotificationsView: View {
                 }
             }
             ToolbarItem(placement: .principal) {
-                Text("Premium Notifications")
+                Text(localizationManager.localized("premium.notifications.title"))
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
             }

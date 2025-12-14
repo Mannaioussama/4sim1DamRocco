@@ -4,7 +4,14 @@ struct CreateSessionView: View {
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject private var theme: Theme
     @EnvironmentObject private var activityAPIService: ActivityAPIService
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = CreateActivityViewModel()
+    @State private var sharePayload: SharePayload? = nil
+
+    private struct SharePayload: Identifiable {
+        let id = UUID()
+        let text: String
+    }
 
     // Extra local state for end time (backend will still use start time for now)
     @State private var endTime: Date = Date()
@@ -20,7 +27,7 @@ struct CreateSessionView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
                         // Sport Type
-                        fieldGroup(title: "Sport Type *") {
+                        fieldGroup(title: localizationManager.localized("createSession.field.sportType")) {
                             Menu {
                                 ForEach(viewModel.sportCategories, id: \.1) { item in
                                     let (icon, name) = item
@@ -38,7 +45,9 @@ struct CreateSessionView: View {
                                             .font(.system(size: 18))
                                             .foregroundColor(theme.colors.textSecondary)
                                     }
-                                    Text(viewModel.sportType.isEmpty ? "Select a sport" : viewModel.sportType)
+                                    Text(viewModel.sportType.isEmpty
+                                         ? localizationManager.localized("createSession.field.sportType.placeholder")
+                                         : viewModel.sportType)
                                         .font(.system(size: 15))
                                         .foregroundColor(viewModel.sportType.isEmpty ? theme.colors.textSecondary : theme.colors.textPrimary)
                                     Spacer()
@@ -61,12 +70,12 @@ struct CreateSessionView: View {
                         }
 
                         // Title
-                        fieldGroup(title: "Session Title *") {
+                        fieldGroup(title: localizationManager.localized("createSession.field.title")) {
                             HStack(spacing: 12) {
                                 Image(systemName: "textformat")
                                     .font(.system(size: 20))
                                     .foregroundColor(theme.colors.textSecondary)
-                                TextField("e.g., Evening strength session", text: $viewModel.title)
+                                TextField(localizationManager.localized("createSession.field.title.placeholder"), text: $viewModel.title)
                                     .font(.system(size: 15))
                                     .foregroundColor(theme.colors.textPrimary)
                             }
@@ -83,18 +92,18 @@ struct CreateSessionView: View {
                         }
 
                         // Price per Session
-                        fieldGroup(title: "Price per Session *") {
+                        fieldGroup(title: localizationManager.localized("createSession.field.price")) {
                             HStack(spacing: 12) {
                                 Image(systemName: "dollarsign.circle")
                                     .font(.system(size: 20))
                                     .foregroundColor(theme.colors.textSecondary)
 
-                                TextField("e.g., 20", text: $viewModel.price)
+                                TextField(localizationManager.localized("createSession.field.price.placeholder"), text: $viewModel.price)
                                     .keyboardType(.decimalPad)
                                     .font(.system(size: 15))
                                     .foregroundColor(theme.colors.textPrimary)
 
-                                Text("USD")
+                                Text(localizationManager.localized("createSession.field.price.currency"))
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(theme.colors.textSecondary)
                             }
@@ -111,7 +120,7 @@ struct CreateSessionView: View {
                         }
 
                         // Description
-                        fieldGroup(title: "Description") {
+                        fieldGroup(title: localizationManager.localized("createSession.field.description")) {
                             ZStack(alignment: .topLeading) {
                                 TextEditor(text: $viewModel.description)
                                     .scrollContentBackground(.hidden)
@@ -128,7 +137,7 @@ struct CreateSessionView: View {
                                     .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: 4, x: 0, y: 2)
 
                                 if viewModel.description.isEmpty {
-                                    Text("Describe the focus of this session...")
+                                    Text(localizationManager.localized("createSession.field.description.placeholder"))
                                         .foregroundColor(theme.colors.textSecondary.opacity(0.7))
                                         .font(.system(size: 15))
                                         .padding(.horizontal, 20)
@@ -139,13 +148,13 @@ struct CreateSessionView: View {
                         }
 
                         // Location with Map Picker
-                        fieldGroup(title: "Location *") {
+                        fieldGroup(title: localizationManager.localized("createSession.field.location")) {
                             HStack(spacing: 12) {
                                 Image(systemName: "mappin.circle.fill")
                                     .font(.system(size: 20))
                                     .foregroundColor(theme.colors.textSecondary)
 
-                                TextField("Enter address or venue name", text: $viewModel.location)
+                                TextField(localizationManager.localized("createSession.field.location.placeholder"), text: $viewModel.location)
                                     .font(.system(size: 15))
                                     .foregroundColor(theme.colors.textPrimary)
 
@@ -155,7 +164,7 @@ struct CreateSessionView: View {
                                     HStack(spacing: 6) {
                                         Image(systemName: "map.fill")
                                             .font(.system(size: 14))
-                                        Text("Pick from Map")
+                                        Text(localizationManager.localized("createSession.field.location.mapButton"))
                                             .font(.system(size: 13, weight: .semibold))
                                     }
                                     .foregroundColor(.white)
@@ -188,7 +197,7 @@ struct CreateSessionView: View {
                         HStack(spacing: 12) {
                             // Date
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Date *")
+                                Text(localizationManager.localized("createSession.field.date"))
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(theme.colors.textPrimary)
 
@@ -215,7 +224,7 @@ struct CreateSessionView: View {
 
                             // Start / End Session
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Start Session *")
+                                Text(localizationManager.localized("createSession.field.startSession"))
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(theme.colors.textPrimary)
 
@@ -239,7 +248,7 @@ struct CreateSessionView: View {
                                 )
                                 .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: 4, x: 0, y: 2)
 
-                                Text("End Session")
+                                Text(localizationManager.localized("createSession.field.endSession"))
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(theme.colors.textSecondary)
 
@@ -266,7 +275,7 @@ struct CreateSessionView: View {
                         }
 
                         // Participants
-                        fieldGroup(title: "Participants") {
+                        fieldGroup(title: localizationManager.localized("createSession.field.participants")) {
                             HStack(spacing: 12) {
                                 Image(systemName: "person.3.fill")
                                     .font(.system(size: 20))
@@ -274,7 +283,12 @@ struct CreateSessionView: View {
 
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack {
-                                        Text("Max participants: \(viewModel.participantsCount)")
+                                        Text(
+                                            String(
+                                                format: localizationManager.localized("createSession.field.participants.maxLabel"),
+                                                viewModel.participantsCount
+                                            )
+                                        )
                                             .font(.system(size: 14))
                                             .foregroundColor(theme.colors.textPrimary)
                                         Spacer()
@@ -296,7 +310,7 @@ struct CreateSessionView: View {
                         }
 
                         // Level
-                        fieldGroup(title: "Level *") {
+                        fieldGroup(title: localizationManager.localized("createSession.field.level")) {
                             Menu {
                                 ForEach(viewModel.skillLevels, id: \.self) { level in
                                     Button(level) {
@@ -308,7 +322,9 @@ struct CreateSessionView: View {
                                     Image(systemName: "chart.bar.xaxis")
                                         .font(.system(size: 20))
                                         .foregroundColor(theme.colors.textSecondary)
-                                    Text(viewModel.level.isEmpty ? "Select level" : viewModel.level)
+                                    Text(viewModel.level.isEmpty
+                                         ? localizationManager.localized("createSession.field.level.placeholder")
+                                         : viewModel.level)
                                         .font(.system(size: 15))
                                         .foregroundColor(viewModel.level.isEmpty ? theme.colors.textSecondary : theme.colors.textPrimary)
                                     Spacer()
@@ -333,7 +349,7 @@ struct CreateSessionView: View {
                         // Buttons
                         HStack(spacing: 12) {
                             Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                                Text("Cancel")
+                                Text(localizationManager.localized("createSession.button.cancel"))
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(theme.colors.textPrimary)
                                     .frame(maxWidth: .infinity)
@@ -353,7 +369,11 @@ struct CreateSessionView: View {
                                 }
                             }) {
                                 ZStack {
-                                    Text(viewModel.isSaving ? "Creating..." : "Create Session")
+                                    Text(
+                                        viewModel.isSaving
+                                        ? localizationManager.localized("createSession.button.submitting")
+                                        : localizationManager.localized("createSession.button.submit")
+                                    )
                                         .font(.system(size: 16, weight: .semibold))
                                         .foregroundColor(.white)
                                         .frame(maxWidth: .infinity)
@@ -386,7 +406,7 @@ struct CreateSessionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Create Session")
+                Text(localizationManager.localized("createSession.nav.title"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(theme.colors.textPrimary)
             }
@@ -403,23 +423,37 @@ struct CreateSessionView: View {
                             Circle().stroke(theme.colors.cardStroke, lineWidth: 1)
                         )
                 }
+                .accessibilityLabel(localizationManager.localized("common.back"))
             }
         }
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(theme.colors.barMaterial, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $viewModel.showSuccess) {
-            SuccessDialog {
-                viewModel.showSuccess = false
-                presentationMode.wrappedValue.dismiss()
-            }
+            SuccessDialog(
+                onClose: {
+                    viewModel.showSuccess = false
+                    presentationMode.wrappedValue.dismiss()
+                },
+                onShare: {
+                    let text = viewModel.buildShareText(isCoachSession: true)
+                    print("[Share] CreateSessionView text:\n\(text)")
+                    let finalText = text.isEmpty ? "Shared from NEXO" : text
+                    sharePayload = SharePayload(text: finalText)
+                    viewModel.showSuccess = false
+                }
+            )
             .environmentObject(theme)
+            .environmentObject(localizationManager)
         }
         .sheet(isPresented: $viewModel.showMapPicker) {
             MapLocationPickerView { location in
                 viewModel.setLocation(name: location.displayName, coordinate: location.coordinate.clCoordinate)
             }
             .environmentObject(theme)
+        }
+        .sheet(item: $sharePayload) { payload in
+            ShareSheet(activityItems: [payload.text])
         }
     }
 

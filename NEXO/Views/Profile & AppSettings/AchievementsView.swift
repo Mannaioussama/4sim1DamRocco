@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AchievementsView: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = AchievementsViewModel()
 
     // MARK: - Body
@@ -24,7 +25,7 @@ struct AchievementsView: View {
             }
         }
         .ignoresSafeArea(edges: .bottom)
-        .navigationTitle("Achievements")
+        .navigationTitle(localizationManager.localized("achievements.title"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.trackScreenView()
@@ -38,7 +39,7 @@ struct AchievementsView: View {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle())
                 .scaleEffect(1.2)
-            Text("Loading achievements...")
+            Text(localizationManager.localized("achievements.loading"))
                 .font(.system(size: 14))
                 .foregroundColor(theme.colors.textSecondary)
         }
@@ -65,7 +66,7 @@ struct AchievementsView: View {
             VStack(spacing: 6) {
                 HStack {
                     VStack(alignment: .leading) {
-                        Text("Your Level")
+                        Text(localizationManager.localized("achievements.stats.yourLevel"))
                             .font(.caption)
                             .foregroundColor(theme.colors.textSecondary)
                         Text(viewModel.levelText)
@@ -74,7 +75,7 @@ struct AchievementsView: View {
                     }
                     Spacer()
                     VStack(alignment: .trailing) {
-                        Text("XP Progress")
+                        Text(localizationManager.localized("achievements.stats.xpProgress"))
                             .font(.caption)
                             .foregroundColor(theme.colors.textSecondary)
                         Text(viewModel.xpProgressText)
@@ -102,17 +103,17 @@ struct AchievementsView: View {
                 quickStat(
                     icon: "rosette",
                     value: viewModel.totalBadgesText,
-                    label: "Badges"
+                    label: localizationManager.localized("achievements.stats.badges")
                 )
                 quickStat(
                     icon: "bolt.fill",
                     value: viewModel.currentStreakText,
-                    label: "Streak"
+                    label: localizationManager.localized("achievements.stats.streak")
                 )
                 quickStat(
                     icon: "chart.line.uptrend.xyaxis",
                     value: viewModel.longestStreakText,
-                    label: "Best Streak"
+                    label: localizationManager.localized("achievements.stats.bestStreak")
                 )
             }
         }
@@ -286,6 +287,7 @@ private struct AchievementsTabButton: View {
 
 private struct LeaderboardRow: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let entry: LeaderboardEntry
     let isUser: Bool
     
@@ -316,7 +318,7 @@ private struct LeaderboardRow: View {
             }
             Spacer()
             if isUser {
-                Text("You")
+                Text(localizationManager.localized("achievements.leaderboard.you"))
                     .font(.caption2.bold())
                     .padding(4)
                     .background(Color.green)
@@ -397,6 +399,7 @@ private struct BadgeCard: View {
 
 private struct ChallengeCard: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let challenge: ChallengeItem
     
     var body: some View {
@@ -419,7 +422,7 @@ private struct ChallengeCard: View {
             ProgressView(value: Double(challenge.progress) / Double(challenge.total))
                 .tint(.yellow)
             HStack {
-                Text("Reward: \(challenge.reward)")
+                Text("\(localizationManager.localized("achievements.challenge.rewardPrefix")) \(challenge.reward)")
                     .font(.caption2)
                     .foregroundColor(theme.colors.textSecondary)
                 Spacer()

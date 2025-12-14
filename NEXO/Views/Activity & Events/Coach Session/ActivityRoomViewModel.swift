@@ -91,11 +91,16 @@ enum ActivityTab: String, CaseIterable {
     case info = "info"
     
     var label: String {
+        let l = LocalizationManager.shared
         switch self {
-        case .chat: return "Chat"
-        case .participants: return "People"
-        case .ai: return "AI Tips"
-        case .info: return "Info"
+        case .chat:
+            return l.localized("activityRoom.tab.chat")
+        case .participants:
+            return l.localized("activityRoom.tab.participants")
+        case .ai:
+            return l.localized("activityRoom.tab.ai")
+        case .info:
+            return l.localized("activityRoom.tab.info")
         }
     }
 }
@@ -122,6 +127,7 @@ class ActivityRoomViewModel: ObservableObject, ActivityRoomWebSocketDelegate {
     
     private var cancellables = Set<AnyCancellable>()
     private let websocketService = ActivityRoomWebSocketService.shared
+    private let localization = LocalizationManager.shared
     
     // MARK: - Computed Properties
     
@@ -130,11 +136,13 @@ class ActivityRoomViewModel: ObservableObject, ActivityRoomWebSocketDelegate {
     }
     
     var navigationTitle: String {
-        return "\(activity.sportType) Session"
+        let format = localization.localized("activityRoom.nav.title.format")
+        return String(format: format, activity.sportType)
     }
     
     var navigationSubtitle: String {
-        return "Hosted by \(activity.hostName)"
+        let format = localization.localized("activityRoom.nav.subtitle.format")
+        return String(format: format, activity.hostName)
     }
     
     var canSendMessage: Bool {
@@ -170,11 +178,13 @@ class ActivityRoomViewModel: ObservableObject, ActivityRoomWebSocketDelegate {
     }
     
     var startTimeMessage: String {
-        return "Starts in 2 hours" // TODO: Calculate actual time difference
+        // TODO: Calculate actual time difference
+        return localization.localized("activityRoom.info.startsInPlaceholder")
     }
     
     var spotsLeftMessage: String {
-        return "\(spotsLeft) spots left"
+        let suffix = localization.localized("activityRoom.info.spotsLeftSuffix")
+        return "\(spotsLeft) \(suffix)"
     }
     
     // MARK: - Initialization
@@ -237,7 +247,8 @@ class ActivityRoomViewModel: ObservableObject, ActivityRoomWebSocketDelegate {
             let decoder = JSONDecoder()
             let history = try decoder.decode(ActivityRoomMessagesResponse.self, from: data)
             let converted = history.messages.map { msg -> ChatMessage in
-                let senderName = msg.sender?.name ?? "Participant"
+                let senderName = msg.sender?.name
+                    ?? localization.localized("activityRoom.participant.genericName")
                 let avatar = msg.sender?.profileImageUrl ?? "https://api.dicebear.com/7.x/avataaars/svg?seed=Participant"
                 
                 let timeString: String
@@ -288,9 +299,11 @@ class ActivityRoomViewModel: ObservableObject, ActivityRoomWebSocketDelegate {
             let decoder = JSONDecoder()
             let result = try decoder.decode(ActivityRoomParticipantsResponse.self, from: data)
             let mapped = result.participants.map { dto -> Participant in
-                let name = dto.name ?? "Participant"
+                let name = dto.name ?? localization.localized("activityRoom.participant.genericName")
                 let avatar = dto.profileImageUrl ?? "https://api.dicebear.com/7.x/avataaars/svg?seed=\(name.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) ?? "Participant")"
-                let status = dto.isHost ? "Host" : "Joined"
+                let status = dto.isHost
+                    ? localization.localized("activityRoom.participants.status.host")
+                    : localization.localized("activityRoom.participants.status.joined")
                 return Participant(
                     id: dto.id,
                     name: name,
@@ -323,11 +336,12 @@ class ActivityRoomViewModel: ObservableObject, ActivityRoomWebSocketDelegate {
         
         let trimmedMessage = message.trimmingCharacters(in: .whitespaces)
         let currentTime = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
+        let youLabel = localization.localized("chat.sender.you")
         
         // Optimistically append a local message
         let optimistic = ChatMessage(
             id: UUID().uuidString,
-            sender: "You",
+            sender: youLabel,
             avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=You",
             text: trimmedMessage,
             time: currentTime
@@ -491,12 +505,17 @@ class ActivityRoomViewModel: ObservableObject, ActivityRoomWebSocketDelegate {
         try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
         
         // Add a new mock message to show refresh worked
+        let timeString = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
+        let systemLabel = localization.localized("chat.sender.system")
+        let textFormat = localization.localized("chat.system.refreshMessage")
+        let bodyText = String(format: textFormat, timeString)
+        
         let newMessage = ChatMessage(
             id: UUID().uuidString,
-            sender: "System",
+            sender: systemLabel,
             avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=System",
-            text: "Messages refreshed at \(DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short))",
-            time: DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
+            text: bodyText,
+            time: timeString
         )
         
         messages.append(newMessage)

@@ -80,6 +80,7 @@ class CoachOnboardingViewModel: ObservableObject {
     private let profileAPI = ProfileAPI.shared
     private let tokenManager = AuthTokenManager.shared
     private let userDefaults = UserDefaults.standard
+    private let localizationManager = LocalizationManager.shared
     
     // For local testing you can flip this, but real logic now goes through the API
     private var simulateAPISubmissionSuccess: Bool = true
@@ -103,33 +104,55 @@ class CoachOnboardingViewModel: ObservableObject {
     }
     
     var nameLabel: String {
-        return isCoachAccount ? "Full Name *" : "Club Name *"
+        return localizationManager.localized(
+            isCoachAccount
+            ? "coachVerification.form.nameLabel.coach"
+            : "coachVerification.form.nameLabel.club"
+        )
     }
     
     var namePlaceholder: String {
-        return isCoachAccount ? "John Smith" : "SportHub LA"
+        return localizationManager.localized(
+            isCoachAccount
+            ? "coachVerification.form.namePlaceholder.coach"
+            : "coachVerification.form.namePlaceholder.club"
+        )
     }
     
     var bioPlaceholder: String {
-        return isCoachAccount
-            ? "Tell us about your coaching experience and philosophy..."
-            : "Describe your club, facilities, and what makes you special..."
+        return localizationManager.localized(
+            isCoachAccount
+            ? "coachVerification.form.bioPlaceholder.coach"
+            : "coachVerification.form.bioPlaceholder.club"
+        )
     }
     
     var specializationLabel: String {
-        return isCoachAccount ? "Specialization *" : "Sport Focus *"
+        return localizationManager.localized(
+            isCoachAccount
+            ? "coachVerification.form.specializationLabel.coach"
+            : "coachVerification.form.specializationLabel.club"
+        )
     }
     
     var specializationPlaceholder: String {
-        return isCoachAccount ? "Running, Fitness" : "Tennis, Swimming"
+        return localizationManager.localized(
+            isCoachAccount
+            ? "coachVerification.form.specializationPlaceholder.coach"
+            : "coachVerification.form.specializationPlaceholder.club"
+        )
     }
     
     var certificationsLabel: String {
-        return "Certifications / License *"
+        return localizationManager.localized("coachVerification.form.certificationsLabel")
     }
     
     var certificationsPlaceholder: String {
-        return isCoachAccount ? "NASM CPT, ACE, etc." : "Business License Number"
+        return localizationManager.localized(
+            isCoachAccount
+            ? "coachVerification.form.certificationsPlaceholder.coach"
+            : "coachVerification.form.certificationsPlaceholder.club"
+        )
     }
     
     var hasDocuments: Bool {
@@ -145,20 +168,27 @@ class CoachOnboardingViewModel: ObservableObject {
     }
     
     var navigationTitle: String {
-        return isApplicationStep ? "Apply for Verification" : "Verification Status"
+        return localizationManager.localized(
+            isApplicationStep
+            ? "coachVerification.nav.apply"
+            : "coachVerification.nav.status"
+        )
     }
     
     var verifiedBadgeText: String {
-        return "✓ Verified \(isCoachAccount ? "Coach" : "Club")"
+        let key = isCoachAccount
+            ? "coachVerification.status.verifiedBadge.coach"
+            : "coachVerification.status.verifiedBadge.club"
+        return "✓ " + localizationManager.localized(key)
     }
     
     var experienceOptions: [(String, String)] {
         return [
-            ("", "Select years"),
-            ("1-2", "1-2 years"),
-            ("3-5", "3-5 years"),
-            ("5-10", "5-10 years"),
-            ("10+", "10+ years")
+            ("", localizationManager.localized("coachVerification.form.experience.option.select")),
+            ("1-2", localizationManager.localized("coachVerification.form.experience.option.1-2")),
+            ("3-5", localizationManager.localized("coachVerification.form.experience.option.3-5")),
+            ("5-10", localizationManager.localized("coachVerification.form.experience.option.5-10")),
+            ("10+", localizationManager.localized("coachVerification.form.experience.option.10+"))
         ]
     }
     
@@ -339,7 +369,11 @@ class CoachOnboardingViewModel: ObservableObject {
     
     func validateName() -> Bool {
         if formData.name.trimmingCharacters(in: .whitespaces).isEmpty {
-            nameError = isCoachAccount ? "Full name is required" : "Club name is required"
+            nameError = localizationManager.localized(
+                isCoachAccount
+                ? "coachVerification.error.nameRequired.coach"
+                : "coachVerification.error.nameRequired.club"
+            )
             return false
         }
         nameError = ""
@@ -348,11 +382,11 @@ class CoachOnboardingViewModel: ObservableObject {
     
     func validateBio() -> Bool {
         if formData.bio.trimmingCharacters(in: .whitespaces).isEmpty {
-            bioError = "About section is required"
+            bioError = localizationManager.localized("coachVerification.error.bioRequired")
             return false
         }
         if formData.bio.count < 20 {
-            bioError = "Please provide at least 20 characters"
+            bioError = localizationManager.localized("coachVerification.error.bioTooShort")
             return false
         }
         bioError = ""
@@ -361,7 +395,11 @@ class CoachOnboardingViewModel: ObservableObject {
     
     func validateSpecialization() -> Bool {
         if formData.specialization.trimmingCharacters(in: .whitespaces).isEmpty {
-            specializationError = isCoachAccount ? "Specialization is required" : "Sport focus is required"
+            specializationError = localizationManager.localized(
+                isCoachAccount
+                ? "coachVerification.error.specializationRequired.coach"
+                : "coachVerification.error.specializationRequired.club"
+            )
             return false
         }
         specializationError = ""
@@ -370,7 +408,7 @@ class CoachOnboardingViewModel: ObservableObject {
     
     func validateExperience() -> Bool {
         if formData.experience.isEmpty {
-            experienceError = "Please select years of experience"
+            experienceError = localizationManager.localized("coachVerification.error.experienceRequired")
             return false
         }
         experienceError = ""
@@ -379,7 +417,11 @@ class CoachOnboardingViewModel: ObservableObject {
     
     func validateCertifications() -> Bool {
         if formData.certifications.trimmingCharacters(in: .whitespaces).isEmpty {
-            certificationsError = isCoachAccount ? "Certifications are required" : "License is required"
+            certificationsError = localizationManager.localized(
+                isCoachAccount
+                ? "coachVerification.error.certificationsRequired.coach"
+                : "coachVerification.error.certificationsRequired.club"
+            )
             return false
         }
         certificationsError = ""
@@ -388,7 +430,7 @@ class CoachOnboardingViewModel: ObservableObject {
     
     func validateLocation() -> Bool {
         if formData.location.trimmingCharacters(in: .whitespaces).isEmpty {
-            locationError = "Location is required"
+            locationError = localizationManager.localized("coachVerification.error.locationRequired")
             return false
         }
         locationError = ""
@@ -397,7 +439,7 @@ class CoachOnboardingViewModel: ObservableObject {
     
     func validateDocuments() -> Bool {
         if documents.isEmpty {
-            documentsError = "Please upload at least one verification document"
+            documentsError = localizationManager.localized("coachVerification.error.documentsRequired")
             return false
         }
         documentsError = ""
@@ -422,13 +464,13 @@ class CoachOnboardingViewModel: ObservableObject {
     
     func submitApplication(onSuccess: @escaping () -> Void, onError: @escaping (String) -> Void) {
         guard validateForm() else {
-            errorMessage = "Please fill in all required fields"
+            errorMessage = localizationManager.localized("coachVerification.error.genericRequired")
             showErrorAlert = true
             return
         }
         
         guard let token = tokenManager.getToken(), let userId = tokenManager.getUserId() else {
-            errorMessage = "Authentication required to submit coach verification."
+            errorMessage = localizationManager.localized("coachVerification.error.authRequired")
             showErrorAlert = true
             return
         }
@@ -490,7 +532,7 @@ class CoachOnboardingViewModel: ObservableObject {
                         self.lastVerificationResponse = response
                         self.status = .rejected
                         self.isLoading = false
-                        self.errorMessage = "We could not verify your coach credentials. Please review your details and documents."
+                        self.errorMessage = self.localizationManager.localized("coachVerification.error.couldNotVerify")
                         self.showErrorAlert = true
                         self.trackApplicationFailed(error: self.errorMessage)
                         onError(self.errorMessage)
@@ -552,8 +594,8 @@ class CoachOnboardingViewModel: ObservableObject {
                     endPoint: .bottomTrailing
                 ),
                 border: .orange.opacity(0.35),
-                title: "Verification Pending",
-                message: "Your application is under review. We typically respond within 2–3 business days."
+                title: localizationManager.localized("coachVerification.status.pending.title"),
+                message: localizationManager.localized("coachVerification.status.pending.message")
             )
             
         case .approved:
@@ -569,8 +611,8 @@ class CoachOnboardingViewModel: ObservableObject {
                     endPoint: .bottomTrailing
                 ),
                 border: .green.opacity(0.35),
-                title: "Verified!",
-                message: "Congratulations! Your account has been verified. You can now create paid sessions and access coach features."
+                title: localizationManager.localized("coachVerification.status.approved.title"),
+                message: localizationManager.localized("coachVerification.status.approved.message")
             )
             
         case .rejected:
@@ -586,8 +628,8 @@ class CoachOnboardingViewModel: ObservableObject {
                     endPoint: .bottomTrailing
                 ),
                 border: .red.opacity(0.35),
-                title: "Application Rejected",
-                message: "Unfortunately, we couldn't verify your credentials. Please review your information and reapply."
+                title: localizationManager.localized("coachVerification.status.rejected.title"),
+                message: localizationManager.localized("coachVerification.status.rejected.message")
             )
             
         case .notApplied:

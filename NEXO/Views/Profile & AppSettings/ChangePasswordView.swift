@@ -10,6 +10,7 @@ import SwiftUI
 struct ChangePasswordView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = ChangePasswordViewModel()
 
     var onBack: (() -> Void)?
@@ -41,15 +42,15 @@ struct ChangePasswordView: View {
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
-        .alert("Success", isPresented: $viewModel.showSuccessAlert) {
-            Button("OK") {
+        .alert(localizationManager.localized("common.success"), isPresented: $viewModel.showSuccessAlert) {
+            Button(localizationManager.localized("common.ok")) {
                 handleSuccessfulSave()
             }
         } message: {
             Text(viewModel.alertMessage)
         }
-        .alert("Error", isPresented: $viewModel.showErrorAlert) {
-            Button("OK") {}
+        .alert(localizationManager.localized("common.error"), isPresented: $viewModel.showErrorAlert) {
+            Button(localizationManager.localized("common.ok")) {}
         } message: {
             Text(viewModel.alertMessage)
         }
@@ -70,7 +71,7 @@ struct ChangePasswordView: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                     .scaleEffect(1.2)
                 
-                Text("Changing password...")
+                Text(localizationManager.localized("password.loading.changing"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white)
             }
@@ -113,14 +114,14 @@ struct ChangePasswordView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Text("Change Password")
+                    Text(localizationManager.localized("password.header.title"))
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
 
                     Spacer()
 
                     Button(action: handleSave) {
-                        Text("Save")
+                        Text(localizationManager.localized("common.save"))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
@@ -201,7 +202,7 @@ struct ChangePasswordView: View {
     
     private var passwordInfoCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Password Information")
+            Text(localizationManager.localized("password.section.info"))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
                 .padding(.horizontal, 6)
@@ -254,7 +255,7 @@ struct ChangePasswordView: View {
     private var passwordStrengthIndicator: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Password Strength:")
+                Text(localizationManager.localized("password.strength.title"))
                     .font(.system(size: 12))
                     .foregroundColor(theme.colors.textSecondary)
                 
@@ -289,7 +290,7 @@ struct ChangePasswordView: View {
             glowBox(colors: ["8B5CF6","EC4899"], opacity: 0.10, radius: 20)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Password Requirements:")
+                Text(localizationManager.localized("password.section.requirementsTitle"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
 

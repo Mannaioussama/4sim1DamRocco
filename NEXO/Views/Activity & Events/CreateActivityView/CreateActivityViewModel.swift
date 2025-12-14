@@ -38,6 +38,7 @@ class CreateActivityViewModel: ObservableObject {
     ]
     
     let skillLevels = ["Beginner", "Intermediate", "Advanced"]
+    private let localization = LocalizationManager.shared
     
     // MARK: - Computed Properties
     
@@ -92,7 +93,9 @@ class CreateActivityViewModel: ObservableObject {
     
     func createActivity(using service: ActivityAPIService, isCoachSession: Bool) async {
         guard isFormValid else {
-            await MainActor.run { self.errorMessage = "Please fill all required fields." }
+            await MainActor.run {
+                self.errorMessage = localization.localized("createActivity.error.requiredFields")
+            }
             return
         }
         
@@ -104,7 +107,9 @@ class CreateActivityViewModel: ObservableObject {
             let trimmedPrice = price.trimmingCharacters(in: .whitespacesAndNewlines)
             let normalizedPrice = trimmedPrice.replacingOccurrences(of: ",", with: ".")
             guard !trimmedPrice.isEmpty, let parsed = Double(normalizedPrice), parsed >= 0 else {
-                await MainActor.run { self.errorMessage = "Please enter a valid price for the session." }
+                await MainActor.run {
+                    self.errorMessage = localization.localized("createSession.error.invalidPrice")
+                }
                 return
             }
             priceValue = parsed
@@ -138,9 +143,65 @@ class CreateActivityViewModel: ObservableObject {
             if success {
                 self.showSuccess = true
             } else {
-                self.errorMessage = service.error ?? "Failed to create activity."
+                if let apiError = service.error, !apiError.isEmpty {
+                    self.errorMessage = apiError
+                } else {
+                    let key = isCoachSession ? "createSession.error.submitFailed" : "createActivity.error.submitFailed"
+                    self.errorMessage = localization.localized(key)
+                }
             }
         }
+    }
+    
+    func buildShareText(isCoachSession: Bool) -> String {
+        let titleKey = isCoachSession ? "share.session.inviteTitle" : "share.activity.inviteTitle"
+        let inviteTitle = localization.localized(titleKey)
+        var lines: [String] = []
+        lines.append(inviteTitle)
+        lines.append("")
+
+        let emoji = selectedSportEmoji ?? "🏅"
+        let mainTitle: String
+        if !title.isEmpty {
+            mainTitle = title
+        } else if !sportType.isEmpty {
+            mainTitle = sportType
+        } else {
+            mainTitle = ""
+        }
+        if !mainTitle.isEmpty {
+            lines.append("\(emoji) \(mainTitle)")
+        }
+
+        if !sportType.isEmpty {
+            lines.append("\(localization.localized("share.activity.sportLabel")) \(sportType)")
+        }
+        if !location.isEmpty {
+            lines.append("\(localization.localized("share.activity.locationLabel")) \(location)")
+        }
+
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        let dateString = df.string(from: date)
+        let tf = DateFormatter()
+        tf.timeStyle = .short
+        let timeString = tf.string(from: time)
+
+        lines.append("\(localization.localized("share.activity.dateLabel")) \(dateString)")
+        lines.append("\(localization.localized("share.activity.timeLabel")) \(timeString)")
+
+        if isCoachSession {
+            let trimmedPrice = price.trimmingCharacters(in: .whitespacesAndNewlines)
+            let normalizedPrice = trimmedPrice.replacingOccurrences(of: ",", with: ".")
+            if let parsed = Double(normalizedPrice) {
+                let priceString = String(format: "$%.2f", parsed)
+                lines.append("\(localization.localized("share.activity.priceLabel")) \(priceString)")
+            }
+        }
+
+        lines.append("")
+        lines.append(localization.localized("share.common.appSuffix"))
+        return lines.joined(separator: "\n")
     }
     
     func resetForm() {

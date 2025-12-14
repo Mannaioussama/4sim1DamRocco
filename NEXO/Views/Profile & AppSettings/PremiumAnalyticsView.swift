@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PremiumAnalyticsView: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -13,16 +14,16 @@ struct PremiumAnalyticsView: View {
                 VStack(spacing: 20) {
                     // Top summary grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        AnalyticsStatCard(title: "Total Activities", value: "0")
-                        AnalyticsStatCard(title: "This Month", value: "0")
-                        AnalyticsStatCard(title: "Revenue", value: "€0.00")
-                        AnalyticsStatCard(title: "Fill Rate", value: "0.0%")
+                        AnalyticsStatCard(title: localizationManager.localized("premium.analytics.stat.totalActivities"), value: "0")
+                        AnalyticsStatCard(title: localizationManager.localized("premium.analytics.stat.thisMonth"), value: "0")
+                        AnalyticsStatCard(title: localizationManager.localized("premium.analytics.stat.revenue"), value: "€0.00")
+                        AnalyticsStatCard(title: localizationManager.localized("premium.analytics.stat.fillRate"), value: "0.0%")
                     }
                     
                     AnalyticsStatisticsCard()
                     
-                    AnalyticsSectionRow(title: "Activities by Month")
-                    AnalyticsSectionRow(title: "Top Activities")
+                    AnalyticsSectionRow(title: localizationManager.localized("premium.analytics.section.activitiesByMonth"))
+                    AnalyticsSectionRow(title: localizationManager.localized("premium.analytics.section.topActivities"))
                     
                     Spacer(minLength: 24)
                 }
@@ -43,7 +44,7 @@ struct PremiumAnalyticsView: View {
                 }
             }
             ToolbarItem(placement: .principal) {
-                Text("Premium Analytics")
+                Text(localizationManager.localized("premium.analytics.title"))
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
             }
@@ -83,18 +84,19 @@ private struct AnalyticsStatCard: View {
 
 private struct AnalyticsStatisticsCard: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Statistics")
+            Text(localizationManager.localized("premium.analytics.statistics.title"))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
             
             VStack(spacing: 10) {
-                AnalyticsListRow(label: "Average Activities/Month", value: "0.0")
-                AnalyticsListRow(label: "Total Participants", value: "0")
-                AnalyticsListRow(label: "Avg Participants/Activity", value: "0.0")
-                AnalyticsListRow(label: "Avg Revenue/Activity", value: "€0.00")
+                AnalyticsListRow(label: localizationManager.localized("premium.analytics.statistics.avgActivitiesPerMonth"), value: "0.0")
+                AnalyticsListRow(label: localizationManager.localized("premium.analytics.statistics.totalParticipants"), value: "0")
+                AnalyticsListRow(label: localizationManager.localized("premium.analytics.statistics.avgParticipantsPerActivity"), value: "0.0")
+                AnalyticsListRow(label: localizationManager.localized("premium.analytics.statistics.avgRevenuePerActivity"), value: "€0.00")
             }
         }
         .padding(16)

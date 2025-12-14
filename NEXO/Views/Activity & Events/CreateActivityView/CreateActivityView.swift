@@ -11,7 +11,14 @@ struct CreateActivityView: View {
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject private var theme: Theme
     @EnvironmentObject private var activityAPIService: ActivityAPIService
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = CreateActivityViewModel()
+    @State private var sharePayload: SharePayload? = nil
+
+    private struct SharePayload: Identifiable {
+        let id = UUID()
+        let text: String
+    }
 
     var body: some View {
         ZStack {
@@ -24,7 +31,7 @@ struct CreateActivityView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
                         // Sport Type
-                        fieldGroup(title: "Sport Type *") {
+                        fieldGroup(title: localizationManager.localized("createActivity.field.sportType")) {
                             Menu {
                                 ForEach(viewModel.sportCategories, id: \.1) { item in
                                     let (icon, name) = item
@@ -42,7 +49,9 @@ struct CreateActivityView: View {
                                             .font(.system(size: 18))
                                             .foregroundColor(theme.colors.textSecondary)
                                     }
-                                    Text(viewModel.sportType.isEmpty ? "Select a sport" : viewModel.sportType)
+                                    Text(viewModel.sportType.isEmpty
+                                         ? localizationManager.localized("createActivity.field.sportType.placeholder")
+                                         : viewModel.sportType)
                                         .font(.system(size: 15))
                                         .foregroundColor(viewModel.sportType.isEmpty ? theme.colors.textSecondary : theme.colors.textPrimary)
                                     Spacer()
@@ -65,12 +74,12 @@ struct CreateActivityView: View {
                         }
 
                         // Title
-                        fieldGroup(title: "Activity Title *") {
+                        fieldGroup(title: localizationManager.localized("createActivity.field.title")) {
                             HStack(spacing: 12) {
                                 Image(systemName: "textformat")
                                     .font(.system(size: 20))
                                     .foregroundColor(theme.colors.textSecondary)
-                                TextField("e.g., Morning run at the park", text: $viewModel.title)
+                                TextField(localizationManager.localized("createActivity.field.title.placeholder"), text: $viewModel.title)
                                     .font(.system(size: 15))
                                     .foregroundColor(theme.colors.textPrimary)
                             }
@@ -87,7 +96,7 @@ struct CreateActivityView: View {
                         }
 
                         // Description
-                        fieldGroup(title: "Description") {
+                        fieldGroup(title: localizationManager.localized("createActivity.field.description")) {
                             ZStack(alignment: .topLeading) {
                                 TextEditor(text: $viewModel.description)
                                     .scrollContentBackground(.hidden)
@@ -104,7 +113,7 @@ struct CreateActivityView: View {
                                     .shadow(color: .black.opacity(theme.isDarkMode ? 0.25 : 0.05), radius: 4, x: 0, y: 2)
 
                                 if viewModel.description.isEmpty {
-                                    Text("Tell participants what to expect...")
+                                    Text(localizationManager.localized("createActivity.field.description.placeholder"))
                                         .foregroundColor(theme.colors.textSecondary.opacity(0.7))
                                         .font(.system(size: 15))
                                         .padding(.horizontal, 20)
@@ -115,13 +124,13 @@ struct CreateActivityView: View {
                         }
 
                         // Location with Map Picker
-                        fieldGroup(title: "Location *") {
+                        fieldGroup(title: localizationManager.localized("createActivity.field.location")) {
                             HStack(spacing: 12) {
                                 Image(systemName: "mappin.circle.fill")
                                     .font(.system(size: 20))
                                     .foregroundColor(theme.colors.textSecondary)
                                 
-                                TextField("Enter address or venue name", text: $viewModel.location)
+                                TextField(localizationManager.localized("createActivity.field.location.placeholder"), text: $viewModel.location)
                                     .font(.system(size: 15))
                                     .foregroundColor(theme.colors.textPrimary)
                                 
@@ -132,7 +141,7 @@ struct CreateActivityView: View {
                                     HStack(spacing: 6) {
                                         Image(systemName: "map.fill")
                                             .font(.system(size: 14))
-                                        Text("Pick from Map")
+                                        Text(localizationManager.localized("createActivity.field.location.mapButton"))
                                             .font(.system(size: 13, weight: .semibold))
                                     }
                                     .foregroundColor(.white)
@@ -165,7 +174,7 @@ struct CreateActivityView: View {
                         HStack(spacing: 12) {
                             // Date
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Date *")
+                                Text(localizationManager.localized("createActivity.field.date"))
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(theme.colors.textPrimary)
 
@@ -192,7 +201,7 @@ struct CreateActivityView: View {
 
                             // Time
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Time *")
+                                Text(localizationManager.localized("createActivity.field.time"))
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(theme.colors.textPrimary)
 
@@ -224,7 +233,12 @@ struct CreateActivityView: View {
                                 Image(systemName: "person.2.fill")
                                     .font(.system(size: 18))
                                     .foregroundColor(theme.colors.textPrimary)
-                                Text("Number of Participants: \(viewModel.participantsCount)")
+                                Text(
+                                    String(
+                                        format: localizationManager.localized("createActivity.field.participants.label"),
+                                        viewModel.participantsCount
+                                    )
+                                )
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(theme.colors.textPrimary)
                             }
@@ -244,7 +258,7 @@ struct CreateActivityView: View {
                         }
 
                         // Skill Level
-                        fieldGroup(title: "Skill Level *") {
+                        fieldGroup(title: localizationManager.localized("createActivity.field.level")) {
                             Menu {
                                 ForEach(viewModel.skillLevels, id: \.self) { lvl in
                                     Button(action: { viewModel.selectLevel(lvl) }) {
@@ -254,7 +268,9 @@ struct CreateActivityView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Text(viewModel.level.isEmpty ? "Select skill level" : viewModel.level)
+                                    Text(viewModel.level.isEmpty
+                                         ? localizationManager.localized("createActivity.field.level.placeholder")
+                                         : viewModel.level)
                                         .font(.system(size: 15))
                                         .foregroundColor(viewModel.level.isEmpty ? theme.colors.textSecondary : theme.colors.textPrimary)
                                     Spacer()
@@ -277,19 +293,23 @@ struct CreateActivityView: View {
                         }
 
                         // Visibility
-                        fieldGroup(title: "Visibility") {
+                        fieldGroup(title: localizationManager.localized("createActivity.field.visibility")) {
                             Menu {
                                 Button(action: { viewModel.setVisibility("public") }) {
-                                    Text("Public - Anyone can join")
+                                    Text(localizationManager.localized("createActivity.field.visibility.public"))
                                         .font(.system(size: 16))
                                 }
                                 Button(action: { viewModel.setVisibility("friends") }) {
-                                    Text("Friends Only")
+                                    Text(localizationManager.localized("createActivity.field.visibility.friends"))
                                         .font(.system(size: 16))
                                 }
                             } label: {
                                 HStack {
-                                    Text(viewModel.visibilityDisplayText)
+                                    Text(
+                                        viewModel.visibility == "public"
+                                        ? localizationManager.localized("createActivity.field.visibility.public")
+                                        : localizationManager.localized("createActivity.field.visibility.friends")
+                                    )
                                         .font(.system(size: 15))
                                         .foregroundColor(theme.colors.textPrimary)
                                     Spacer()
@@ -314,7 +334,7 @@ struct CreateActivityView: View {
                         // Buttons
                         HStack(spacing: 12) {
                             Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                                Text("Cancel")
+                                Text(localizationManager.localized("createActivity.button.cancel"))
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(theme.colors.textPrimary)
                                     .frame(maxWidth: .infinity)
@@ -334,7 +354,11 @@ struct CreateActivityView: View {
                                 }
                             }) {
                                 ZStack {
-                                    Text(viewModel.isSaving ? "Creating..." : "Create Activity")
+                                    Text(
+                                        viewModel.isSaving
+                                        ? localizationManager.localized("createActivity.button.submitting")
+                                        : localizationManager.localized("createActivity.button.submit")
+                                    )
                                         .font(.system(size: 16, weight: .semibold))
                                         .foregroundColor(.white)
                                         .frame(maxWidth: .infinity)
@@ -367,7 +391,7 @@ struct CreateActivityView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Create Activity")
+                Text(localizationManager.localized("createActivity.nav.title"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(theme.colors.textPrimary)
             }
@@ -384,28 +408,42 @@ struct CreateActivityView: View {
                             Circle().stroke(theme.colors.cardStroke, lineWidth: 1)
                         )
                 }
+                .accessibilityLabel(localizationManager.localized("common.back"))
             }
         }
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(theme.colors.barMaterial, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
-        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
-            Button("OK") { viewModel.errorMessage = nil }
+        .alert(localizationManager.localized("common.error"), isPresented: .constant(viewModel.errorMessage != nil)) {
+            Button(localizationManager.localized("common.ok")) { viewModel.errorMessage = nil }
         } message: {
-            Text(viewModel.errorMessage ?? "Unknown error")
+            Text(viewModel.errorMessage ?? localizationManager.localized("createActivity.error.unknown"))
         }
         .sheet(isPresented: $viewModel.showSuccess) {
-            SuccessDialog {
-                viewModel.showSuccess = false
-                presentationMode.wrappedValue.dismiss()
-            }
+            SuccessDialog(
+                onClose: {
+                    viewModel.showSuccess = false
+                    presentationMode.wrappedValue.dismiss()
+                },
+                onShare: {
+                    let text = viewModel.buildShareText(isCoachSession: false)
+                    print("[Share] CreateActivityView text:\n\(text)")
+                    let finalText = text.isEmpty ? "Shared from NEXO" : text
+                    sharePayload = SharePayload(text: finalText)
+                    viewModel.showSuccess = false
+                }
+            )
             .environmentObject(theme)
+            .environmentObject(localizationManager)
         }
         .sheet(isPresented: $viewModel.showMapPicker) {
             MapLocationPickerView { location in
                 viewModel.setLocation(name: location.displayName, coordinate: location.coordinate.clCoordinate)
             }
             .environmentObject(theme)
+        }
+        .sheet(item: $sharePayload) { payload in
+            ShareSheet(activityItems: [payload.text])
         }
     }
 
@@ -473,7 +511,9 @@ struct CreateActivityView: View {
 
 struct SuccessDialog: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     var onClose: () -> Void
+    var onShare: () -> Void
 
     var body: some View {
         VStack(spacing: 20) {
@@ -486,11 +526,11 @@ struct SuccessDialog: View {
                     .font(.system(size: 50))
             }
             
-            Text("Your session is live!")
+            Text(localizationManager.localized("createActivity.success.title"))
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(theme.colors.textPrimary)
             
-            Text("Your activity has been created. Share the link with friends or wait for others to join.")
+            Text(localizationManager.localized("createActivity.success.message"))
                 .multilineTextAlignment(.center)
                 .font(.system(size: 14))
                 .foregroundColor(theme.colors.textSecondary)
@@ -498,7 +538,7 @@ struct SuccessDialog: View {
             
             HStack(spacing: 12) {
                 Button(action: onClose) {
-                    Text("Close")
+                    Text(localizationManager.localized("createActivity.success.close"))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
                         .frame(maxWidth: .infinity)
@@ -512,8 +552,8 @@ struct SuccessDialog: View {
                         )
                 }
                 
-                Button(action: onClose) {
-                    Text("Share Link")
+                Button(action: onShare) {
+                    Text(localizationManager.localized("createActivity.success.shareLink"))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)

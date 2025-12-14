@@ -44,6 +44,7 @@ class SettingsViewModel: ObservableObject {
     @Published var pushNotifs: Bool = true
     @Published var emailNotifs: Bool = false
     @Published var sound: Bool = true
+    @Published var selectedLanguage: AppLanguage = .english
     
     // States
     @Published var isLoading: Bool = false
@@ -54,8 +55,118 @@ class SettingsViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let profileAPI = ProfileAPI.shared
     private let tokenManager = AuthTokenManager.shared
+    private let translations: [AppLanguage: [String: String]] = [
+        .english: [
+            "settings.title.dashboard": "Dashboard",
+            "settings.loading_message": "Please wait...",
+            "settings.alert.logout.title": "Logout",
+            "settings.alert.logout.message": "Are you sure you want to log out?",
+            "settings.section.premium": "Premium",
+            "settings.section.appearance": "Appearance",
+            "settings.section.language": "Language",
+            "settings.section.account": "Account",
+            "settings.section.ai": "AI Preferences",
+            "settings.section.privacy": "Privacy",
+            "settings.section.notifications": "Notifications",
+            "settings.section.appinfo": "App Info",
+            "settings.row.premium_subscription": "Premium Subscription",
+            "settings.row.night_mode": "Night Mode",
+            "settings.row.language": "Language",
+            "settings.row.edit_profile": "Edit Profile",
+            "settings.row.change_password": "Change Password",
+            "settings.row.ai_suggestions": "AI Suggestions",
+            "settings.row.motivation_tips": "Motivation Tips",
+            "settings.row.coach_recommendations": "Coach Recommendations",
+            "settings.row.smart_notifications": "Smart Notifications",
+            "settings.row.public_profile": "Public Profile",
+            "settings.row.show_location": "Show Location",
+            "settings.row.blocked_users": "Blocked Users",
+            "settings.row.push_notifications": "Push Notifications",
+            "settings.row.email_notifications": "Email Notifications",
+            "settings.row.sound": "Sound",
+            "settings.row.terms": "Terms of Service",
+            "settings.row.privacy_policy": "Privacy Policy",
+            "settings.row.contact_support": "Contact Support",
+            "settings.row.about": "About",
+            "settings.button.logout": "Log Out"
+        ],
+        .french: [
+            "settings.title.dashboard": "Tableau de bord",
+            "settings.loading_message": "Veuillez patienter...",
+            "settings.alert.logout.title": "Déconnexion",
+            "settings.alert.logout.message": "Voulez-vous vraiment vous déconnecter ?",
+            "settings.section.premium": "Premium",
+            "settings.section.appearance": "Apparence",
+            "settings.section.language": "Langue",
+            "settings.section.account": "Compte",
+            "settings.section.ai": "Préférences IA",
+            "settings.section.privacy": "Confidentialité",
+            "settings.section.notifications": "Notifications",
+            "settings.section.appinfo": "Infos sur l'app",
+            "settings.row.premium_subscription": "Abonnement Premium",
+            "settings.row.night_mode": "Mode nuit",
+            "settings.row.language": "Langue",
+            "settings.row.edit_profile": "Modifier le profil",
+            "settings.row.change_password": "Changer le mot de passe",
+            "settings.row.ai_suggestions": "Suggestions IA",
+            "settings.row.motivation_tips": "Conseils de motivation",
+            "settings.row.coach_recommendations": "Recommandations du coach",
+            "settings.row.smart_notifications": "Notifications intelligentes",
+            "settings.row.public_profile": "Profil public",
+            "settings.row.show_location": "Afficher la position",
+            "settings.row.blocked_users": "Utilisateurs bloqués",
+            "settings.row.push_notifications": "Notifications push",
+            "settings.row.email_notifications": "Notifications e-mail",
+            "settings.row.sound": "Son",
+            "settings.row.terms": "Conditions d'utilisation",
+            "settings.row.privacy_policy": "Politique de confidentialité",
+            "settings.row.contact_support": "Contacter le support",
+            "settings.row.about": "À propos",
+            "settings.button.logout": "Se déconnecter"
+        ],
+        .arabic: [
+            "settings.title.dashboard": "لوحة التحكم",
+            "settings.loading_message": "الرجاء الانتظار...",
+            "settings.alert.logout.title": "تسجيل الخروج",
+            "settings.alert.logout.message": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+            "settings.section.premium": "بريميوم",
+            "settings.section.appearance": "المظهر",
+            "settings.section.language": "اللغة",
+            "settings.section.account": "الحساب",
+            "settings.section.ai": "تفضيلات الذكاء الاصطناعي",
+            "settings.section.privacy": "الخصوصية",
+            "settings.section.notifications": "الإشعارات",
+            "settings.section.appinfo": "معلومات التطبيق",
+            "settings.row.premium_subscription": "اشتراك بريميوم",
+            "settings.row.night_mode": "الوضع الليلي",
+            "settings.row.language": "اللغة",
+            "settings.row.edit_profile": "تعديل الملف الشخصي",
+            "settings.row.change_password": "تغيير كلمة المرور",
+            "settings.row.ai_suggestions": "اقتراحات الذكاء الاصطناعي",
+            "settings.row.motivation_tips": "نصائح تحفيزية",
+            "settings.row.coach_recommendations": "توصيات المدرب",
+            "settings.row.smart_notifications": "إشعارات ذكية",
+            "settings.row.public_profile": "الملف الشخصي العام",
+            "settings.row.show_location": "إظهار الموقع",
+            "settings.row.blocked_users": "المستخدمون المحظورون",
+            "settings.row.push_notifications": "إشعارات الدفع",
+            "settings.row.email_notifications": "إشعارات البريد الإلكتروني",
+            "settings.row.sound": "الصوت",
+            "settings.row.terms": "شروط الخدمة",
+            "settings.row.privacy_policy": "سياسة الخصوصية",
+            "settings.row.contact_support": "اتصل بالدعم",
+            "settings.row.about": "حول",
+            "settings.button.logout": "تسجيل الخروج"
+        ]
+    ]
     
     // MARK: - Computed Properties
+    
+    func localized(_ key: String) -> String {
+        translations[selectedLanguage]?[key]
+        ?? translations[.english]?[key]
+        ?? key
+    }
     
     var hasUnverifiedEmail: Bool {
         return !emailVerified
@@ -102,18 +213,30 @@ class SettingsViewModel: ObservableObject {
     
     // MARK: - Section Headers
     
-    var premiumSectionTitle: String { "Premium" }
-    var appearanceSectionTitle: String { "Appearance" }
-    var accountSectionTitle: String { "Account" }
-    var aiPreferencesSectionTitle: String { "AI Preferences" }
-    var privacySectionTitle: String { "Privacy" }
-    var notificationsSectionTitle: String { "Notifications" }
-    var appInfoSectionTitle: String { "App Info" }
+    var premiumSectionTitle: String { localized("settings.section.premium") }
+    var appearanceSectionTitle: String { localized("settings.section.appearance") }
+    var languageSectionTitle: String { localized("settings.section.language") }
+    var accountSectionTitle: String { localized("settings.section.account") }
+    var aiPreferencesSectionTitle: String { localized("settings.section.ai") }
+    var privacySectionTitle: String { localized("settings.section.privacy") }
+    var notificationsSectionTitle: String { localized("settings.section.notifications") }
+    var appInfoSectionTitle: String { localized("settings.section.appinfo") }
+    var currentLanguageLabel: String {
+        switch selectedLanguage {
+        case .english:
+            return "English"
+        case .french:
+            return "Français"
+        case .arabic:
+            return "العربية"
+        }
+    }
     
     // MARK: - Initialization
     
     init() {
         setupObservers()
+        loadSavedLanguage()
         Task { await loadVerificationStatus() }
     }
     
@@ -313,7 +436,22 @@ class SettingsViewModel: ObservableObject {
         // TODO: Load from persistent storage or backend
         print("Loading user settings")
     }
-
+    
+    func setLanguage(_ language: AppLanguage) {
+        selectedLanguage = language
+        LocalizationManager.shared.setLanguage(language)
+        UserDefaults.standard.set(language.rawValue, forKey: "app_language")
+    }
+    
+    private func loadSavedLanguage() {
+        if let stored = UserDefaults.standard.string(forKey: "app_language"),
+           let language = AppLanguage(rawValue: stored) {
+            selectedLanguage = language
+        } else {
+            selectedLanguage = LocalizationManager.shared.language
+        }
+    }
+    
     // MARK: - Verification Status (Backend)
     
     @MainActor
@@ -322,6 +460,10 @@ class SettingsViewModel: ObservableObject {
         do {
             let profile = try await profileAPI.getProfile(token: token)
             verificationStatus = (profile.isCoachVerified ?? false) ? .approved : .none
+            // Keep the Edit Profile orange dot in sync with real email verification state.
+            // When the backend marks isEmailVerified = true, this will flip emailVerified
+            // and SettingsView will stop showing the pulsing dot.
+            emailVerified = profile.isEmailVerified
         } catch {
             print("Failed to load verification status: \(error)")
         }

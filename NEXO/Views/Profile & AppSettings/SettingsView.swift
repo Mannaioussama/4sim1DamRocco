@@ -15,6 +15,7 @@ struct SettingsView: View {
 
     @EnvironmentObject private var theme: Theme
     @StateObject private var viewModel = SettingsViewModel()
+    @State private var showingLanguagePicker = false
 
     // MARK: - Local Palette
     struct Palette {
@@ -47,9 +48,9 @@ struct SettingsView: View {
                 loadingOverlay
             }
         }
-        .navigationTitle("Dashboard")
+        .navigationTitle(viewModel.localized("settings.title.dashboard"))
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Logout", isPresented: $viewModel.showLogoutConfirmation) {
+        .alert(viewModel.localized("settings.alert.logout.title"), isPresented: $viewModel.showLogoutConfirmation) {
             Button("Cancel", role: .cancel) {
                 viewModel.cancelLogout()
             }
@@ -57,11 +58,25 @@ struct SettingsView: View {
                 handleLogout()
             }
         } message: {
-            Text("Are you sure you want to log out?")
+            Text(viewModel.localized("settings.alert.logout.message"))
+        }
+        .sheet(isPresented: $showingLanguagePicker) {
+            LanguageSheetView(
+                selectedLanguage: viewModel.selectedLanguage,
+                onSelect: { language in
+                    viewModel.setLanguage(language)
+                    showingLanguagePicker = false
+                },
+                onCancel: {
+                    showingLanguagePicker = false
+                }
+            )
+            .environmentObject(theme)
         }
         .onAppear {
             viewModel.trackScreenView()
             viewModel.loadSettings()
+            Task { await viewModel.loadVerificationStatus() }
         }
     }
     
@@ -77,7 +92,7 @@ struct SettingsView: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                     .scaleEffect(1.2)
                 
-                Text("Please wait...")
+                Text(viewModel.localized("settings.loading_message"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white)
             }
@@ -110,22 +125,29 @@ struct SettingsView: View {
     private var settingsSections: some View {
         VStack(spacing: 20) {
             SettingsSectionView(title: viewModel.premiumSectionTitle, items: [
-                .navigate("Premium Subscription", systemIcon: "star.fill", extra: nil, action: {
+                .navigate(viewModel.localized("settings.row.premium_subscription"), systemIcon: "star.fill", extra: nil, action: {
                     viewModel.openPremiumSubscription()
                     onOpenPremium?()
                 })
             ])
 
             SettingsSectionView(title: viewModel.appearanceSectionTitle, items: [
-                .toggle("Night Mode", Binding(
+                .toggle(viewModel.localized("settings.row.night_mode"), Binding(
                     get: { theme.isDarkMode },
                     set: { theme.isDarkMode = $0 }
                 ), systemIcon: "moon.fill")
             ])
 
+            SettingsSectionView(title: viewModel.languageSectionTitle, items: [
+                .navigate(viewModel.localized("settings.row.language"), systemIcon: "globe", extra: viewModel.currentLanguageLabel, action: {
+                    showingLanguagePicker = true
+                    viewModel.trackNavigationTo("Language")
+                })
+            ])
+
             SettingsSectionView(title: viewModel.accountSectionTitle, items: [
                 .destination(
-                    "Edit Profile",
+                    viewModel.localized("settings.row.edit_profile"),
                     systemIcon: "person",
                     extra: viewModel.hasUnverifiedEmail ? "__unverified__" : nil,
                     destination: AnyView(
@@ -135,7 +157,7 @@ struct SettingsView: View {
                     )
                 ),
                 .destination(
-                    "Change Password",
+                    viewModel.localized("settings.row.change_password"),
                     systemIcon: "lock",
                     extra: nil,
                     destination: AnyView(
@@ -147,41 +169,41 @@ struct SettingsView: View {
             ])
 
             SettingsSectionView(title: viewModel.aiPreferencesSectionTitle, items: [
-                .toggle("AI Suggestions", $viewModel.aiSuggestions, systemIcon: "sparkles"),
-                .toggle("Motivation Tips", $viewModel.motivationTips, systemIcon: "sparkles"),
-                .toggle("Coach Recommendations", $viewModel.coachRecs, systemIcon: "sparkles"),
-                .toggle("Smart Notifications", $viewModel.smartNotifs, systemIcon: "sparkles")
+                .toggle(viewModel.localized("settings.row.ai_suggestions"), $viewModel.aiSuggestions, systemIcon: "sparkles"),
+                .toggle(viewModel.localized("settings.row.motivation_tips"), $viewModel.motivationTips, systemIcon: "sparkles"),
+                .toggle(viewModel.localized("settings.row.coach_recommendations"), $viewModel.coachRecs, systemIcon: "sparkles"),
+                .toggle(viewModel.localized("settings.row.smart_notifications"), $viewModel.smartNotifs, systemIcon: "sparkles")
             ])
 
             SettingsSectionView(title: viewModel.privacySectionTitle, items: [
-                .toggle("Public Profile", $viewModel.publicProfile, systemIcon: "shield"),
-                .toggle("Show Location", $viewModel.showLocation, systemIcon: "shield"),
-                .navigate("Blocked Users", systemIcon: "person.fill.xmark", action: {
+                .toggle(viewModel.localized("settings.row.public_profile"), $viewModel.publicProfile, systemIcon: "shield"),
+                .toggle(viewModel.localized("settings.row.show_location"), $viewModel.showLocation, systemIcon: "shield"),
+                .navigate(viewModel.localized("settings.row.blocked_users"), systemIcon: "person.fill.xmark", action: {
                     viewModel.openBlockedUsers()
                     viewModel.trackNavigationTo("Blocked Users")
                 })
             ])
 
             SettingsSectionView(title: viewModel.notificationsSectionTitle, items: [
-                .toggle("Push Notifications", $viewModel.pushNotifs, systemIcon: "bell.fill"),
-                .toggle("Email Notifications", $viewModel.emailNotifs, systemIcon: "envelope"),
-                .toggle("Sound", $viewModel.sound, systemIcon: "speaker.wave.2.fill")
+                .toggle(viewModel.localized("settings.row.push_notifications"), $viewModel.pushNotifs, systemIcon: "bell.fill"),
+                .toggle(viewModel.localized("settings.row.email_notifications"), $viewModel.emailNotifs, systemIcon: "envelope"),
+                .toggle(viewModel.localized("settings.row.sound"), $viewModel.sound, systemIcon: "speaker.wave.2.fill")
             ])
 
             SettingsSectionView(title: viewModel.appInfoSectionTitle, items: [
-                .navigate("Terms of Service", systemIcon: "info.circle", action: {
+                .navigate(viewModel.localized("settings.row.terms"), systemIcon: "info.circle", action: {
                     viewModel.openTermsOfService()
                     viewModel.trackNavigationTo("Terms of Service")
                 }),
-                .navigate("Privacy Policy", systemIcon: "info.circle", action: {
+                .navigate(viewModel.localized("settings.row.privacy_policy"), systemIcon: "info.circle", action: {
                     viewModel.openPrivacyPolicy()
                     viewModel.trackNavigationTo("Privacy Policy")
                 }),
-                .navigate("Contact Support", systemIcon: "info.circle", action: {
+                .navigate(viewModel.localized("settings.row.contact_support"), systemIcon: "info.circle", action: {
                     viewModel.openContactSupport()
                     viewModel.trackNavigationTo("Contact Support")
                 }),
-                .navigate("About", systemIcon: "info.circle", extra: viewModel.appVersion, action: {
+                .navigate(viewModel.localized("settings.row.about"), systemIcon: "info.circle", extra: viewModel.appVersion, action: {
                     viewModel.openAbout()
                     viewModel.trackNavigationTo("About")
                 })
@@ -198,7 +220,7 @@ struct SettingsView: View {
             HStack {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
                     .font(.system(size: 18, weight: .semibold))
-                Text("Log Out")
+                Text(viewModel.localized("settings.button.logout"))
                     .font(.headline)
             }
             .foregroundColor(.white)
@@ -257,6 +279,78 @@ struct SettingsView: View {
             },
             onError: { _ in }
         )
+    }
+}
+
+// MARK: - Language Sheet
+private struct LanguageSheetView: View {
+    @EnvironmentObject private var theme: Theme
+    let selectedLanguage: AppLanguage
+    let onSelect: (AppLanguage) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Capsule()
+                .fill(Color.secondary.opacity(0.4))
+                .frame(width: 40, height: 5)
+                .padding(.top, 8)
+
+            Text("Language")
+                .font(.headline)
+                .foregroundColor(theme.colors.textPrimary)
+                .padding(.top, 4)
+
+            VStack(spacing: 10) {
+                languageButton(title: "English", language: .english)
+                languageButton(title: "Français", language: .french)
+                languageButton(title: "العربية", language: .arabic)
+            }
+            .padding(.vertical, 8)
+
+            Button(role: .cancel) {
+                onCancel()
+            } label: {
+                Text("Cancel")
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.gray.opacity(0.3))
+            .foregroundColor(theme.colors.textPrimary)
+
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 24)
+        .background(theme.colors.backgroundGradient.ignoresSafeArea())
+    }
+
+    private func languageButton(title: String, language: AppLanguage) -> some View {
+        Button {
+            onSelect(language)
+        } label: {
+            HStack {
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                Spacer()
+                if language == selectedLanguage {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(Color(hex: "8B5CF6"))
+                }
+            }
+            .padding()
+            .background(theme.colors.cardBackground)
+            .background(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+            )
+            .cornerRadius(14)
+        }
+        .buttonStyle(.plain)
     }
 }
 

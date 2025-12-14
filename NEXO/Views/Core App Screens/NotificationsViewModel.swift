@@ -28,6 +28,9 @@ class NotificationsViewModel: ObservableObject {
 
     // MARK: - Dependencies
     private let service: QuickMatchServicing
+    private let activityService = ActivityAPIService()
+    private let reviewsService = ReviewsService()
+    private let authTokenManager = AuthTokenManager.shared
     
     // MARK: - Initialization
     
@@ -78,6 +81,7 @@ class NotificationsViewModel: ObservableObject {
         do {
             async let likesResp = service.getLikesReceived()
             async let matchesList = service.getMatches()
+            async let reviewPromptsTask = buildReviewNotifications()
             let (likesReceived, matches) = try await (likesResp, matchesList)
             
             let likeCards: [AppNotification] = likesReceived.likes
@@ -102,22 +106,16 @@ class NotificationsViewModel: ObservableObject {
                 )
             }
             
-            // Combine and sort newest first (by parsed date)
+            // Combine and sort newest first (by parsed date) for QuickMatch events
             let combined = (likeCards + matchCards)
                 .sorted { lhs, rhs in
                     parsedDate(from: lhs.time) > parsedDate(from: rhs.time)
                 }
 
-            // Static reference notification: prompt user to rate their last coach session
-            let ratingPrompt = AppNotification(
-                id: "coach-rating-reference",
-                icon: "⭐️",
-                message: "How was your last coach session? Tap to leave a rating and review.",
-                time: "Just now",
-                actionText: "Rate"
-            )
+            // Dynamic review notifications for completed coach sessions that the user joined
+            let reviewPrompts = await reviewPromptsTask
 
-            notifications = [ratingPrompt] + combined
+            notifications = reviewPrompts + combined
         } catch let api as APIError {
             errorMessage = api.userMessage
             notifications = []
@@ -160,6 +158,21 @@ class NotificationsViewModel: ObservableObject {
         print("Cleared all notifications")
     }
     
+    /// Submits a review for a given activity and stores any error message on failure.
+    func submitReview(activityId: String, rating: Int, comment: String) async {
+        do {
+            _ = try await reviewsService.createReview(
+                activityId: activityId,
+                rating: rating,
+                comment: comment.isEmpty ? nil : comment
+            )
+        } catch let api as APIError {
+            errorMessage = api.userMessage
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+    
     // MARK: - Helper Methods
     
     func getNotification(by id: String) -> AppNotification? {
@@ -192,6 +205,69 @@ class NotificationsViewModel: ObservableObject {
         } else {
             return "Older"
         }
+    }
+    
+    // MARK: - Review Notifications
+    
+    /// Builds review prompt notifications for completed coach sessions the user joined
+    /// and has not yet reviewed.
+    private func buildReviewNotifications() async -> [AppNotification] {
+        guard let userId = authTokenManager.getUserId() else {
+            return []
+        }
+        
+        await activityService.fetchMyActivities()
+        let all = activityService.userActivities
+        
+        // Only consider paid sessions that are in the past and where the current user was a participant.
+        let candidateSessions = all.filter { activity in
+            activity.isPaidSession &&
+            (activity.participantIds?.contains(userId) ?? false) &&
+            isPastSession(activity)
+        }
+        
+        var prompts: [AppNotification] = []
+        
+        for activity in candidateSessions {
+            do {
+                let response = try await reviewsService.getActivityReviews(activityId: activity.id)
+                let alreadyReviewed = response.reviews.contains { $0.userId.id == userId }
+                if alreadyReviewed { continue }
+                
+                let timeLabel = activity.date
+                let message = "How was \"\(activity.title)\" with \(activity.hostName)? Tap to leave a rating."
+                
+                let notification = AppNotification(
+                    id: "review-\(activity.id)",
+                    icon: "⭐️",
+                    message: message,
+                    time: timeLabel,
+                    actionText: "Rate"
+                )
+                
+                prompts.append(notification)
+            } catch {
+                #if DEBUG
+                print("⚠️ Failed to load reviews for activity \(activity.id): \(error)")
+                #endif
+            }
+        }
+        
+        return prompts
+    }
+    
+    /// Treats a session as expired once its date is strictly before today.
+    private func isPastSession(_ activity: Activity) -> Bool {
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .none
+
+        guard let date = df.date(from: activity.date) else {
+            return false
+        }
+
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        return date < startOfToday
     }
     
     // MARK: - Time Formatting

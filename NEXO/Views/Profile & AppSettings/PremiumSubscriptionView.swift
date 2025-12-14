@@ -3,6 +3,7 @@ import StripePaymentSheet
 
 struct PremiumSubscriptionView: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = SubscriptionViewModel()
     @Environment(\.dismiss) private var dismiss
     
@@ -34,7 +35,7 @@ struct PremiumSubscriptionView: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("Choose Your Plan")
+                            Text(localizationManager.localized("premium.choosePlan.title"))
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundColor(theme.colors.textPrimary)
                                 .padding(.horizontal)
@@ -74,7 +75,7 @@ struct PremiumSubscriptionView: View {
                 }
             }
             ToolbarItem(placement: .principal) {
-                Text("Premium Plans")
+                Text(localizationManager.localized("premium.title"))
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
             }
@@ -85,8 +86,8 @@ struct PremiumSubscriptionView: View {
             await viewModel.loadPlans()
             await viewModel.loadCurrentSubscription()
         }
-        .alert("Erreur", isPresented: .constant(viewModel.error != nil)) {
-            Button("OK") {
+        .alert(localizationManager.localized("common.error"), isPresented: .constant(viewModel.error != nil)) {
+            Button(localizationManager.localized("common.ok")) {
                 viewModel.clearError()
             }
         } message: {
@@ -94,12 +95,12 @@ struct PremiumSubscriptionView: View {
                 Text(error)
             }
         }
-        .alert("Succès!", isPresented: $viewModel.subscriptionSuccess) {
-            Button("OK") {
+        .alert(localizationManager.localized("premium.alert.successTitle"), isPresented: $viewModel.subscriptionSuccess) {
+            Button(localizationManager.localized("common.ok")) {
                 viewModel.clearSuccess()
             }
         } message: {
-            Text("Votre abonnement a été activé avec succès!")
+            Text(localizationManager.localized("premium.alert.successMessage"))
         }
         .sheet(isPresented: $showStripePayment) {
             if let clientSecret = viewModel.clientSecret {
@@ -143,6 +144,7 @@ struct PremiumSubscriptionView: View {
 private struct HeroSectionView: View {
     let currentPlan: SubscriptionResponse?
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     
     var body: some View {
         VStack(spacing: 12) {
@@ -150,18 +152,18 @@ private struct HeroSectionView: View {
                 .font(.system(size: 40))
                 .foregroundColor(Color(hex: "FFC107"))
             
-            Text("Unlock Your Potential")
+            Text(localizationManager.localized("premium.hero.title"))
                 .font(.system(size: 22, weight: .bold))
                 .foregroundColor(theme.colors.textPrimary)
                 .multilineTextAlignment(.center)
             
-            Text("Create more activities and grow your coaching business")
+            Text(localizationManager.localized("premium.hero.subtitle"))
                 .font(.system(size: 14))
                 .foregroundColor(theme.colors.textSecondary)
                 .multilineTextAlignment(.center)
             
             if let currentPlan = currentPlan {
-                Text("Current: \(currentPlan.type.replacingOccurrences(of: "_", with: " ").uppercased())")
+                Text("\(localizationManager.localized("premium.hero.currentPrefix")) \(currentPlan.type.replacingOccurrences(of: "_", with: " ").uppercased())")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Color(hex: "22C55E"))
             }
@@ -183,11 +185,12 @@ private struct HeroSectionView: View {
 private struct CurrentPlanCardView: View {
     let plan: SubscriptionResponse
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Current Plan")
+                Text(localizationManager.localized("premium.currentPlan.title"))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
                 Spacer()
@@ -412,12 +415,13 @@ private struct PremiumStatisticsCard: View {
     let freeActivitiesRemaining: Int
     let subscriptionType: String
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             // Header row
             HStack {
-                Text("Usage Statistics")
+                Text(localizationManager.localized("premium.stats.usageStatistics"))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
                 Spacer()
@@ -431,7 +435,9 @@ private struct PremiumStatisticsCard: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
-                Text(activitiesLimit == -1 ? "Unlimited Activities" : "\(activitiesRemainingText)")
+                Text(activitiesLimit == -1
+                     ? localizationManager.localized("premium.stats.unlimitedActivities")
+                     : activitiesRemainingText)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.white)
             }
@@ -449,7 +455,7 @@ private struct PremiumStatisticsCard: View {
                     Text("\(activitiesUsed)")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(theme.colors.textPrimary)
-                    Text("Created")
+                    Text(localizationManager.localized("premium.stats.created"))
                         .font(.system(size: 12))
                         .foregroundColor(theme.colors.textSecondary)
                 }
@@ -466,7 +472,7 @@ private struct PremiumStatisticsCard: View {
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(theme.colors.textPrimary)
                         .multilineTextAlignment(.center)
-                    Text("Plan")
+                    Text(localizationManager.localized("premium.stats.planLabel"))
                         .font(.system(size: 12))
                         .foregroundColor(theme.colors.textSecondary)
                 }
@@ -490,9 +496,11 @@ private struct PremiumStatisticsCard: View {
     }
 
     private var activitiesRemainingText: String {
-        if activitiesLimit == -1 { return "Unlimited" }
+        if activitiesLimit == -1 {
+            return localizationManager.localized("premium.stats.unlimited")
+        }
         let remaining = max(activitiesLimit - activitiesUsed, 0)
-        return "\(remaining) left this month"
+        return String(format: localizationManager.localized("premium.stats.activitiesRemainingFormat"), remaining)
     }
 
     private var planTitle: String {
@@ -524,16 +532,17 @@ private struct StatItem: View {
 private struct UsageActionsRow: View {
     @EnvironmentObject private var theme: Theme
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var localizationManager: LocalizationManager
 
     var body: some View {
         HStack(spacing: 10) {
-            UsageActionButton(icon: "chart.bar.fill", title: "Analytics") {
+            UsageActionButton(icon: "chart.bar.fill", title: localizationManager.localized("premium.usage.analytics")) {
                 router.push(.premiumAnalytics)
             }
-            UsageActionButton(icon: "building.columns", title: "Billing") {
+            UsageActionButton(icon: "building.columns", title: localizationManager.localized("premium.usage.billing")) {
                 router.push(.premiumBilling)
             }
-            UsageActionButton(icon: "bell.fill", title: "Notifications") {
+            UsageActionButton(icon: "bell.fill", title: localizationManager.localized("premium.usage.notifications")) {
                 router.push(.premiumNotifications)
             }
         }

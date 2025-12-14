@@ -400,10 +400,10 @@ struct SignUpPage: View {
     
     private var socialSignUpButtons: some View {
         VStack(spacing: 12) {
-            Button(action: handleGoogleSignUp) {
+            Button(action: handleGmailSignUp) {
                 HStack(spacing: 8) {
-                    Image(systemName: "globe").font(.system(size: 18))
-                    Text("Google").font(.system(size: 15, weight: .medium))
+                    Image(systemName: "envelope.fill").font(.system(size: 18))
+                    Text("Gmail").font(.system(size: 15, weight: .medium))
                 }
                 .foregroundColor(theme.colors.textPrimary)
                 .frame(maxWidth: .infinity)
@@ -422,10 +422,10 @@ struct SignUpPage: View {
             .buttonStyle(ScaleButtonStyle())
             .disabled(viewModel.isLoading)
             
-            Button(action: handleFacebookSignUp) {
+            Button(action: handleAppleSignUp) {
                 HStack(spacing: 8) {
-                    Image(systemName: "f.circle.fill").font(.system(size: 18))
-                    Text("Facebook").font(.system(size: 15, weight: .medium))
+                    Image(systemName: "apple.logo").font(.system(size: 18))
+                    Text("Apple").font(.system(size: 15, weight: .medium))
                 }
                 .foregroundColor(theme.colors.textPrimary)
                 .frame(maxWidth: .infinity)
@@ -481,17 +481,17 @@ struct SignUpPage: View {
         )
     }
     
-    private func handleGoogleSignUp() {
-        viewModel.trackSocialSignUp(provider: "Google")
-        viewModel.signUpWithGoogle(
+    private func handleGmailSignUp() {
+        viewModel.trackSocialSignUp(provider: "Gmail")
+        viewModel.signUpWithGmail(
             onSuccess: { onSignUp() },
             onError: { _ in }
         )
     }
     
-    private func handleFacebookSignUp() {
-        viewModel.trackSocialSignUp(provider: "Facebook")
-        viewModel.signUpWithFacebook(
+    private func handleAppleSignUp() {
+        viewModel.trackSocialSignUp(provider: "Apple")
+        viewModel.signUpWithApple(
             onSuccess: { onSignUp() },
             onError: { _ in }
         )

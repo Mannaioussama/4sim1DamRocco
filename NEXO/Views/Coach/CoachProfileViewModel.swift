@@ -61,6 +61,7 @@ class CoachProfileViewModel: ObservableObject {
     private let authTokenManager = AuthTokenManager.shared
     private let followService = FollowService()
     private let reviewsService = ReviewsService()
+    private let localization = LocalizationManager.shared
     
     // MARK: - Computed Properties
     
@@ -286,9 +287,28 @@ class CoachProfileViewModel: ObservableObject {
         print("Booking session: \(session.title)")
     }
     
-    func shareProfile() {
-        // TODO: Implement share functionality
-        print("Sharing coach profile: \(coachId)")
+    func shareProfile() -> String {
+        guard let coach = coach else {
+            return localization.localized("share.coach.fallback")
+        }
+
+        let inviteTitle = localization.localized("share.coach.inviteTitle")
+        var lines: [String] = []
+        lines.append(inviteTitle)
+        lines.append("")
+
+        lines.append(coach.name)
+
+        lines.append("\(localization.localized("share.coach.locationLabel")) \(coach.location)")
+
+        if coach.rating > 0 {
+            let ratingString = String(format: "%.1f", coach.rating)
+            lines.append("\(localization.localized("share.coach.ratingLabel")) \(ratingString)")
+        }
+
+        lines.append("")
+        lines.append(localization.localized("share.common.appSuffix"))
+        return lines.joined(separator: "\n")
     }
     
     func sendMessage() {

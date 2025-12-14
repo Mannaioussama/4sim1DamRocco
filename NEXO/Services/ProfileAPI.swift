@@ -14,9 +14,41 @@ class ProfileAPI {
     
     private init() {}
     
+    // MARK: - Simple Profile Cache
+    private var profileCacheURL: URL {
+        let urls = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
+        return urls[0].appendingPathComponent("profile_cache.json")
+    }
+    
+    private func saveProfileToCache(_ profile: UserProfile) {
+        do {
+            let data = try JSONEncoder().encode(profile)
+            try data.write(to: profileCacheURL, options: .atomic)
+        } catch {
+            #if DEBUG
+            print("❌ [ProfileAPI] Failed to cache profile: \(error)")
+            #endif
+        }
+    }
+    
+    private func loadCachedProfile() -> UserProfile? {
+        let url = profileCacheURL
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        do {
+            let data = try Data(contentsOf: url)
+            return try JSONDecoder().decode(UserProfile.self, from: data)
+        } catch {
+            #if DEBUG
+            print("❌ [ProfileAPI] Failed to load cached profile: \(error)")
+            #endif
+            return nil
+        }
+    }
+    
     // MARK: - Endpoints
     private enum Endpoint {
         case getProfile
+        case getUser(userId: String)
         case updateProfile(userId: String)
         case uploadProfileImage(userId: String)
         case sendVerificationEmail
@@ -27,6 +59,8 @@ class ProfileAPI {
             switch self {
             case .getProfile:
                 return "/users/profile"
+            case .getUser(let userId):
+                return "/users/\(userId)"
             case .updateProfile(let userId):
                 return "/users/\(userId)"
             case .uploadProfileImage(let userId):
@@ -57,19 +91,65 @@ class ProfileAPI {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError(statusCode: nil, message: "Invalid server response.")
+            }
+            
+            #if DEBUG
+            if let bodyStr = String(data: data, encoding: .utf8) {
+                print("➡️ GET \(url.absoluteString)")
+                print("⬅️ Status: \(httpResponse.statusCode) Body: \(bodyStr)")
+            }
+            #endif
+            
+            if (200..<300).contains(httpResponse.statusCode) {
+                let decoder = JSONDecoder()
+                let profile = try decoder.decode(UserProfile.self, from: data)
+                saveProfileToCache(profile)
+                return profile
+            } else {
+                if let apiErr = try? JSONDecoder().decode(APIError.self, from: data) {
+                    throw apiErr
+                }
+                throw APIError(statusCode: httpResponse.statusCode, message: "Failed to get profile")
+            }
+        } catch {
+            if let cached = loadCachedProfile() {
+                #if DEBUG
+                print("ℹ️ [ProfileAPI] Returning cached profile due to error: \(error)")
+                #endif
+                return cached
+            }
+            throw error
+        }
+    }
+
+    /// Fetches the public profile of another user by ID.
+    /// This is used for things like showing real participants in a session.
+    func getUserProfile(userId: String, token: String) async throws -> UserProfile {
+        let url = APIConfig.endpoint(Endpoint.getUser(userId: userId).path())
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError(statusCode: nil, message: "Invalid server response.")
         }
-        
+
         #if DEBUG
         if let bodyStr = String(data: data, encoding: .utf8) {
             print("➡️ GET \(url.absoluteString)")
             print("⬅️ Status: \(httpResponse.statusCode) Body: \(bodyStr)")
         }
         #endif
-        
+
         if (200..<300).contains(httpResponse.statusCode) {
             let decoder = JSONDecoder()
             return try decoder.decode(UserProfile.self, from: data)
@@ -77,7 +157,7 @@ class ProfileAPI {
             if let apiErr = try? JSONDecoder().decode(APIError.self, from: data) {
                 throw apiErr
             }
-            throw APIError(statusCode: httpResponse.statusCode, message: "Failed to get profile")
+            throw APIError(statusCode: httpResponse.statusCode, message: "Failed to get user profile")
         }
     }
     

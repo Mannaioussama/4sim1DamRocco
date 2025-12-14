@@ -10,8 +10,8 @@ import HealthKit
 struct NEXOApp: App {
     @StateObject private var theme = Theme()
     @StateObject private var authStore = AuthStore()
-    @StateObject private var aiCoachService = AICoachService()
     @StateObject private var activityAPIService = ActivityAPIService() // Shared across the app
+    @StateObject private var localizationManager = LocalizationManager.shared
 
     var body: some Scene {
         WindowGroup {
@@ -19,12 +19,18 @@ struct NEXOApp: App {
                 .environmentObject(theme)
                 .environmentObject(authStore)
                 .environmentObject(activityAPIService) // Provide shared ActivityAPIService
+                .environmentObject(localizationManager)
+                // Switch layout direction for Arabic (RTL) vs others (LTR)
+                .environment(\.layoutDirection, localizationManager.isRTL ? .rightToLeft : .leftToRight)
                 // Optional: flip system scheme too (status bar/material defaults).
                 // You can comment this out if you only want semantic colors to change.
                 .preferredColorScheme(theme.isDarkMode ? .dark : .light)
                 .onAppear {
                     // Configure Stripe once at app startup
                     StripeConfig.shared.configure()
+                }
+                .onOpenURL { url in
+                    _ = StravaOAuthHandler.shared.handleDeepLink(url)
                 }
         }
     }
@@ -47,6 +53,14 @@ struct RootView: View {
                     .environmentObject(router)
                     .environmentObject(theme) // FIX: forward Theme to AppShellView and all its children
                     .environmentObject(activityAPIService) // Forward ActivityAPIService to MapScreen
+                    .onAppear {
+                        // Eagerly load activities once the main app shell is visible so
+                        // Home and Sessions (map) have data on first open.
+                        Task {
+                            await activityAPIService.fetchAllActivities()
+                            await activityAPIService.fetchMyActivities()
+                        }
+                    }
             } else {
                 // Auth flow stack
                 NavigationStack(path: $authPath) {

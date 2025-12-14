@@ -18,9 +18,22 @@
 		FAC1AE392EBE64AC00378841 /* NEXO.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NEXO.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		FA1C06A32EE641DE0053F304 /* Exceptions for "NEXO" folder in "NEXO" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = FAAACFDA2EB82429003040A5 /* NEXO */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		FAAACFDD2EB82429003040A5 /* NEXO */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FA1C06A32EE641DE0053F304 /* Exceptions for "NEXO" folder in "NEXO" target */,
+			);
 			path = NEXO;
 			sourceTree = "<group>";
 		};
@@ -371,6 +384,8 @@
 				DEVELOPMENT_TEAM = 55274D8L89;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NEXO/Info.plist;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to confirm withdrawals from your coach balance.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "We need access to your health data to provide personalized fitness recommendations and track your workout progress.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We need to update your health data to record workout sessions and fitness activities.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need your location to show nearby sports activities even when the app is in the background.";
@@ -408,6 +423,8 @@
 				DEVELOPMENT_TEAM = 55274D8L89;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NEXO/Info.plist;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to confirm withdrawals from your coach balance.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "We need access to your health data to provide personalized fitness recommendations and track your workout progress.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We need to update your health data to record workout sessions and fitness activities.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need your location to show nearby sports activities even when the app is in the background.";

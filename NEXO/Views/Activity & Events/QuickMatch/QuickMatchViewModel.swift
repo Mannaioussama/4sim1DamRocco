@@ -53,9 +53,10 @@ class QuickMatchViewModel: ObservableObject {
     private var currentPage: Int = 1
     private let limit: Int = 20
     private var hasMorePages: Bool = true
-
+    
     // MARK: - Dependencies
     private let service: QuickMatchServicing
+    private let localization = LocalizationManager.shared
 
     // MARK: - Computed Properties
     
@@ -215,13 +216,19 @@ class QuickMatchViewModel: ObservableObject {
             if let sports = p.sports, !sports.isEmpty {
                 return sports.map {
                     SportInfo(
-                        name: $0.name ?? "Sport",
+                        name: $0.name ?? localization.localized("quickMatch.profile.sport.defaultName"),
                         icon: $0.icon ?? "🏃",
-                        level: $0.level ?? "Intermediate"
+                        level: $0.level ?? localization.localized("quickMatch.profile.sport.defaultLevel")
                     )
                 }
             } else if let interests = p.sportsInterests {
-                return interests.prefix(3).map { SportInfo(name: $0, icon: "🏃", level: "Intermediate") }
+                return interests.prefix(3).map {
+                    SportInfo(
+                        name: $0,
+                        icon: "🏃",
+                        level: localization.localized("quickMatch.profile.sport.defaultLevel")
+                    )
+                }
             } else {
                 return []
             }
@@ -229,11 +236,11 @@ class QuickMatchViewModel: ObservableObject {
         let interests = p.interests ?? p.sportsInterests ?? []
         return MatchProfile(
             id: p.id,
-            name: p.name ?? "Unknown",
+            name: p.name ?? localization.localized("quickMatch.profile.name.unknown"),
             age: p.age ?? 25,
             avatar: avatar,
             coverImage: cover,
-            location: p.location ?? "Unknown",
+            location: p.location ?? localization.localized("quickMatch.profile.location.unknown"),
             distance: p.distance ?? "—",
             bio: (p.bio ?? p.about) ?? "",
             sports: sportsInfo,

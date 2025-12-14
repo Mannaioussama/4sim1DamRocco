@@ -11,6 +11,7 @@ import PhotosUI
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = EditProfileViewModel()
 
     var onBack: (() -> Void)?
@@ -44,13 +45,13 @@ struct EditProfileView: View {
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
-        .alert("Success", isPresented: $viewModel.showSuccessAlert) {
-            Button("OK") {}
+        .alert(localizationManager.localized("common.success"), isPresented: $viewModel.showSuccessAlert) {
+            Button(localizationManager.localized("common.ok")) {}
         } message: {
             Text(viewModel.successMessage)
         }
-        .alert("Error", isPresented: $viewModel.showErrorAlert) {
-            Button("OK") {}
+        .alert(localizationManager.localized("common.error"), isPresented: $viewModel.showErrorAlert) {
+            Button(localizationManager.localized("common.ok")) {}
         } message: {
             Text(viewModel.errorMessage)
         }
@@ -71,7 +72,7 @@ struct EditProfileView: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                     .scaleEffect(1.2)
                 
-                Text("Saving profile...")
+                Text(localizationManager.localized("profile.edit.loading.saving"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white)
             }
@@ -115,14 +116,14 @@ struct EditProfileView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Text("Edit Profile")
+                    Text(localizationManager.localized("profile.edit.header.title"))
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
 
                     Spacer()
 
                     Button(action: handleSave) {
-                        Text("Save")
+                        Text(localizationManager.localized("common.save"))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
@@ -191,7 +192,7 @@ struct EditProfileView: View {
                         viewModel.trackPhotoChanged()
                     }
                 }
-                Text("Tap to change photo")
+                Text(localizationManager.localized("profile.edit.photo.change"))
                     .font(.system(size: 12))
                     .foregroundColor(theme.colors.textSecondary)
             }
@@ -210,7 +211,7 @@ struct EditProfileView: View {
     
     private var basicInfoSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Basic Information")
+            Text(localizationManager.localized("profile.edit.section.basicInfo"))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
                 .padding(.horizontal, 6)
@@ -267,7 +268,7 @@ struct EditProfileView: View {
     
     private var bioSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("About Me")
+            Text(localizationManager.localized("profile.edit.section.aboutMe"))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
                 .padding(.horizontal, 6)
@@ -320,13 +321,13 @@ struct EditProfileView: View {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 14))
                     .foregroundColor(Color(hex: "EC4899"))
-                Text("Sports Interests")
+                Text(localizationManager.localized("profile.edit.section.sportsInterests"))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
                 
                 Spacer()
                 
-                Text("\(viewModel.selectedSportsCount) selected")
+                Text("\(viewModel.selectedSportsCount) \(localizationManager.localized("profile.edit.sports.selectedSuffix"))")
                     .font(.system(size: 12))
                     .foregroundColor(theme.colors.textSecondary)
             }
@@ -336,7 +337,7 @@ struct EditProfileView: View {
                 glowBox(colors: ["8B5CF6","EC4899"], opacity: 0.15, radius: 24)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Select the sports you're interested in")
+                    Text(localizationManager.localized("profile.edit.sports.description"))
                         .font(.system(size: 12))
                         .foregroundColor(theme.colors.textSecondary)
 
@@ -404,7 +405,7 @@ struct EditProfileView: View {
                 Image(systemName: "checkmark.shield.fill")
                     .font(.system(size: 14))
                     .foregroundColor(Color(hex: viewModel.emailVerificationColor))
-                Text("Email Verification")
+                Text(localizationManager.localized("profile.edit.section.emailVerification"))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
             }
@@ -439,7 +440,7 @@ struct EditProfileView: View {
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(theme.colors.textPrimary)
                             if viewModel.emailVerified {
-                                Text("✓ Verified")
+                                Text("✓ \(localizationManager.localized("profile.edit.email.verified"))")
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 6)
@@ -457,7 +458,7 @@ struct EditProfileView: View {
                             Button {
                                 handleSendVerification()
                             } label: {
-                                Text("Send Verification Email")
+                                Text(localizationManager.localized("profile.edit.email.sendVerification"))
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 16)

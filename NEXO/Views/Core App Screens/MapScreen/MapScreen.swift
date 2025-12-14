@@ -11,6 +11,7 @@ import MapKit
 struct MapScreen: View {
     @EnvironmentObject private var theme: Theme
     @EnvironmentObject private var activityAPIService: ActivityAPIService
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = MapScreenViewModel()
     
     var onActivityClick: (Activity) -> Void
@@ -28,22 +29,37 @@ struct MapScreen: View {
         .onAppear {
             // Attempt to center on user immediately if permission already granted.
             viewModel.handleViewAppeared()
-            // Update ViewModel with activities from ActivityAPIService
-            viewModel.updateActivities(activityAPIService.activities)
+            // If we already have backend activities loaded, use them immediately
+            if !activityAPIService.activities.isEmpty {
+                viewModel.updateActivities(activityAPIService.activities)
+            } else if !activityAPIService.isLoading {
+                // First open and nothing loaded yet: trigger initial fetch.
+                // Pins will appear when the service publishes activities and onChange fires.
+                Task {
+                    await activityAPIService.fetchAllActivities()
+                }
+            }
         }
         .onChange(of: activityAPIService.activities) { newActivities in
             viewModel.updateActivities(newActivities)
         }
-        .alert("Choose Maps App", isPresented: $viewModel.showingDirectionsAlert) {
-            Button("Apple Maps") {
+        .alert(localizationManager.localized("map.alert.chooseApp"), isPresented: $viewModel.showingDirectionsAlert) {
+            Button(localizationManager.localized("map.alert.appleMaps")) {
                 viewModel.openInAppleMaps()
             }
-            Button("Google Maps") {
+            Button(localizationManager.localized("map.alert.googleMaps")) {
                 viewModel.openInGoogleMaps()
             }
-            Button("Cancel", role: .cancel) { }
+            Button(localizationManager.localized("common.cancel"), role: .cancel) { }
         } message: {
-            Text("Choose which maps app to use for directions to \(viewModel.selectedActivityForDirections?.title ?? "the activity")")
+            let fallbackName = localizationManager.localized("activityRoom.activity.unknownTitle")
+            let activityName = viewModel.selectedActivityForDirections?.title ?? fallbackName
+            Text(
+                String(
+                    format: localizationManager.localized("map.alert.chooseApp.messageFormat"),
+                    activityName
+                )
+            )
         }
     }
     
@@ -124,7 +140,7 @@ struct MapScreen: View {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle())
                 .scaleEffect(1.2)
-            Text("Loading AI suggestions...")
+            Text(localizationManager.localized("map.loading"))
                 .font(.system(size: 14))
                 .foregroundColor(theme.colors.textSecondary)
         }
@@ -154,12 +170,12 @@ struct MapScreen: View {
     private var headerTopSection: some View {
         HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(viewModel.headerTitle)
+                Text(localizationManager.localized("map.header.title"))
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(theme.colors.textPrimary)
                     .tracking(-0.5)
                 
-                Text(viewModel.headerSubtitle)
+                Text(localizationManager.localized("map.header.subtitle"))
                     .font(.system(size: 14))
                     .foregroundColor(theme.colors.textSecondary)
             }
@@ -217,7 +233,7 @@ struct MapScreen: View {
                 Image(systemName: "map")
                     .font(.system(size: 16))
                 
-                Text("Map")
+                Text(localizationManager.localized("map.toggle.map"))
                     .font(.system(size: 14, weight: .semibold))
             }
             .frame(maxWidth: .infinity)
@@ -238,7 +254,7 @@ struct MapScreen: View {
                 Image(systemName: "list.bullet")
                     .font(.system(size: 16))
                 
-                Text("List")
+                Text(localizationManager.localized("map.toggle.list"))
                     .font(.system(size: 14, weight: .semibold))
             }
             .frame(maxWidth: .infinity)
@@ -257,8 +273,8 @@ struct MapScreen: View {
             Map(position: $viewModel.position) {
                 UserAnnotation()
                 
-                // Dynamic activity annotations from database
-                ForEach(viewModel.activitiesWithCoordinates) { activity in
+                // Dynamic activity annotations from database, filtered by distance & other filters
+                ForEach(viewModel.filteredActivities) { activity in
                     if let coordinate = activity.coordinate {
                         Annotation("", coordinate: coordinate) {
                             Button {
@@ -272,6 +288,7 @@ struct MapScreen: View {
                     }
                 }
             }
+            .id(viewModel.mapReloadToken)
             .onMapCameraChange { context in
                 viewModel.updateRegion(context.region)
             }
@@ -410,14 +427,11 @@ struct MapScreen: View {
     private var listView: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // AI Info Banner
-                personalizedBanner
-                
                 // Why This Section
                 whyTheseSection
                 
                 // Activity Cards (Dynamic from database)
-                ForEach(viewModel.activitiesWithCoordinates) { activity in
+                ForEach(viewModel.filteredActivities) { activity in
                     AIActivityCard(
                         activity: activity,
                         isSaved: viewModel.isSaved(activity.id),
@@ -457,11 +471,11 @@ struct MapScreen: View {
             .frame(width: 44, height: 44)
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(viewModel.personalizedTitle)
+                Text(localizationManager.localized("map.banner.personalizedTitle"))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white)
                 
-                Text(viewModel.personalizedDescription)
+                Text(localizationManager.localized("map.banner.personalizedDescription"))
                     .font(.system(size: 12))
                     .foregroundColor(.white.opacity(0.9))
             }
@@ -504,14 +518,49 @@ struct MapScreen: View {
             .frame(width: 32, height: 32)
             
             VStack(alignment: .leading, spacing: 6) {
-                Text(viewModel.whyTheseTitle)
+                Text(localizationManager.localized("map.whyThese.title"))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(theme.colors.textPrimary)
                 
-                Text(viewModel.whyTheseDescription)
+                Text(localizationManager.localized("map.whyThese.description"))
                     .font(.system(size: 12))
                     .foregroundColor(theme.colors.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if viewModel.userCoordinate != nil {
+                    // Dynamic radius description and selector when we have the user's location
+                    VStack(alignment: .leading, spacing: 6) {
+                        let radiusKm = max(viewModel.selectedRadius / 1000, 0)
+                        Text("Showing sessions within \(Int(radiusKm)) km of your location.")
+                            .font(.system(size: 11))
+                            .foregroundColor(theme.colors.textSecondary)
+
+                        HStack(spacing: 6) {
+                            let options: [Double] = [1, 3, 5]
+                            ForEach(options.indices, id: \.self) { index in
+                                let km = options[index]
+                                let isSelected = abs((viewModel.selectedRadius / 1000) - km) < 0.01
+                                Button(action: {
+                                    viewModel.setRadiusInKilometers(km)
+                                }) {
+                                    Text("\(Int(km)) km")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(isSelected ? theme.colors.accentPurple.opacity(0.15) : theme.colors.cardBackground)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(isSelected ? theme.colors.accentPurple : theme.colors.cardStroke, lineWidth: 1)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
             }
         }
         .padding(14)
@@ -673,6 +722,7 @@ struct ActivityMapPin: View {
 
 struct SelectedActivityCard: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let activity: Activity
     let onClose: () -> Void
     let onJoin: () -> Void
@@ -715,7 +765,11 @@ struct SelectedActivityCard: View {
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(theme.colors.textPrimary)
                             
-                            Text(isCoachSession ? "Coach" : "Individual")
+                            Text(
+                                isCoachSession
+                                ? localizationManager.localized("map.selected.hostType.coach")
+                                : localizationManager.localized("map.selected.hostType.individual")
+                            )
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(isCoachSession ? Color(hex: "A855F7") : Color(hex: "3B82F6"))
                                 .padding(.horizontal, 8)
@@ -760,7 +814,12 @@ struct SelectedActivityCard: View {
                         .font(.system(size: 14))
                         .foregroundColor(Color(hex: "3B82F6"))
                     
-                    Text("\(activity.spotsLeft) spots left")
+                    Text(
+                        String(
+                            format: localizationManager.localized("map.selected.spotsLeftFormat"),
+                            activity.spotsLeft
+                        )
+                    )
                         .font(.system(size: 14))
                         .foregroundColor(theme.colors.textSecondary)
                 }
@@ -787,7 +846,7 @@ struct SelectedActivityCard: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "location")
                                     .font(.system(size: 14))
-                                Text("Directions")
+                                Text(localizationManager.localized("map.selected.directionsButton"))
                                     .font(.system(size: 14, weight: .medium))
                             }
                             .foregroundColor(Color(hex: "3B82F6"))
@@ -807,7 +866,7 @@ struct SelectedActivityCard: View {
                                 HStack(spacing: 6) {
                                     Image(systemName: "person.badge.plus")
                                         .font(.system(size: 14))
-                                    Text("Join")
+                                    Text(localizationManager.localized("map.selected.joinButton"))
                                         .font(.system(size: 14, weight: .medium))
                                 }
                                 .foregroundColor(.white)
@@ -822,7 +881,7 @@ struct SelectedActivityCard: View {
                                 HStack(spacing: 6) {
                                     Image(systemName: "message")
                                         .font(.system(size: 14))
-                                    Text("Chat Now")
+                                    Text(localizationManager.localized("map.selected.chatNowButton"))
                                         .font(.system(size: 14, weight: .medium))
                                 }
                                 .foregroundColor(Color(hex: "10B981"))
@@ -871,6 +930,7 @@ struct SelectedActivityCard: View {
 
 struct AIActivityCard: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
 
     let activity: Activity
     let isSaved: Bool
@@ -953,7 +1013,13 @@ struct AIActivityCard: View {
                             .font(.system(size: 14))
                             .foregroundColor(theme.colors.textSecondary)
                         
-                        Text("\(spotsLeft) of \(activity.spotsTotal) spots remaining")
+                        Text(
+                            String(
+                                format: localizationManager.localized("map.aiCard.spotsRemainingFormat"),
+                                spotsLeft,
+                                activity.spotsTotal
+                            )
+                        )
                             .font(.system(size: 12))
                             .foregroundColor(theme.colors.textSecondary)
                     }
@@ -980,7 +1046,7 @@ struct AIActivityCard: View {
                     .buttonStyle(ScaleButtonStyle())
                     
                     Button(action: onJoin) {
-                        Text("Join")
+                        Text(localizationManager.localized("map.aiCard.joinButton"))
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
@@ -1008,7 +1074,7 @@ struct AIActivityCard: View {
                     .font(.system(size: 10))
                     .foregroundColor(.white)
                 
-                Text("AI Pick")
+                Text(localizationManager.localized("map.aiCard.badge.aiPick"))
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.white)
             }

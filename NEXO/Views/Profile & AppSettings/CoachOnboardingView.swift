@@ -9,6 +9,7 @@ import SwiftUI
 
 struct CoachOnboardingView: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = CoachOnboardingViewModel()
     
     var onBack: (() -> Void)?
@@ -52,7 +53,7 @@ struct CoachOnboardingView: View {
                             .overlay(Circle().stroke(theme.colors.cardStroke, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Back")
+                    .accessibilityLabel(localizationManager.localized("common.back"))
                 }
             }
         }
@@ -87,8 +88,8 @@ struct CoachOnboardingView: View {
                 onFiles: { viewModel.openFilesPicker() }
             )
         }
-        .alert("Error", isPresented: $viewModel.showErrorAlert) {
-            Button("OK") {}
+        .alert(localizationManager.localized("common.error"), isPresented: $viewModel.showErrorAlert) {
+            Button(localizationManager.localized("common.ok")) {}
         } message: {
             Text(viewModel.errorMessage)
         }
@@ -110,7 +111,7 @@ struct CoachOnboardingView: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                     .scaleEffect(1.2)
                 
-                Text("Submitting application...")
+                Text(localizationManager.localized("coachVerification.loading.submitting"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white)
             }
@@ -170,10 +171,10 @@ struct CoachOnboardingView: View {
 
             // Read-only email field pulled from user profile
             VStack(alignment: .leading, spacing: 6) {
-                Text("Email")
+                Text(localizationManager.localized("coachVerification.form.emailLabel"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(theme.colors.textPrimary)
-                TextField("Email", text: $viewModel.formData.email)
+                TextField(localizationManager.localized("coachVerification.form.emailLabel"), text: $viewModel.formData.email)
                     .font(.system(size: 14))
                     .foregroundColor(theme.colors.textSecondary)
                     .padding()
@@ -187,7 +188,7 @@ struct CoachOnboardingView: View {
             }
             
             textArea(
-                label: "About *",
+                label: localizationManager.localized("coachVerification.form.aboutLabel"),
                 placeholder: viewModel.bioPlaceholder,
                 text: $viewModel.formData.bio,
                 error: viewModel.bioError
@@ -210,15 +211,15 @@ struct CoachOnboardingView: View {
             )
             
             textField(
-                label: "Location *",
-                placeholder: "City, State",
+                label: localizationManager.localized("coachVerification.form.locationLabel"),
+                placeholder: localizationManager.localized("coachVerification.form.locationPlaceholder"),
                 text: $viewModel.formData.location,
                 error: viewModel.locationError
             )
             
             textField(
-                label: "Website / Social Media",
-                placeholder: "https://...",
+                label: localizationManager.localized("coachVerification.form.websiteLabel"),
+                placeholder: localizationManager.localized("coachVerification.form.websitePlaceholder"),
                 text: $viewModel.formData.website,
                 error: ""
             )
@@ -399,7 +400,7 @@ struct CoachOnboardingView: View {
     
     private var uploadButton: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Upload Verification Documents *")
+            Text(localizationManager.localized("coachVerification.upload.title"))
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(theme.colors.textPrimary)
             GeometryReader { proxy in
@@ -411,10 +412,10 @@ struct CoachOnboardingView: View {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 24))
                             .foregroundColor(theme.colors.textSecondary)
-                        Text("Upload ID, Certifications, or Business License")
+                        Text(localizationManager.localized("coachVerification.upload.main"))
                             .font(.system(size: 13))
                             .foregroundColor(theme.colors.textPrimary)
-                        Text("PNG, JPG, or HEIC (max 5MB each)")
+                        Text(localizationManager.localized("coachVerification.upload.hint"))
                             .font(.system(size: 11))
                             .foregroundColor(theme.colors.textSecondary)
                     }
@@ -437,7 +438,7 @@ struct CoachOnboardingView: View {
     
     private var documentsPreview: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Selected Documents")
+            Text(localizationManager.localized("coachVerification.documents.selected"))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
             
@@ -489,7 +490,7 @@ struct CoachOnboardingView: View {
         Button(action: handleSubmit) {
             HStack {
                 Image(systemName: "doc.text")
-                Text("Submit Application")
+                Text(localizationManager.localized("coachVerification.button.submit"))
             }
             .font(.system(size: 15, weight: .medium))
             .foregroundColor(.white)
@@ -519,7 +520,7 @@ struct CoachOnboardingView: View {
         } label: {
             HStack {
                 Image(systemName: "checkmark.seal.fill")
-                Text("Already Verified")
+                Text(localizationManager.localized("coachVerification.button.alreadyVerified"))
             }
             .font(.system(size: 15, weight: .medium))
             .foregroundColor(theme.colors.textPrimary)
@@ -573,7 +574,7 @@ struct CoachOnboardingView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             if response.confidenceScore > 0 {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text("Confidence Score")
+                                    Text(localizationManager.localized("coachVerification.status.confidenceScore"))
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundColor(theme.colors.textPrimary)
                                     Text("\(Int(response.confidenceScore * 100))%")
@@ -584,7 +585,7 @@ struct CoachOnboardingView: View {
                             }
                             if !response.verificationReasons.isEmpty {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("Verification Reasons")
+                                    Text(localizationManager.localized("coachVerification.status.verificationReasons"))
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundColor(theme.colors.textPrimary)
                                     ForEach(response.verificationReasons, id: \.self) { reason in
@@ -637,7 +638,7 @@ struct CoachOnboardingView: View {
                 .cornerRadius(50)
             
             if viewModel.canModifyData {
-                Button("Modify my data") {
+                Button(localizationManager.localized("coachVerification.status.modifyData")) {
                     viewModel.reapply()
                     viewModel.trackReapply()
                 }
@@ -654,7 +655,7 @@ struct CoachOnboardingView: View {
     }
     
     private var rejectedActions: some View {
-        Button("Reapply") {
+        Button(localizationManager.localized("coachVerification.status.reapply")) {
             viewModel.reapply()
             viewModel.trackReapply()
         }

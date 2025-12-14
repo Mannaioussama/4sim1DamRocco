@@ -12,6 +12,7 @@ struct AppShellView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var activityAPIService: ActivityAPIService
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @State private var selectedActivityForChat: Activity?
     @State private var selectedActivityForDetails: Activity?
     @State private var isCoachVerified: Bool = false
@@ -152,7 +153,7 @@ struct AppShellView: View {
                 }
                 .tabItem {
                     Image(systemName: "house.fill")
-                    Text("Home")
+                    Text(localizationManager.localized("tab.home"))
                 }
                 .tag(AppTab.home)
 
@@ -174,7 +175,7 @@ struct AppShellView: View {
                 }
                 .tabItem {
                     Image(systemName: "calendar")
-                    Text("Sessions")
+                    Text(localizationManager.localized("tab.sessions"))
                 }
                 .tag(AppTab.map)
 
@@ -199,7 +200,7 @@ struct AppShellView: View {
                 }
                 .tabItem {
                     Image(systemName: "message.fill")
-                    Text("Chat")
+                    Text(localizationManager.localized("tab.chat"))
                 }
                 .tag(AppTab.chat)
 
@@ -216,7 +217,7 @@ struct AppShellView: View {
                 }
                 .tabItem {
                     Image(systemName: "rectangle.grid.2x2.fill")
-                    Text("Dashboard")
+                    Text(localizationManager.localized("tab.dashboard"))
                 }
                 .tag(AppTab.profile)
             }
@@ -307,7 +308,7 @@ struct AppShellView: View {
         switch route {
         case .aiCoach:
             AICoachView()
-                .navigationTitle("AI Coach")
+                .navigationTitle(localizationManager.localized("coach.title"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar(.visible, for: .navigationBar)
                 .toolbar(.hidden, for: .tabBar)
@@ -336,8 +337,30 @@ struct AppShellView: View {
                 .toolbar(.hidden, for: .tabBar)
 
         case .aiMatchmaker:
-            AIMatchmakerView()
-                .toolbar(.hidden, for: .tabBar)
+            AIMatchmakerView(
+                onBack: { router.pop() },
+                onJoinActivity: { activityId in
+                    // Use cached activities when possible, otherwise fetch from backend.
+                    Task {
+                        if let activity = await activityAPIService.getActivityOrFetch(id: activityId) {
+                            await MainActor.run {
+                                selectedActivityForDetails = activity
+                                router.push(.enhancedEventDetails)
+                            }
+                        } else {
+                            // Fallback: at least send the user to the Sessions tab.
+                            await MainActor.run {
+                                router.select(.map)
+                            }
+                        }
+                    }
+                },
+                onViewProfile: { userId in
+                    // Navigate to the coach profile (or generic user profile) screen.
+                    router.push(.coachProfile(coachId: userId))
+                }
+            )
+            .toolbar(.hidden, for: .tabBar)
 
         case .aiSuggestions:
             AISuggestionsView()
@@ -352,11 +375,14 @@ struct AppShellView: View {
 
         case .enhancedEventDetails:
             if let activity = selectedActivityForDetails {
+                let currentUserId = AuthTokenManager.shared.getUserId()
+                let isCoachOwner = (currentUserId != nil && activity.creator?.id == currentUserId)
                 EnhancedEventDetailsView(
                     activity: activity,
                     onBack: { router.pop() },
                     onJoin: { router.push(.activityRoom) },
-                    onViewCoach: { coachId in router.push(.coachProfile(coachId: coachId)) }
+                    onViewCoach: { coachId in router.push(.coachProfile(coachId: coachId)) },
+                    isCoachView: isCoachOwner
                 )
                 .toolbar(.hidden, for: .tabBar)
             } else {

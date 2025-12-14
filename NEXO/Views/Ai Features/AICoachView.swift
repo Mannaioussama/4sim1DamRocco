@@ -9,6 +9,7 @@ import SwiftUI
 struct AICoachView: View {
     @EnvironmentObject private var theme: Theme
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var activityAPIService: ActivityAPIService
     @StateObject private var viewModel = AICoachViewModel()
 
     var body: some View {
@@ -35,11 +36,23 @@ struct AICoachView: View {
             }
         }
         .navigationTitle("AI Coach")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            if viewModel.suggestions.isEmpty {
-                viewModel.loadSuggestions()
+            viewModel.bootstrapIfNeeded(activityAPIService: activityAPIService)
+            viewModel.trackScreenView()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .stravaOAuthCompleted)) { notification in
+            if let result = notification.object as? StravaConnectionResult {
+                if result.success {
+                    viewModel.markStravaConnected()
+                    viewModel.loadSuggestions()
+                } else {
+                    viewModel.errorMessage = result.message
+                }
             }
+        }
+        .onChange(of: viewModel.selectedTab) { newValue in
+            viewModel.trackTabChange(newValue)
         }
         .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("OK") { viewModel.errorMessage = nil }
@@ -56,6 +69,7 @@ struct AICoachView: View {
 struct StatsHeaderView: View {
     @ObservedObject var viewModel: AICoachViewModel
     @State private var isPresentingStrava = false
+    @State private var weatherInfo: WeatherInfo?
 
     var body: some View {
         VStack(spacing: 12) {
@@ -67,7 +81,48 @@ struct StatsHeaderView: View {
             }
             .padding(.horizontal)
 
-            if viewModel.stravaData == nil {
+            HStack {
+                if viewModel.currentLevel > 0 {
+                    HStack(spacing: 8) {
+                        Image(systemName: "star.circle.fill")
+                            .foregroundColor(.yellow)
+                        Text(viewModel.levelDisplayText)
+                            .font(.system(size: 13, weight: .semibold))
+                        if !viewModel.xpProgressText.isEmpty {
+                            Text(viewModel.xpProgressText)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+
+                Spacer()
+
+                Text(viewModel.streakMessage)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal)
+
+            if viewModel.isStravaConnected {
+                VStack(spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundColor(.green)
+                        Text("Strava connected")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Button(action: {
+                        viewModel.disconnectStrava()
+                    }) {
+                        Text("Disconnect Strava")
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundColor(.red)
+                    }
+                }
+            } else {
                 Button {
                     isPresentingStrava = true
                 } label: {
@@ -78,6 +133,16 @@ struct StatsHeaderView: View {
                     .font(.system(size: 13, weight: .semibold))
                 }
             }
+
+            Text(dataSourcesText)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+                .padding(.horizontal)
+
+            if let info = weatherInfo {
+                WeatherSummaryCell(info: info)
+                    .padding(.horizontal)
+            }
         }
         .padding(.vertical)
         .background(Color(.systemGray6))
@@ -86,21 +151,83 @@ struct StatsHeaderView: View {
                 SafariView(url: url)
             }
         }
+        .onAppear {
+            loadWeather()
+        }
+    }
+
+    private var dataSourcesText: String {
+        if viewModel.isStravaConnected {
+            return "Using your NEXO sessions, achievements and Strava data"
+        } else {
+            return "Using your NEXO sessions and achievements"
+        }
+    }
+
+    private func loadWeather() {
+        if #available(iOS 16.0, *) {
+            Task {
+                let service = WeatherKitService()
+                await service.requestLocationAndWeather()
+                await MainActor.run {
+                    if let info = service.getWeatherInfo() {
+                        self.weatherInfo = info
+                    } else {
+                        let legacy = LegacyWeatherService()
+                        self.weatherInfo = legacy.weatherInfo
+                    }
+                }
+            }
+        } else {
+            let legacy = LegacyWeatherService()
+            self.weatherInfo = legacy.weatherInfo
+        }
     }
 
     private var stravaConnectURL: URL? {
         var components = URLComponents(string: "https://www.strava.com/oauth/mobile/authorize")
         let clientId = StravaConfig.clientId
-        let redirectUri = StravaConfig.redirectURI
+        let redirectUri = StravaConfig.backendRedirectURI
         components?.queryItems = [
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "redirect_uri", value: redirectUri),
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "approval_prompt", value: "auto"),
-            URLQueryItem(name: "scope", value: "read,activity:read_all"),
+            URLQueryItem(name: "scope", value: "read,activity:read_all,profile:read_all"),
             URLQueryItem(name: "state", value: "nexo_ai_coach")
         ]
         return components?.url
+    }
+}
+
+struct WeatherSummaryCell: View {
+    let info: WeatherInfo
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: info.icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.orange)
+                .frame(width: 32, height: 32)
+                .background(Color(.systemBackground))
+                .cornerRadius(8)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(info.temperature)°")
+                    .font(.system(size: 15, weight: .semibold))
+                Text(info.condition.capitalized)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Text(info.description)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(10)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
     }
 }
 
@@ -178,6 +305,9 @@ struct SuggestionsTabView: View {
                     ForEach(viewModel.suggestions) { suggestion in
                         SuggestionCard(suggestion: suggestion) {
                             startGroupChat(for: suggestion)
+                        }
+                        .onAppear {
+                            viewModel.trackSuggestionImpression(suggestion)
                         }
                     }
                 }
@@ -307,6 +437,9 @@ struct TipsTabView: View {
                 } else {
                     ForEach(viewModel.tips) { tip in
                         TipCard(tip: tip)
+                            .onAppear {
+                                viewModel.trackTipImpression(tip)
+                            }
                     }
                 }
             }

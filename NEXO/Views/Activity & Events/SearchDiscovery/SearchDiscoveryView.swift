@@ -13,6 +13,7 @@ struct SearchDiscoveryView: View {
     var onCoachClick: (() -> Void)?
 
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = SearchDiscoveryViewModel()
 
     var body: some View {
@@ -31,7 +32,7 @@ struct SearchDiscoveryView: View {
             }
         }
         .ignoresSafeArea(edges: .bottom)
-        .navigationTitle("Explore More")
+        .navigationTitle(localizationManager.localized("explore.nav.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if let onBack {
@@ -45,6 +46,7 @@ struct SearchDiscoveryView: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("common.back"))
                 }
             }
         }
@@ -93,7 +95,7 @@ extension SearchDiscoveryView {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(theme.colors.textSecondary)
-                TextField("Search sports, people, or places...", text: $viewModel.searchQuery)
+                TextField(localizationManager.localized("explore.search.placeholder"), text: $viewModel.searchQuery)
                     .font(.system(size: 15))
                     .disableAutocorrection(true)
                     .foregroundColor(theme.colors.textPrimary)
@@ -122,7 +124,7 @@ extension SearchDiscoveryView {
                 HStack {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle())
-                    Text("Loading...")
+                    Text(localizationManager.localized("explore.loading"))
                         .font(.system(size: 13))
                         .foregroundColor(theme.colors.textSecondary)
                 }
@@ -141,14 +143,14 @@ extension SearchDiscoveryView {
             if let coach = viewModel.featuredCoach {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text("Featured Coach")
+                        Text(localizationManager.localized("explore.featuredCoach.title"))
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(theme.colors.textPrimary)
                         
                         Spacer()
                         
                         if let onCoachClick {
-                            Button("See All") {
+                            Button(localizationManager.localized("explore.featuredCoach.seeAll")) {
                                 onCoachClick()
                             }
                             .font(.system(size: 13, weight: .medium))
@@ -204,7 +206,7 @@ extension SearchDiscoveryView {
                                         .font(.system(size: 10))
                                         .foregroundColor(theme.colors.textSecondary)
                                     
-                                    Text("\(coach.reviewCount) reviews")
+                                    Text("\(coach.reviewCount) " + localizationManager.localized("explore.featuredCoach.reviewsLabel"))
                                         .font(.system(size: 12))
                                         .foregroundColor(theme.colors.textSecondary)
                                     
@@ -212,7 +214,7 @@ extension SearchDiscoveryView {
                                         .font(.system(size: 10))
                                         .foregroundColor(theme.colors.textSecondary)
                                     
-                                    Text("\(coach.sessionCount)+ sessions")
+                                    Text("\(coach.sessionCount)+ " + localizationManager.localized("explore.featuredCoach.sessionsLabel"))
                                         .font(.system(size: 12))
                                         .foregroundColor(theme.colors.textSecondary)
                                 }
@@ -243,7 +245,7 @@ extension SearchDiscoveryView {
     
     private var categoriesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Browse by Sport")
+            Text(localizationManager.localized("explore.categories.title"))
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
 
@@ -293,13 +295,22 @@ extension SearchDiscoveryView {
 
     private var trendingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(!viewModel.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty ? "Search Results" : "Trending Near You")
+            Text(
+                viewModel.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty
+                ? localizationManager.localized("explore.trending.title.nearYou")
+                : localizationManager.localized("explore.trending.title.searchResults")
+            )
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
 
             if let overview = viewModel.overview {
                 if overview.trendingActivities.isEmpty && !viewModel.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty && !viewModel.isLoading {
-                    Text("No activities found for '\(viewModel.searchQuery)'")
+                    Text(
+                        String(
+                            format: localizationManager.localized("explore.trending.noResultsFormat"),
+                            viewModel.searchQuery
+                        )
+                    )
                         .font(.system(size: 14))
                         .foregroundColor(theme.colors.textSecondary)
                         .padding()
@@ -369,12 +380,12 @@ extension SearchDiscoveryView {
                     }
                 }
             } else if viewModel.error != nil {
-                Text("Error loading activities")
+                Text(localizationManager.localized("explore.trending.error"))
                     .font(.system(size: 14))
                     .foregroundColor(.red)
                     .padding()
             } else if !viewModel.isLoading {
-                Text("No activities available")
+                Text(localizationManager.localized("explore.trending.empty"))
                     .font(.system(size: 14))
                     .foregroundColor(theme.colors.textSecondary)
                     .padding()

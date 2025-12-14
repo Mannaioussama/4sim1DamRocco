@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ChatListView: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = ChatListViewModel()
     @FocusState private var isSearchFocused: Bool
     
@@ -109,7 +110,7 @@ struct ChatListView: View {
     private var headerSection: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Messages")
+                Text(localizationManager.localized("chat.list.header.title"))
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(theme.colors.textPrimary)
                     .tracking(-0.5)
@@ -135,7 +136,7 @@ struct ChatListView: View {
                     .font(.system(size: 18))
                     .foregroundColor(theme.colors.textSecondary)
                 
-                TextField("Search people or conversations...", text: $viewModel.searchQuery)
+                TextField(localizationManager.localized("chat.list.search.placeholder"), text: $viewModel.searchQuery)
                     .font(.system(size: 15))
                     .foregroundColor(theme.colors.textPrimary)
                     .tint(theme.colors.accentPurple)
@@ -183,7 +184,7 @@ struct ChatListView: View {
                     // Searching state
                     VStack(spacing: 8) {
                         ProgressView()
-                        Text("Searching people…")
+                        Text(localizationManager.localized("chat.list.search.searchingUsers"))
                             .font(.system(size: 13))
                             .foregroundColor(theme.colors.textSecondary)
                     }
@@ -194,7 +195,7 @@ struct ChatListView: View {
                     // People section
                     VStack(spacing: 8) {
                         HStack {
-                            Text("People")
+                            Text(localizationManager.localized("chat.list.section.people"))
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(theme.colors.textPrimary)
                             Spacer()
@@ -219,7 +220,7 @@ struct ChatListView: View {
                 if viewModel.hasSearchResults {
                     VStack(spacing: 8) {
                         HStack {
-                            Text("Conversations")
+                            Text(localizationManager.localized("chat.list.section.conversations"))
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(theme.colors.textPrimary)
                             Spacer()
@@ -291,7 +292,7 @@ struct ChatListView: View {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle())
                 .scaleEffect(1.2)
-            Text("Loading conversations...")
+            Text(localizationManager.localized("chat.list.loading"))
                 .font(.system(size: 14))
                 .foregroundColor(theme.colors.textSecondary)
         }
@@ -305,17 +306,17 @@ struct ChatListView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48))
                 .foregroundColor(theme.colors.textSecondary)
-            Text("No results")
+            Text(localizationManager.localized("chat.list.empty.title"))
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
-            Text("Try a different name or keyword")
+            Text(localizationManager.localized("chat.list.empty.subtitle"))
                 .font(.system(size: 14))
                 .foregroundColor(theme.colors.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             
             Button(action: { viewModel.clearSearch() }) {
-                Text("Clear Search")
+                Text(localizationManager.localized("chat.list.empty.clearButton"))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 24)
@@ -333,6 +334,7 @@ struct ChatListView: View {
 
 struct ChatRow: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let chat: Chat
     let onTap: () -> Void
     
@@ -402,7 +404,7 @@ struct ChatRow: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "person.3.fill")
                                     .font(.system(size: 11, weight: .semibold))
-                                Text("Group")
+                                Text(localizationManager.localized("chat.row.groupBadge"))
                                     .font(.system(size: 11, weight: .semibold))
                             }
                             .padding(.horizontal, 6)
@@ -463,6 +465,7 @@ struct ChatRow: View {
 
 struct SearchUserRow: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let user: UserSearchResult
     let onTap: () -> Void
     
@@ -486,7 +489,7 @@ struct SearchUserRow: View {
                     Text(user.name)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
-                    Text("Tap to chat")
+                    Text(localizationManager.localized("chat.searchRow.tapToChat"))
                         .font(.system(size: 12))
                         .foregroundColor(theme.colors.textSecondary)
                 }

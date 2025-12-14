@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ActivityRoomView: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel: ActivityRoomViewModel
 
     let onBack: () -> Void
@@ -77,7 +78,7 @@ struct ActivityRoomView: View {
                         .background(theme.colors.cardBackground)
                         .clipShape(Circle())
                 }
-                .accessibilityLabel("Back")
+                .accessibilityLabel(localizationManager.localized("common.back"))
             }
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 2) {
@@ -100,42 +101,42 @@ struct ActivityRoomView: View {
                         .background(theme.colors.cardBackground)
                         .clipShape(Circle())
                 }
-                .accessibilityLabel("Share")
+                .accessibilityLabel(localizationManager.localized("common.share"))
             }
         }
         .toolbar(.hidden, for: .tabBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(theme.colors.barMaterial, for: .navigationBar)
-        .alert("Leave Activity", isPresented: $viewModel.showLeaveConfirmation) {
-            Button("Cancel", role: .cancel) {
+        .alert(localizationManager.localized("activityRoom.alert.leave.title"), isPresented: $viewModel.showLeaveConfirmation) {
+            Button(localizationManager.localized("common.cancel"), role: .cancel) {
                 viewModel.cancelLeave()
             }
-            Button("Leave", role: .destructive) {
+            Button(localizationManager.localized("activityRoom.button.leave"), role: .destructive) {
                 handleLeave()
             }
         } message: {
-            Text("Are you sure you want to leave this activity?")
+            Text(localizationManager.localized("activityRoom.alert.leave.message"))
         }
-        .alert("Complete Activity", isPresented: $viewModel.showCompleteConfirmation) {
-            Button("Cancel", role: .cancel) {
+        .alert(localizationManager.localized("activityRoom.alert.complete.title"), isPresented: $viewModel.showCompleteConfirmation) {
+            Button(localizationManager.localized("common.cancel"), role: .cancel) {
                 viewModel.cancelComplete()
             }
-            Button("Complete") {
+            Button(localizationManager.localized("activityRoom.button.complete")) {
                 handleComplete()
             }
         } message: {
-            Text("Mark this activity as complete?")
+            Text(localizationManager.localized("activityRoom.alert.complete.message"))
         }
-        .alert("Choose Maps App", isPresented: $viewModel.showingDirectionsAlert) {
-            Button("Apple Maps") {
+        .alert(localizationManager.localized("activityRoom.alert.maps.title"), isPresented: $viewModel.showingDirectionsAlert) {
+            Button(localizationManager.localized("activityRoom.maps.apple")) {
                 viewModel.openInAppleMaps()
             }
-            Button("Google Maps") {
+            Button(localizationManager.localized("activityRoom.maps.google")) {
                 viewModel.openInGoogleMaps()
             }
-            Button("Cancel", role: .cancel) { }
+            Button(localizationManager.localized("common.cancel"), role: .cancel) { }
         } message: {
-            Text("Choose which maps app to use for directions to \(viewModel.activity.location)")
+            Text(String(format: localizationManager.localized("activityRoom.alert.maps.message"), viewModel.activity.location))
         }
         .onAppear {
             viewModel.trackScreenView()
@@ -234,7 +235,7 @@ struct ActivityRoomView: View {
                         Button(action: {
                             viewModel.getDirections()
                         }) {
-                            Text("Get Directions")
+                            Text(localizationManager.localized("activityRoom.info.getDirections"))
                                 .font(.system(size: 12))
                                 .foregroundColor(.white.opacity(0.9))
                                 .underline()
@@ -358,7 +359,7 @@ struct ActivityRoomView: View {
     
     private var messageInputBar: some View {
         HStack(spacing: 8) {
-            TextField("Type a message...", text: $viewModel.message)
+            TextField(localizationManager.localized("chat.input.placeholder"), text: $viewModel.message)
                 .font(.system(size: 13))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -436,7 +437,7 @@ struct ActivityRoomView: View {
                         Spacer()
                         
                         if viewModel.isHost(person) {
-                            Text("Host")
+                            Text(localizationManager.localized("activityRoom.participants.status.host"))
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 12)
@@ -452,7 +453,7 @@ struct ActivityRoomView: View {
                             Button(action: {
                                 viewModel.messageParticipant(person)
                             }) {
-                                Text("Message")
+                                Text(localizationManager.localized("common.message"))
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(theme.colors.textPrimary)
                                     .padding(.horizontal, 12)
@@ -500,8 +501,8 @@ struct ActivityRoomView: View {
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     ),
-                    title: "\"Progress starts with small steps\"",
-                    description: "Stay consistent and you'll reach your goals! 💪",
+                    title: localizationManager.localized("activityRoom.ai.motivation.title"),
+                    description: localizationManager.localized("activityRoom.ai.motivation.description"),
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
                 
@@ -509,9 +510,9 @@ struct ActivityRoomView: View {
                     icon: "sun.max.fill",
                     iconColor: theme.colors.accentOrange,
                     iconBackground: .color(theme.colors.accentOrangeGlow.opacity(theme.isDarkMode ? 0.12 : 0.18)),
-                    title: "Perfect weather conditions",
-                    description: "72°F, sunny — ideal for outdoor activity",
-                    extraInfo: "💡 Great conditions for \(viewModel.activity.sportType). Remember to bring sunscreen!",
+                    title: localizationManager.localized("activityRoom.ai.weather.title"),
+                    description: localizationManager.localized("activityRoom.ai.weather.description"),
+                    extraInfo: String(format: localizationManager.localized("activityRoom.ai.weather.extra"), viewModel.activity.sportType),
                     extraInfoBackground: theme.colors.accentOrangeGlow.opacity(theme.isDarkMode ? 0.10 : 0.16),
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
@@ -520,9 +521,9 @@ struct ActivityRoomView: View {
                     icon: "person.3.fill",
                     iconColor: theme.colors.accentGreen,
                     iconBackground: .color(theme.colors.accentGreenGlow.opacity(theme.isDarkMode ? 0.12 : 0.18)),
-                    title: "Optimal group size",
-                    description: "\(viewModel.activity.spotsTaken) participants — perfect for engagement",
-                    extraInfo: "✓ Not too crowded — you'll get personalized attention",
+                    title: localizationManager.localized("activityRoom.ai.group.title"),
+                    description: "\(viewModel.activity.spotsTaken) " + localizationManager.localized("activityRoom.ai.group.descriptionSuffix"),
+                    extraInfo: localizationManager.localized("activityRoom.ai.group.extra"),
                     extraInfoBackground: theme.colors.accentGreenGlow.opacity(theme.isDarkMode ? 0.10 : 0.14),
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
@@ -531,8 +532,8 @@ struct ActivityRoomView: View {
                     icon: "clock",
                     iconColor: theme.colors.accentOrange,
                     iconBackground: .color(theme.colors.accentOrangeGlow.opacity(theme.isDarkMode ? 0.12 : 0.18)),
-                    title: "Timing suggestion",
-                    description: "Arrive 10 minutes early for warm-up",
+                    title: localizationManager.localized("activityRoom.ai.timing.title"),
+                    description: localizationManager.localized("activityRoom.ai.timing.description"),
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
                 
@@ -540,11 +541,11 @@ struct ActivityRoomView: View {
                     icon: "exclamationmark.triangle.fill",
                     iconColor: Color(hex: "#CA8A04"),
                     iconBackground: .color(Color(hex: "#FEF3C7").opacity(theme.isDarkMode ? 0.10 : 0.24)),
-                    title: "Safety reminders",
+                    title: localizationManager.localized("activityRoom.ai.safety.title"),
                     bulletPoints: [
-                        "Stay hydrated throughout the session",
-                        "Listen to your body and take breaks when needed",
-                        "Inform the host of any health concerns"
+                        localizationManager.localized("activityRoom.ai.safety.bullet1"),
+                        localizationManager.localized("activityRoom.ai.safety.bullet2"),
+                        localizationManager.localized("activityRoom.ai.safety.bullet3")
                     ],
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
@@ -558,8 +559,8 @@ struct ActivityRoomView: View {
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     ),
-                    title: "AI says this is a great match!",
-                    description: "Based on your profile, this activity matches your skill level and interests. Enjoy!",
+                    title: localizationManager.localized("activityRoom.ai.match.title"),
+                    description: localizationManager.localized("activityRoom.ai.match.description"),
                     backgroundColor: .color(theme.colors.cardBackground)
                 )
             }
@@ -574,7 +575,7 @@ struct ActivityRoomView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("About")
+                    Text(localizationManager.localized("activity.info.aboutTitle"))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
                     Text(viewModel.activity.description.isEmpty ? viewModel.activity.title : viewModel.activity.description)
@@ -593,7 +594,7 @@ struct ActivityRoomView: View {
                 .shadow(color: .black.opacity(0.07), radius: 4, x: 0, y: 2)
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Details")
+                    Text(localizationManager.localized("activity.info.detailsTitle"))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
                         .padding(.bottom, 4)
@@ -603,21 +604,21 @@ struct ActivityRoomView: View {
                             icon: "clock",
                             iconColor: theme.colors.accentPurple,
                             iconBackground: theme.colors.accentPurpleGlow.opacity(0.18),
-                            label: "Date & Time",
+                            label: localizationManager.localized("activity.info.dateTime"),
                             value: "\(viewModel.activity.date) at \(viewModel.activity.time)"
                         )
                         InfoDetailRow(
                             icon: "mappin",
                             iconColor: theme.colors.accentPink,
                             iconBackground: theme.colors.accentPink.opacity(0.13),
-                            label: "Location",
+                            label: localizationManager.localized("activity.info.location"),
                             value: viewModel.activity.location
                         )
                         InfoDetailRow(
                             icon: "person.2",
                             iconColor: theme.colors.accentPurple,
                             iconBackground: theme.colors.accentPurpleGlow.opacity(0.17),
-                            label: "Participants",
+                            label: localizationManager.localized("activity.info.participants"),
                             value: "\(viewModel.activity.spotsTaken) / \(viewModel.activity.spotsTotal)"
                         )
                     }
@@ -634,7 +635,7 @@ struct ActivityRoomView: View {
                 .shadow(color: .black.opacity(0.07), radius: 4, x: 0, y: 2)
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Skill Level")
+                    Text(localizationManager.localized("activity.info.skillLevel"))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
                     

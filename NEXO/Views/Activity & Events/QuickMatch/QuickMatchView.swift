@@ -12,6 +12,7 @@ struct QuickMatchView: View {
     var onBack: (() -> Void)?
 
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = QuickMatchViewModel()
 
     // MARK: - View
@@ -55,10 +56,11 @@ struct QuickMatchView: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("common.back"))
                 }
             }
             ToolbarItem(placement: .principal) {
-                Text("Quick Match")
+                Text(localizationManager.localized("quickMatch.nav.title"))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(theme.colors.accentPurple)
             }
@@ -108,6 +110,7 @@ private extension QuickMatchView {
 
 private struct LikesBadge: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let count: Int
     
     var body: some View {
@@ -144,7 +147,12 @@ private struct LikesBadge: View {
             )
             .shadow(color: .black.opacity(0.2), radius: 10, y: 4)
         }
-        .accessibilityLabel("Likes \(count)")
+        .accessibilityLabel(
+            String(
+                format: localizationManager.localized("quickMatch.likesBadge.accessibility"),
+                count
+            )
+        )
     }
 }
 
@@ -163,6 +171,7 @@ extension QuickMatchView {
                     viewModel.handleSwipe(direction, profile)
                 }
                 .environmentObject(theme)
+                .environmentObject(localizationManager)
                 .frame(width: size.width, height: size.height)
                 // Likes badge anchored to the card bounds
                 .overlay(alignment: .topTrailing) {
@@ -281,6 +290,7 @@ private struct LikeButton: View {
 // MARK: - SwipeCard
 struct SwipeCard: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let profile: MatchProfile
     var onSwipe: (SwipeDirection) -> Void
 
@@ -370,7 +380,7 @@ struct SwipeCard: View {
     private var swipeIndicators: some View {
         HStack {
             if offset.width > 30 {
-                indicator(text: "LIKE", color: theme.colors.accentGreen)
+                indicator(text: localizationManager.localized("quickMatch.indicator.like"), color: theme.colors.accentGreen)
                     .rotationEffect(.degrees(-20))
                     .padding(.leading, 12)
                     .padding(.top, 12)
@@ -379,7 +389,7 @@ struct SwipeCard: View {
             Spacer()
             
             if offset.width < -30 {
-                indicator(text: "NOPE", color: Color(hex: "#F87171"))
+                indicator(text: localizationManager.localized("quickMatch.indicator.nope"), color: Color(hex: "#F87171"))
                     .rotationEffect(.degrees(20))
                     .padding(.trailing, 12)
                     .padding(.top, 12)
@@ -465,7 +475,7 @@ struct SwipeCard: View {
                     .foregroundColor(theme.colors.textPrimary)
             }
             
-            Text("Rating")
+            Text(localizationManager.localized("quickMatch.stats.rating"))
                 .font(.system(size: 10))
                 .foregroundColor(theme.colors.textSecondary)
         }
@@ -487,7 +497,7 @@ struct SwipeCard: View {
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(theme.colors.textPrimary)
             
-            Text("Activities")
+            Text(localizationManager.localized("quickMatch.stats.activities"))
                 .font(.system(size: 10))
                 .foregroundColor(theme.colors.textSecondary)
         }
@@ -505,7 +515,7 @@ struct SwipeCard: View {
     
     private var favoriteSports: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Favorite Sports")
+            Text(localizationManager.localized("quickMatch.section.favoriteSports"))
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
             
@@ -553,7 +563,7 @@ struct SwipeCard: View {
     
     private var interestsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Interests")
+            Text(localizationManager.localized("quickMatch.section.interests"))
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
             
@@ -614,11 +624,11 @@ extension QuickMatchView {
         VStack(spacing: 16) {
             emptyStateIcon
             
-            Text("All caught up!")
+            Text(localizationManager.localized("quickMatch.empty.title"))
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(theme.colors.textPrimary)
             
-            Text("You've seen all available profiles. Check back later for more sport buddies!")
+            Text(localizationManager.localized("quickMatch.empty.message"))
                 .font(.system(size: 15))
                 .foregroundColor(theme.colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -688,7 +698,7 @@ extension QuickMatchView {
                 .padding(.horizontal, -4)
             
             Button(action: { onBack?() }) {
-                Text("Back to Home")
+                Text(localizationManager.localized("quickMatch.empty.backButton"))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(theme.colors.textPrimary)
                     .frame(maxWidth: .infinity)
@@ -732,11 +742,11 @@ extension QuickMatchView {
                     .foregroundColor(.white)
                     .padding(.bottom, 8)
                 
-                Text("It's a Match!")
+                Text(localizationManager.localized("quickMatch.matchModal.title"))
                     .font(.system(size: 36, weight: .bold))
                     .foregroundColor(.white)
                 
-                Text("You and \(profile.name) both like each other")
+                Text(String(format: localizationManager.localized("quickMatch.matchModal.subtitle"), profile.name))
                     .font(.system(size: 17))
                     .foregroundColor(.white.opacity(0.9))
                     .multilineTextAlignment(.center)
@@ -756,7 +766,7 @@ extension QuickMatchView {
                 .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
                 .padding(.top, 16)
                 
-                Text("Starting a conversation...")
+                Text(localizationManager.localized("quickMatch.matchModal.status"))
                     .font(.system(size: 15))
                     .foregroundColor(.white.opacity(0.8))
                     .padding(.top, 8)

@@ -75,4 +75,40 @@ class LoginViewModel: ObservableObject {
             }
         }
     }
+    
+    // MARK: - Social Login Methods
+    
+    func loginWithGmail() {
+        apiError = nil
+        isLoading = true
+        
+        // TODO: Implement Gmail login
+        // This requires backend configuration for OAuth with Google
+        Task {
+            // Simulate network delay
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            
+            await MainActor.run {
+                isLoading = false
+                apiError = "Gmail login not yet implemented"
+            }
+        }
+    }
+    
+    func loginWithApple() {
+        apiError = nil
+        isLoading = true
+        
+        // TODO: Implement Apple Sign In
+        // This requires importing AuthenticationServices and implementing ASAuthorizationControllerDelegate
+        Task {
+            // Simulate network delay
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            
+            await MainActor.run {
+                isLoading = false
+                apiError = "Apple login not yet implemented"
+            }
+        }
+    }
 }

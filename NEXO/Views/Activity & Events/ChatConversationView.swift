@@ -31,6 +31,7 @@ struct Message: Identifiable {
 
 struct GroupParticipantsPopup: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let participants: [ChatParticipant]
     var onSelectParticipant: (ChatParticipant) -> Void
     var onClose: () -> Void
@@ -45,7 +46,7 @@ struct GroupParticipantsPopup: View {
                 Spacer()
                 VStack(spacing: 0) {
                     HStack {
-                        Text("Participants")
+                        Text(localizationManager.localized("chat.participantsPopup.title"))
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(theme.colors.textPrimary)
                         Spacer()
@@ -117,7 +118,7 @@ struct GroupParticipantsPopup: View {
                     .frame(maxHeight: 260)
 
                     Button(action: onClose) {
-                        Text("Close")
+                        Text(localizationManager.localized("chat.participantsPopup.closeButton"))
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -157,6 +158,7 @@ enum MessageSender {
 
 struct ChatConversationView: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel: ChatConversationViewModel
     @FocusState private var isInputFocused: Bool
     @State private var keyboardHeight: CGFloat = 0
@@ -206,16 +208,16 @@ struct ChatConversationView: View {
                 messagesList
             }
         }
-        .alert("Leave Group", isPresented: $viewModel.showLeaveConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Leave", role: .destructive) {
+        .alert(localizationManager.localized("chat.group.leave.title"), isPresented: $viewModel.showLeaveConfirmation) {
+            Button(localizationManager.localized("common.cancel"), role: .cancel) { }
+            Button(localizationManager.localized("chat.group.leave.title"), role: .destructive) {
                 Task {
                     await viewModel.leaveGroup()
                     onBack()
                 }
             }
         } message: {
-            Text("Are you sure you want to leave this group chat? You will no longer receive messages from this group.")
+            Text(localizationManager.localized("chat.group.leave.message"))
         }
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden(true)
@@ -319,7 +321,7 @@ struct ChatConversationView: View {
                                 isShowingParticipantsList = true
                             }
                         } label: {
-                            Label("View participants", systemImage: "person.3")
+                            Label(localizationManager.localized("chat.group.menu.viewParticipants"), systemImage: "person.3")
                         }
 
                         if let creator = viewModel.participants.first {
@@ -331,14 +333,14 @@ struct ChatConversationView: View {
                                     isShowingParticipantProfile = true
                                 }
                             } label: {
-                                Label("View creator profile", systemImage: "person.crop.circle")
+                                Label(localizationManager.localized("chat.group.menu.viewCreatorProfile"), systemImage: "person.crop.circle")
                             }
                         }
 
                         Button(role: .destructive, action: {
                             viewModel.showLeaveConfirmation = true
                         }) {
-                            Label("Leave Group", systemImage: "arrow.right.square")
+                            Label(localizationManager.localized("chat.group.menu.leaveGroup"), systemImage: "arrow.right.square")
                         }
                     } label: {
                         Image(systemName: "ellipsis")
@@ -360,7 +362,7 @@ struct ChatConversationView: View {
                                 isShowingParticipantProfile = true
                             }
                         } label: {
-                            Label("Show profile", systemImage: "person.crop.circle")
+                            Label(localizationManager.localized("chat.direct.menu.showProfile"), systemImage: "person.crop.circle")
                         }
                     } label: {
                         Image(systemName: "ellipsis")
@@ -393,12 +395,25 @@ struct ChatConversationView: View {
                 let isGroupChat = viewModel.isGroup
                 let title: String = {
                     if isGroupChat {
-                        return viewModel.sessionTitle.isEmpty ? "Group chat" : viewModel.sessionTitle
+                        if viewModel.sessionTitle.isEmpty {
+                            return localizationManager.localized("chat.header.group.titleFallback")
+                        } else {
+                            return viewModel.sessionTitle
+                        }
                     } else {
-                        return viewModel.directChatDisplayName
+                        let base = viewModel.directChatDisplayName
+                        if base == "Conversation" {
+                            return localizationManager.localized("chat.header.direct.fallbackTitle")
+                        }
+                        return base
                     }
                 }()
-                let subtitle: String? = isGroupChat ? "\(viewModel.participants.count) participants" : nil
+                let subtitle: String? = isGroupChat
+                    ? String(
+                        format: localizationManager.localized("chat.header.group.participantsFormat"),
+                        viewModel.participants.count
+                    )
+                    : nil
                 let avatarURL: String = {
                     if isGroupChat {
                         let first = viewModel.participants.first
@@ -500,7 +515,7 @@ struct ChatConversationView: View {
     // MARK: Input Bar
     private var inputBar: some View {
         HStack(spacing: 8) {
-            TextField("Type a message...", text: $viewModel.messageText)
+            TextField(localizationManager.localized("chat.input.placeholder"), text: $viewModel.messageText)
                 .font(.system(size: 15))
                 .foregroundColor(theme.colors.textPrimary)
                 .padding(.horizontal, 16)
@@ -521,7 +536,7 @@ struct ChatConversationView: View {
             Button(action: {
                 viewModel.sendMessage()
             }) {
-                Text("Send")
+                Text(localizationManager.localized("chat.input.sendButton"))
             }
             .buttonStyle(BrandButtonStyle(variant: .default))
         }
@@ -634,6 +649,7 @@ struct MessageBubble: View {
 
 struct ChatParticipantProfilePopup: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let participant: ChatParticipant
     var onClose: () -> Void
 
@@ -679,18 +695,22 @@ struct ChatParticipantProfilePopup: View {
                         Divider()
 
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("About")
+                            Text(localizationManager.localized("chat.profile.about.title"))
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(theme.colors.textPrimary)
 
-                            Text(participant.about?.isEmpty == false ? participant.about! : "No public description available yet.")
+                            Text(
+                                participant.about?.isEmpty == false
+                                ? participant.about!
+                                : localizationManager.localized("chat.profile.about.empty")
+                            )
                                 .font(.system(size: 13))
                                 .foregroundColor(theme.colors.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Favorite Sports")
+                            Text(localizationManager.localized("chat.profile.favoriteSports.title"))
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(theme.colors.textPrimary)
 
@@ -704,14 +724,14 @@ struct ChatParticipantProfilePopup: View {
                                     }
                                 }
                             } else {
-                                Text("No favorite sports added yet.")
+                                Text(localizationManager.localized("chat.profile.favoriteSports.empty"))
                                     .font(.system(size: 13))
                                     .foregroundColor(theme.colors.textSecondary)
                             }
                         }
 
                         Button(action: onClose) {
-                            Text("Close")
+                            Text(localizationManager.localized("chat.profile.closeButton"))
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)

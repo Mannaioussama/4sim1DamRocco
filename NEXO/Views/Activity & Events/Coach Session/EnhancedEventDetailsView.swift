@@ -15,9 +15,16 @@ struct EnhancedEventDetailsView: View {
     @EnvironmentObject private var theme: Theme
     @EnvironmentObject private var activityAPIService: ActivityAPIService
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel: EnhancedEventDetailsViewModel
     @StateObject private var paymentViewModel = PaymentViewModel()
     @State private var showPaymentSuccessPopup: Bool = false
+    @State private var sharePayload: SharePayload? = nil
+
+    private struct SharePayload: Identifiable {
+        let id = UUID()
+        let text: String
+    }
 
     var onBack: () -> Void
     var onJoin: () -> Void
@@ -75,11 +82,11 @@ struct EnhancedEventDetailsView: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 16) {
-                    Text("Payment successful")
+                    Text(localizationManager.localized("eventDetails.payment.success.title"))
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
 
-                    Text("You're all set for this session.")
+                    Text(localizationManager.localized("eventDetails.payment.success.message"))
                         .font(.system(size: 14))
                         .foregroundColor(theme.colors.textSecondary)
 
@@ -87,7 +94,7 @@ struct EnhancedEventDetailsView: View {
                         showPaymentSuccessPopup = false
                         onJoin()
                     }) {
-                        Text("Proceed to session")
+                        Text(localizationManager.localized("eventDetails.payment.success.proceedButton"))
                             .font(.system(size: 15, weight: .semibold))
                             .frame(maxWidth: .infinity)
                     }
@@ -97,7 +104,7 @@ struct EnhancedEventDetailsView: View {
                         showPaymentSuccessPopup = false
                         onBack()
                     }) {
-                        Text("Back home")
+                        Text(localizationManager.localized("eventDetails.payment.success.backHomeButton"))
                             .font(.system(size: 14))
                             .frame(maxWidth: .infinity)
                     }
@@ -126,11 +133,11 @@ struct EnhancedEventDetailsView: View {
                         .background(theme.colors.cardBackground)
                         .clipShape(Circle())
                 }
-                .accessibilityLabel("Back")
+                .accessibilityLabel(localizationManager.localized("common.back"))
             }
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 2) {
-                    Text("Event Details")
+                    Text(localizationManager.localized("eventDetails.nav.title"))
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(theme.colors.textPrimary)
                     Text(viewModel.event.sportType)
@@ -140,7 +147,12 @@ struct EnhancedEventDetailsView: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 8) {
-                    Button(action: { viewModel.shareEvent() }) {
+                    Button(action: {
+                        let text = viewModel.shareEvent()
+                        print("[Share] EnhancedEventDetailsView text:\n\(text)")
+                        let finalText = text.isEmpty ? "Shared from NEXO" : text
+                        sharePayload = SharePayload(text: finalText)
+                    }) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(theme.colors.textPrimary)
@@ -148,11 +160,15 @@ struct EnhancedEventDetailsView: View {
                             .background(theme.colors.cardBackground)
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel(localizationManager.localized("common.share"))
                 }
             }
         }
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .sheet(item: $sharePayload) { payload in
+            ShareSheet(activityItems: [payload.text])
+        }
         // Bottom booking bar pinned
         .safeAreaInset(edge: .bottom) { bottomBar }
         .task {
@@ -190,7 +206,7 @@ private extension EnhancedEventDetailsView {
             }
 
             if viewModel.event.coach.isVerified {
-                Text("✓ Hosted by Verified Coach")
+                Text(localizationManager.localized("eventDetails.verifiedCoachBadge"))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
@@ -205,12 +221,12 @@ private extension EnhancedEventDetailsView {
 
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
-                    infoBox(icon: "calendar", label: "Date", value: viewModel.event.date)
-                    infoBox(icon: "line.3.horizontal.decrease", label: "Level", value: viewModel.event.level)
+                    infoBox(icon: "calendar", label: localizationManager.localized("eventDetails.info.date"), value: viewModel.event.date)
+                    infoBox(icon: "line.3.horizontal.decrease", label: localizationManager.localized("eventDetails.info.level"), value: viewModel.event.level)
                 }
                 HStack(spacing: 8) {
-                    infoBox(icon: "clock", label: "Start Time", value: viewModel.event.time)
-                    infoBox(icon: "clock", label: "End Time", value: viewModel.endTimeText)
+                    infoBox(icon: "clock", label: localizationManager.localized("eventDetails.info.startTime"), value: viewModel.event.time)
+                    infoBox(icon: "clock", label: localizationManager.localized("eventDetails.info.endTime"), value: viewModel.endTimeText)
                 }
             }
         }
@@ -301,12 +317,14 @@ private extension EnhancedEventDetailsView {
             }
 
             HStack(spacing: 8) {
-                Button("View Profile") { onViewCoach(viewModel.event.coach.id) }
+                Button(localizationManager.localized("eventDetails.coach.viewProfile")) { onViewCoach(viewModel.event.coach.id) }
                     .buttonStyle(BrandButtonStyle(variant: .outline))
-                Button(action: openDirectChatWithCoach) {
-                    Label("Message", systemImage: "message")
+                if !viewModel.isCoachView {
+                    Button(action: openDirectChatWithCoach) {
+                        Label(localizationManager.localized("common.message"), systemImage: "message")
+                    }
+                    .buttonStyle(BrandButtonStyle(variant: .outline))
                 }
-                .buttonStyle(BrandButtonStyle(variant: .outline))
             }
         }
         .padding(12)
@@ -325,7 +343,9 @@ private extension EnhancedEventDetailsView {
         HStack(spacing: 8) {
             ForEach(["details", "participants"], id: \.self) { tab in
                 Button(action: { viewModel.selectTab(tab) }) {
-                    Text(tab.capitalized)
+                    Text(tab == "details"
+                         ? localizationManager.localized("eventDetails.tab.details")
+                         : localizationManager.localized("eventDetails.tab.participants"))
                         .font(.system(size: 12, weight: viewModel.selectedTab == tab ? .semibold : .regular))
                         .foregroundColor(viewModel.selectedTab == tab ? Color(hex: "#A855F7") : theme.colors.textSecondary)
                         .frame(maxWidth: .infinity)
@@ -359,7 +379,7 @@ private extension EnhancedEventDetailsView {
 
     private var availabilityCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Availability")
+            Text(localizationManager.localized("eventDetails.availability.title"))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
             
@@ -403,14 +423,14 @@ private extension EnhancedEventDetailsView {
     }
 
     private var aboutCard: some View {
-        infoCard(title: "About this session", content: viewModel.event.description)
+        infoCard(title: localizationManager.localized("eventDetails.about.title"), content: viewModel.event.description)
     }
 
     private var locationCard: some View {
         let config = locationMapConfig
 
         return VStack(alignment: .leading, spacing: 8) {
-            Text("Location")
+            Text(localizationManager.localized("activity.info.location"))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(theme.colors.textPrimary)
             HStack(spacing: 6) {
@@ -468,12 +488,12 @@ private extension EnhancedEventDetailsView {
                         Text(p.name)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(theme.colors.textPrimary)
-                        Text("Joined this event")
+                        Text(localizationManager.localized("eventDetails.participants.joinedLabel"))
                             .font(.system(size: 11))
                             .foregroundColor(theme.colors.textSecondary)
                     }
                     Spacer()
-                    Button("View") {
+                    Button(localizationManager.localized("eventDetails.participants.viewButton")) {
                         viewModel.viewParticipant(p.id)
                     }
                     .font(.system(size: 12))
@@ -551,17 +571,16 @@ private extension EnhancedEventDetailsView {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 if viewModel.isCoachView {
-                    Button("Edit Event") {
-                        viewModel.editEvent()
-                    }
-                    .buttonStyle(BrandButtonStyle(variant: .outline))
-                    Button("Manage Participants") {
-                        viewModel.manageParticipants()
+                    // Owner view: only show a single "Check Session" button that jumps into the activity room
+                    Button(localizationManager.localized("eventDetails.bottom.checkSession")) {
+                        onJoin()
                     }
                     .buttonStyle(BrandButtonStyle(variant: .default))
+                    .frame(maxWidth: .infinity)
                 } else {
+                    // Left: price
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Total")
+                        Text(localizationManager.localized("eventDetails.bottom.totalLabel"))
                             .font(.system(size: 11))
                             .foregroundColor(theme.colors.textSecondary)
                         Text(viewModel.priceDisplay)
@@ -570,34 +589,73 @@ private extension EnhancedEventDetailsView {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                    if paymentViewModel.hasPaidForActivity {
-                        Button("Check session") {
-                            onJoin()
+                    // Middle: coupon field with Apply underneath, centered in its column
+                    VStack(alignment: .center, spacing: 4) {
+                        TextField("Coupon", text: $viewModel.couponCode)
+                            .font(.system(size: 12))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(theme.colors.cardBackground)
+                            .background(.ultraThinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+                            )
+                            .cornerRadius(10)
+                            .frame(maxWidth: 180)
+
+                        Button("Apply") {
+                            viewModel.applyCouponLocally()
                         }
-                        .buttonStyle(BrandButtonStyle(variant: .default))
-                    } else {
-                        Button("Book Now") {
-                            Task {
-                                let amount = max(viewModel.event.price, 0)
-                                await paymentViewModel.initializePayment(
-                                    activityId: viewModel.event.id,
-                                    amount: amount,
-                                    currency: "eur"
-                                )
-                                if let sheet = paymentViewModel.paymentSheet,
-                                   let root = UIApplication.shared.connectedScenes
-                                        .compactMap({ $0 as? UIWindowScene })
-                                        .flatMap({ $0.windows })
-                                        .first(where: { $0.isKeyWindow })?
-                                        .rootViewController {
-                                    sheet.present(from: root) { result in
-                                        handlePaymentResult(result)
+                        .font(.system(size: 12, weight: .semibold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color(hex: "#A855F7"))
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                        .frame(maxWidth: 180)
+
+                        if let savingsText = viewModel.couponSavingsText {
+                            Text(savingsText)
+                                .font(.system(size: 11))
+                                .foregroundColor(Color(hex: "#16A34A"))
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    // Right: action button
+                    VStack {
+                        if paymentViewModel.hasPaidForActivity {
+                            Button(localizationManager.localized("eventDetails.bottom.checkSession")) {
+                                onJoin()
+                            }
+                            .buttonStyle(BrandButtonStyle(variant: .default))
+                        } else {
+                            Button(localizationManager.localized("eventDetails.bottom.bookNow")) {
+                                Task {
+                                    let amount = viewModel.currentPriceForPayment
+                                    await paymentViewModel.initializePayment(
+                                        activityId: viewModel.event.id,
+                                        amount: amount,
+                                        currency: "eur"
+                                    )
+                                    if let sheet = paymentViewModel.paymentSheet,
+                                       let root = UIApplication.shared.connectedScenes
+                                            .compactMap({ $0 as? UIWindowScene })
+                                            .flatMap({ $0.windows })
+                                            .first(where: { $0.isKeyWindow })?
+                                            .rootViewController {
+                                        sheet.present(from: root) { result in
+                                            handlePaymentResult(result)
+                                        }
                                     }
                                 }
                             }
+                            .buttonStyle(BrandButtonStyle(variant: .default))
                         }
-                        .buttonStyle(BrandButtonStyle(variant: .default))
                     }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
             .padding(.horizontal, 16)
@@ -670,7 +728,7 @@ private extension EnhancedEventDetailsView {
                 }
             }
         case .failed:
-            paymentViewModel.errorMessage = "Payment failed. Please try again."
+            paymentViewModel.errorMessage = localizationManager.localized("eventDetails.payment.error.failed")
         case .canceled:
             break
         }

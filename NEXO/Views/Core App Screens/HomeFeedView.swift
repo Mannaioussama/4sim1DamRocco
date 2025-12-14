@@ -11,6 +11,7 @@ import SwiftUI
 struct HomeFeedView: View {
     @EnvironmentObject private var theme: Theme
     @EnvironmentObject private var activityAPIService: ActivityAPIService
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = HomeFeedViewModel(activityAPIService: nil)
     
     var onActivityClick: (Activity) -> Void
@@ -170,11 +171,11 @@ struct HomeFeedView: View {
     private var headerSection: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(viewModel.headerTitle)
+                Text(localizationManager.localized("home.header.title"))
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(theme.colors.textPrimary)
                 
-                Text(viewModel.headerSubtitle)
+                Text(localizationManager.localized("home.header.subtitle"))
                     .font(.system(size: 15))
                     .foregroundColor(theme.colors.textSecondary)
             }
@@ -190,7 +191,7 @@ struct HomeFeedView: View {
                         .font(.system(size: 18))
                         .foregroundColor(theme.colors.textSecondary)
                     
-                    TextField("Search activities...", text: searchQueryBinding)
+                    TextField(localizationManager.localized("home.search.placeholder"), text: searchQueryBinding)
                         .font(.system(size: 15))
                         .foregroundColor(theme.colors.textPrimary)
                         .tint(theme.colors.accentPurple)
@@ -301,8 +302,8 @@ struct HomeFeedView: View {
             HStack(spacing: 10) {
                 if let quickMatch = onQuickMatchClick {
                     CrystalFeatureCard(
-                        title: "Quick Match",
-                        subtitle: "Swipe to connect",
+                        title: localizationManager.localized("home.quickMatch.title"),
+                        subtitle: localizationManager.localized("home.quickMatch.subtitle"),
                         icon: "bolt.fill",
                         iconColor: theme.isDarkMode ? theme.colors.accentOrange : Color(hex: "EC4899"),
                         gradientColors: theme.isDarkMode
@@ -317,8 +318,8 @@ struct HomeFeedView: View {
 
                 if let aiMatchmaker = onAIMatchmakerClick {
                     CrystalFeatureCard(
-                        title: "AI Matchmaker",
-                        subtitle: "Find partners",
+                        title: localizationManager.localized("home.aiMatchmaker.title"),
+                        subtitle: localizationManager.localized("home.aiMatchmaker.subtitle"),
                         icon: "sparkles",
                         iconColor: theme.colors.accentPurple,
                         gradientColors: theme.isDarkMode
@@ -579,6 +580,7 @@ struct CrystalFeatureCard: View {
 
 struct CrystalExploreCard: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let action: () -> Void
     
     var body: some View {
@@ -626,11 +628,11 @@ struct CrystalExploreCard: View {
                 
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Explore More")
+                        Text(localizationManager.localized("home.explore.title"))
                             .font(.system(size: 15, weight: .bold))
                             .foregroundColor(theme.colors.textPrimary)
                         
-                        Text("Browse sports & discover new people")
+                        Text(localizationManager.localized("home.explore.subtitle"))
                             .font(.system(size: 12))
                             .foregroundColor(theme.colors.textSecondary)
                     }

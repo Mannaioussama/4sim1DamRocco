@@ -10,6 +10,12 @@ import SwiftUI
 struct CoachProfileView: View {
     @EnvironmentObject private var theme: Theme
     @StateObject private var viewModel: CoachProfileViewModel
+    @State private var sharePayload: SharePayload? = nil
+
+    private struct SharePayload: Identifiable {
+        let id = UUID()
+        let text: String
+    }
 
     var onBack: (() -> Void)?
     var onBookSession: (() -> Void)?
@@ -76,7 +82,10 @@ struct CoachProfileView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    viewModel.shareProfile()
+                    let text = viewModel.shareProfile()
+                    print("[Share] CoachProfileView text:\n\(text)")
+                    let finalText = text.isEmpty ? "Shared from NEXO" : text
+                    sharePayload = SharePayload(text: finalText)
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 18, weight: .semibold))
@@ -90,6 +99,9 @@ struct CoachProfileView: View {
             }
         }
         .navigationBarBackButtonHidden(onBack != nil)
+        .sheet(item: $sharePayload) { payload in
+            ShareSheet(activityItems: [payload.text])
+        }
         .onAppear {
             viewModel.trackProfileView()
         }

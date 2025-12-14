@@ -10,6 +10,7 @@ import PhotosUI
 
 struct ProfilePage: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @StateObject private var viewModel = ProfilePageViewModel()
 
     var onSettingsClick: () -> Void
@@ -41,7 +42,7 @@ struct ProfilePage: View {
                 VStack(spacing: 0) {
                     // Header
                     HStack {
-                        Text("Profile")
+                        Text(localizationManager.localized("profile.header.title"))
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(theme.colors.textPrimary)
                             .tracking(-0.5)
@@ -55,7 +56,7 @@ struct ProfilePage: View {
                         }) {
                             HStack(spacing: 8) {
                                 Image(systemName: "person").font(.system(size: 18))
-                                Text("Profile").font(.system(size: 14, weight: .medium))
+                                Text(localizationManager.localized("profile.header.title")).font(.system(size: 14, weight: .medium))
                             }
                             .foregroundColor(theme.colors.textPrimary)
                             .padding(.horizontal, 12)
@@ -81,6 +82,7 @@ struct ProfilePage: View {
                         pickedUIImage: viewModel.pickedUIImage
                     )
                     .environmentObject(theme)
+                    .environmentObject(localizationManager)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
 
@@ -163,6 +165,7 @@ private struct PopupActionButton: View {
 // MARK: - Profile Glass Card
 private struct ProfileGlassCard: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let user: ProfileViewData
     let pickedUIImage: UIImage?
 
@@ -261,9 +264,18 @@ private struct ProfileGlassCard: View {
                 }
 
                 HStack(spacing: 8) {
-                    StatPill(value: "\(user.stats.sessionsJoined)", label: "Joined")
-                    StatPill(value: "\(user.stats.sessionsHosted)", label: "Hosted")
-                    StatPill(value: "⭐ \(String(format: "%.1f", user.stats.rating))", label: "Rating")
+                    StatPill(
+                        value: "\(user.stats.sessionsJoined)",
+                        label: localizationManager.localized("profile.stats.joined")
+                    )
+                    StatPill(
+                        value: "\(user.stats.sessionsHosted)",
+                        label: localizationManager.localized("profile.stats.hosted")
+                    )
+                    StatPill(
+                        value: "⭐ \(String(format: "%.1f", user.stats.rating))",
+                        label: localizationManager.localized("profile.stats.rating")
+                    )
                 }
                 .padding(.top, 20)
                 .padding(.bottom, 20)
@@ -336,6 +348,7 @@ private struct StatPill: View {
 // MARK: - Coach Dashboard Button
 struct CoachDashboardButton: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let action: () -> Void
 
     var body: some View {
@@ -373,10 +386,10 @@ struct CoachDashboardButton: View {
                     .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Coach Dashboard")
+                        Text(localizationManager.localized("profile.coachDashboard.title"))
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(theme.colors.textPrimary)
-                        Text("Manage events & track earnings")
+                        Text(localizationManager.localized("profile.coachDashboard.subtitle"))
                             .font(.system(size: 12))
                             .foregroundColor(theme.colors.textSecondary)
                     }
@@ -400,6 +413,7 @@ struct CoachDashboardButton: View {
 // MARK: - Achievements Button (unchanged)
 struct AchievementsButton: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let action: () -> Void
 
     var body: some View {
@@ -437,10 +451,10 @@ struct AchievementsButton: View {
                     .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Achievements")
+                        Text(localizationManager.localized("profile.achievements.title"))
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(theme.colors.textPrimary)
-                        Text("View badges & rewards")
+                        Text(localizationManager.localized("profile.achievements.subtitle"))
                             .font(.system(size: 12))
                             .foregroundColor(theme.colors.textSecondary)
                     }
@@ -464,6 +478,7 @@ struct AchievementsButton: View {
 // MARK: - Tabs
 private struct ProfileCrystalTabs: View {
     @EnvironmentObject private var theme: Theme
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let user: ProfileViewData
     @Binding var selectedTab: Int
     let recentActivities: [Activity]
@@ -491,9 +506,9 @@ private struct ProfileCrystalTabs: View {
     // MARK: - Tab Selector
     private var tabSelector: some View {
         HStack(spacing: 6) {
-            tabButton(title: "About", index: 0)
-            tabButton(title: "Activities", index: 1)
-            tabButton(title: "Medals", index: 2)
+            tabButton(title: localizationManager.localized("profile.tabs.about"), index: 0)
+            tabButton(title: localizationManager.localized("profile.tabs.activities"), index: 1)
+            tabButton(title: localizationManager.localized("profile.tabs.medals"), index: 2)
         }
         .padding(6)
         .background(theme.colors.cardBackground)
@@ -538,48 +553,48 @@ private struct ProfileCrystalTabs: View {
     }
 
     // MARK: - About
-private var aboutTab: some View {
-    VStack(alignment: .leading, spacing: 12) {
-        // Interests
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Interests")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(theme.colors.textPrimary)
-            
-            if user.sportsInterests.isEmpty {
-                Text("No interests added yet")
-                    .font(.system(size: 13))
-                    .foregroundColor(theme.colors.textSecondary)
-            } else {
-                // First row of interests
-                HStack(spacing: 8) {
-                    ForEach(0..<min(3, user.sportsInterests.count), id: \.self) { index in
-                        InterestBadge(interest: user.sportsInterests[index])
-                    }
-                }
-                
-                // Second row if there are more than 3 interests
-                if user.sportsInterests.count > 3 {
+    private var aboutTab: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Interests
+            VStack(alignment: .leading, spacing: 8) {
+                Text(localizationManager.localized("profile.about.interests"))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(theme.colors.textPrimary)
+
+                if user.sportsInterests.isEmpty {
+                    Text(localizationManager.localized("profile.about.noInterests"))
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.colors.textSecondary)
+                } else {
+                    // First row of interests
                     HStack(spacing: 8) {
-                        ForEach(3..<min(6, user.sportsInterests.count), id: \.self) { index in
+                        ForEach(0..<min(3, user.sportsInterests.count), id: \.self) { index in
                             InterestBadge(interest: user.sportsInterests[index])
+                        }
+                    }
+
+                    // Second row if there are more than 3 interests
+                    if user.sportsInterests.count > 3 {
+                        HStack(spacing: 8) {
+                            ForEach(3..<min(6, user.sportsInterests.count), id: \.self) { index in
+                                InterestBadge(interest: user.sportsInterests[index])
+                            }
                         }
                     }
                 }
             }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.colors.cardBackground)
+            .background(theme.colors.barMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(theme.colors.cardStroke, lineWidth: 1)
+            )
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.colors.cardBackground)
-        .background(theme.colors.barMaterial)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(theme.colors.cardStroke, lineWidth: 1)
-        )
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
-}
 
     // MARK: - Activities
     private var activitiesTab: some View {
@@ -636,7 +651,16 @@ private struct ActivityRow: View {
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 2) {
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(activity.isPaidSession ? "Coach Session" : "Individual")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(activity.isPaidSession ? Color(hex: "22C55E") : Color(hex: "3B82F6"))
+                    )
                 Text("\(activity.spotsTaken)/\(activity.spotsTotal)")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(Color(hex: "A855F7"))

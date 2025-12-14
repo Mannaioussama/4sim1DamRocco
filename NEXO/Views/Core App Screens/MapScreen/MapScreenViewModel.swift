@@ -36,6 +36,7 @@ class MapScreenViewModel: NSObject, ObservableObject, CLLocationManagerDelegate 
     // Map properties
     @Published var position: MapCameraPosition
     @Published var currentRegion: MKCoordinateRegion
+    @Published var mapReloadToken = UUID()
     
     // MARK: - Private Properties
     
@@ -94,8 +95,17 @@ class MapScreenViewModel: NSObject, ObservableObject, CLLocationManagerDelegate 
         super.init()
         
         setupLocationManager()
-        loadAISuggestions()
         loadSavedActivities()
+    }
+
+    // MARK: - Radius Management
+    
+    /// Updates the search radius (in kilometers) used to filter activities around the user.
+    /// Keeps the published `selectedRadius` (meters) and the internal `filters.radius` in sync.
+    func setRadiusInKilometers(_ kilometers: Double) {
+        let meters = max(kilometers, 0) * 1000
+        selectedRadius = meters
+        filters.radius = meters
     }
     
     // MARK: - Location Management
@@ -313,6 +323,10 @@ class MapScreenViewModel: NSObject, ObservableObject, CLLocationManagerDelegate 
     
     func updateActivities(_ activities: [Activity]) {
         aiSuggestions = activities
+        // Bump reload token so the Map view rebuilds its annotations when data changes
+        mapReloadToken = UUID()
+        let withCoords = activities.filter { $0.hasCoordinates }.count
+        print("🗺️ [MapScreen] updateActivities: total=\(activities.count), withCoordinates=\(withCoords)")
     }
     
     func selectActivity(_ activity: Activity) {

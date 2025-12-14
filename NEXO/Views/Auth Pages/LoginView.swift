@@ -457,12 +457,12 @@ struct LoginView: View {
     
     private var socialLoginButtons: some View {
         VStack(spacing: 12) {
-            Button(action: {}) {
+            Button(action: { viewModel.loginWithGmail() }) {
                 HStack(spacing: 8) {
-                    Image(systemName: "globe")
+                    Image(systemName: "envelope.fill")
                         .font(.system(size: 18))
                     
-                    Text("Continue with Google")
+                    Text("Continue with Gmail")
                         .font(.system(size: 15, weight: .medium))
                 }
                 .foregroundColor(theme.colors.textPrimary)
@@ -488,12 +488,12 @@ struct LoginView: View {
             }
             .buttonStyle(ScaleButtonStyle())
             
-            Button(action: {}) {
+            Button(action: { viewModel.loginWithApple() }) {
                 HStack(spacing: 8) {
-                    Image(systemName: "f.circle.fill")
+                    Image(systemName: "apple.logo")
                         .font(.system(size: 18))
                     
-                    Text("Continue with Facebook")
+                    Text("Continue with Apple")
                         .font(.system(size: 15, weight: .medium))
                 }
                 .foregroundColor(theme.colors.textPrimary)

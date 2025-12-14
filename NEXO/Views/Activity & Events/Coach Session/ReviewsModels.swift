@@ -13,6 +13,7 @@ struct BackendReview: Codable, Identifiable {
     let rating: Int
     let comment: String?
     let createdAt: String
+    let activityTitle: String?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
@@ -23,6 +24,7 @@ struct BackendReview: Codable, Identifiable {
         case rating
         case comment
         case createdAt
+        case activityTitle
     }
 }
 

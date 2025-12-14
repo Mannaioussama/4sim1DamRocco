@@ -340,23 +340,25 @@ class SignUpViewModel: ObservableObject {
     
     // MARK: - Social Sign Up
     
-    func signUpWithGoogle(onSuccess: @escaping () -> Void, onError: @escaping (String) -> Void) {
+    func signUpWithGmail(onSuccess: @escaping () -> Void, onError: @escaping (String) -> Void) {
         isLoading = true
         
-        // TODO: Implement Google Sign-Up
+        // TODO: Implement Gmail Sign-Up
+        // This requires backend configuration for OAuth with Google
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.isLoading = false
-            onError("Google Sign-Up not yet implemented")
+            onError("Gmail Sign-Up not yet implemented")
         }
     }
     
-    func signUpWithFacebook(onSuccess: @escaping () -> Void, onError: @escaping (String) -> Void) {
+    func signUpWithApple(onSuccess: @escaping () -> Void, onError: @escaping (String) -> Void) {
         isLoading = true
         
-        // TODO: Implement Facebook Sign-Up
+        // TODO: Implement Apple Sign-Up
+        // This requires AuthenticationServices framework and backend validation
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.isLoading = false
-            onError("Facebook Sign-Up not yet implemented")
+            onError("Apple Sign-Up not yet implemented")
         }
     }
     

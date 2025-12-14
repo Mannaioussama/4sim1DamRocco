@@ -68,12 +68,18 @@ class ActivityAPIService: ObservableObject {
     private let session = URLSession.shared
     private var cancellables = Set<AnyCancellable>()
     private let fallbackEnabled: Bool
+    private var activitiesCacheURL: URL {
+        let urls = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
+        return urls[0].appendingPathComponent("activities_cache.json")
+    }
     
     // Backend-only by default. Previews/tests can pass fallbackEnabled: true to see mock items.
     init(fallbackEnabled: Bool = false) {
         self.fallbackEnabled = fallbackEnabled
         if fallbackEnabled {
             Task { await loadFallbackData() }
+        } else {
+            Task { await loadCachedActivities() }
         }
     }
     
@@ -142,6 +148,7 @@ class ActivityAPIService: ObservableObject {
                     throw ActivityAPIError.decodingError
                 }
                 let converted = apiActivities.map { convertToActivity($0) }
+                saveActivitiesToCache(converted)
                 await MainActor.run {
                     self.activities = converted
                     self.isLoading = false
@@ -384,6 +391,17 @@ class ActivityAPIService: ObservableObject {
                 await fetchAllActivities()
                 await fetchMyActivities()
                 return true
+            } else if http.statusCode == 401 {
+                let responseString = String(data: data, encoding: .utf8) ?? "<no body>"
+                log("❌ Create Activity unauthorized: \(responseString)")
+                
+                await MainActor.run {
+                    self.isLoading = false
+                    self.error = "Your session has expired. Please log in again to create activities."
+                    AuthStore.shared.logout()
+                }
+                
+                return false
             } else {
                 let responseString = String(data: data, encoding: .utf8) ?? "<no body>"
                 log("❌ Create Activity failed: status=\(http.statusCode), body=\(responseString)")
@@ -400,6 +418,80 @@ class ActivityAPIService: ObservableObject {
                 self.error = error.localizedDescription
             }
             return false
+        }
+    }
+    
+    // MARK: - Activity Lookup Helpers
+    
+    /// Returns an activity from the in-memory caches if present.
+    func findActivity(id: String) -> Activity? {
+        if let fromAll = activities.first(where: { $0.id == id }) {
+            return fromAll
+        }
+        if let fromUser = userActivities.first(where: { $0.id == id }) {
+            return fromUser
+        }
+        return nil
+    }
+
+    /// Ensures we have a full Activity for a given id, fetching it from the backend if needed.
+    func getActivityOrFetch(id: String) async -> Activity? {
+        if let cached = findActivity(id: id) {
+            return cached
+        }
+        
+        do {
+            var request = URLRequest(url: activityEndpoint(id: id))
+            request.httpMethod = "GET"
+            createAuthHeaders().forEach { header, value in
+                request.setValue(value, forHTTPHeaderField: header)
+            }
+            
+            log("GET \(request.url?.absoluteString ?? "") [single activity]")
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ActivityAPIError.invalidResponse }
+            log("Status \(http.statusCode) for /activities/\(id)")
+            
+            guard http.statusCode == 200 else {
+                if let raw = String(data: data, encoding: .utf8) {
+                    log("Non-200 body for /activities/\(id):\n\(raw)")
+                }
+                if let apiError = try? JSONDecoder().decode(APIError.self, from: data) {
+                    throw apiError
+                }
+                return nil
+            }
+            
+            let decoder = JSONDecoder()
+            let apiActivity: APIActivity
+            if let direct = try? decoder.decode(APIActivity.self, from: data) {
+                apiActivity = direct
+            } else if let wrapped = try? decoder.decode(APIResponse<APIActivity>.self, from: data),
+                      let wrappedData = wrapped.data {
+                apiActivity = wrappedData
+            } else {
+                if let raw = String(data: data, encoding: .utf8) {
+                    log("Decoding failed for /activities/\(id). Raw:\n\(raw)")
+                }
+                return nil
+            }
+            
+            let converted = convertToActivity(apiActivity)
+            await MainActor.run {
+                if let idx = self.activities.firstIndex(where: { $0.id == converted.id }) {
+                    self.activities[idx] = converted
+                } else {
+                    self.activities.append(converted)
+                }
+                
+                if let idx = self.userActivities.firstIndex(where: { $0.id == converted.id }) {
+                    self.userActivities[idx] = converted
+                }
+            }
+            return converted
+        } catch {
+            log("Failed to fetch activity \(id): \(error)")
+            return nil
         }
     }
     
@@ -575,6 +667,31 @@ class ActivityAPIService: ObservableObject {
             price: apiActivity.price,
             description: apiActivity.description
         )
+    }
+    
+    private func saveActivitiesToCache(_ activities: [Activity]) {
+        do {
+            let data = try JSONEncoder().encode(activities)
+            try data.write(to: activitiesCacheURL, options: .atomic)
+        } catch {
+            log("Failed to cache activities: \(error)")
+        }
+    }
+    
+    private func loadCachedActivities() async {
+        let url = activitiesCacheURL
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            let cached = try JSONDecoder().decode([Activity].self, from: data)
+            await MainActor.run {
+                if self.activities.isEmpty {
+                    self.activities = cached
+                }
+            }
+        } catch {
+            log("Failed to load cached activities: \(error)")
+        }
     }
     
     private func convertToISODateOnly(date: String) -> String {

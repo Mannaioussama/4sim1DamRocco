@@ -44,6 +44,7 @@ class ChangePasswordViewModel: ObservableObject {
     // MARK: - Private Properties
     
     private var cancellables = Set<AnyCancellable>()
+    private let localizationManager = LocalizationManager.shared
     
     // MARK: - Computed Properties
     
@@ -117,11 +118,11 @@ class ChangePasswordViewModel: ObservableObject {
     
     var passwordStrengthText: String {
         switch passwordStrengthScore {
-        case 0...1: return "Weak"
-        case 2...3: return "Fair"
-        case 4: return "Good"
-        case 5: return "Strong"
-        default: return "Weak"
+        case 0...1: return localizationManager.localized("password.strength.weak")
+        case 2...3: return localizationManager.localized("password.strength.fair")
+        case 4: return localizationManager.localized("password.strength.good")
+        case 5: return localizationManager.localized("password.strength.strong")
+        default: return localizationManager.localized("password.strength.weak")
         }
     }
     
@@ -137,20 +138,20 @@ class ChangePasswordViewModel: ObservableObject {
     
     // Security tip
     var securityTipTitle: String {
-        return "Security Tip"
+        return localizationManager.localized("password.security.tipTitle")
     }
     
     var securityTipMessage: String {
-        return "Use a strong password with at least 8 characters, including letters, numbers, and symbols."
+        return localizationManager.localized("password.security.tipMessage")
     }
     
     // Requirements list
     var requirements: [(text: String, isMet: Bool)] {
         return [
-            ("At least 8 characters long", meetsLengthRequirement),
-            ("Include uppercase and lowercase letters", meetsUppercaseRequirement && meetsLowercaseRequirement),
-            ("Include at least one number", meetsNumberRequirement),
-            ("Include at least one special character", meetsSpecialCharacterRequirement)
+            (localizationManager.localized("password.requirements.length"), meetsLengthRequirement),
+            (localizationManager.localized("password.requirements.letters"), meetsUppercaseRequirement && meetsLowercaseRequirement),
+            (localizationManager.localized("password.requirements.number"), meetsNumberRequirement),
+            (localizationManager.localized("password.requirements.special"), meetsSpecialCharacterRequirement)
         ]
     }
     
@@ -205,11 +206,11 @@ class ChangePasswordViewModel: ObservableObject {
     
     func clearError(for field: String) {
         switch field {
-        case "Current Password":
+        case localizationManager.localized("password.field.current"):
             currentError = ""
-        case "New Password":
+        case localizationManager.localized("password.field.new"):
             newError = ""
-        case "Confirm New Password":
+        case localizationManager.localized("password.field.confirm"):
             confirmError = ""
         default:
             break
@@ -218,7 +219,7 @@ class ChangePasswordViewModel: ObservableObject {
     
     func validateCurrentPassword() -> Bool {
         if currentPassword.isEmpty {
-            currentError = "Current password is required"
+            currentError = localizationManager.localized("password.error.currentRequired")
             return false
         }
         return true
@@ -226,22 +227,22 @@ class ChangePasswordViewModel: ObservableObject {
     
     func validateNewPassword() -> Bool {
         if newPassword.isEmpty {
-            newError = "New password is required"
+            newError = localizationManager.localized("password.error.newRequired")
             return false
         }
         
         if newPassword.count < 8 {
-            newError = "Password must be at least 8 characters"
+            newError = localizationManager.localized("password.error.minLength")
             return false
         }
         
         if !validatePasswordStrength(newPassword) {
-            newError = "Password does not meet requirements"
+            newError = localizationManager.localized("password.error.notStrongEnough")
             return false
         }
         
         if currentPassword == newPassword {
-            newError = "New password must be different from current password"
+            newError = localizationManager.localized("password.error.sameAsCurrent")
             return false
         }
         
@@ -250,12 +251,12 @@ class ChangePasswordViewModel: ObservableObject {
     
     func validateConfirmPassword() -> Bool {
         if confirmPassword.isEmpty {
-            confirmError = "Please confirm your password"
+            confirmError = localizationManager.localized("password.error.confirmRequired")
             return false
         }
         
         if newPassword != confirmPassword {
-            confirmError = "Passwords do not match"
+            confirmError = localizationManager.localized("password.error.mismatch")
             return false
         }
         
@@ -280,7 +281,7 @@ class ChangePasswordViewModel: ObservableObject {
         guard validateAll() else { return }
         
         guard let token = tokenStore.getAccessToken() else {
-            alertMessage = "Not authenticated. Please log in again."
+            alertMessage = localizationManager.localized("password.error.notAuthenticated")
             showErrorAlert = true
             return
         }

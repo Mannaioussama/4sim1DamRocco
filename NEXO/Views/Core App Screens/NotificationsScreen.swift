@@ -15,6 +15,8 @@ struct NotificationsScreen: View {
     @State private var showRatingSheet: Bool = false
     @State private var ratingStars: Int = 0
     @State private var ratingText: String = ""
+    @State private var pendingReviewActivityId: String? = nil
+    @State private var pendingReviewNotificationId: String? = nil
     
     var body: some View {
         ZStack {
@@ -96,9 +98,22 @@ struct NotificationsScreen: View {
                 stars: $ratingStars,
                 reviewText: $ratingText,
                 onSubmit: {
-                    // For now just log the rating locally
-                    print("Submitted coach rating: \(ratingStars) stars, review: \(ratingText)")
-                    showRatingSheet = false
+                    guard let activityId = pendingReviewActivityId else {
+                        showRatingSheet = false
+                        return
+                    }
+                    let stars = ratingStars
+                    let comment = ratingText
+                    let notificationId = pendingReviewNotificationId
+                    Task { @MainActor in
+                        await viewModel.submitReview(activityId: activityId, rating: stars, comment: comment)
+                        if let notificationId {
+                            viewModel.dismissNotification(notificationId)
+                        }
+                        pendingReviewActivityId = nil
+                        pendingReviewNotificationId = nil
+                        showRatingSheet = false
+                    }
                 },
                 onCancel: {
                     showRatingSheet = false
@@ -131,8 +146,11 @@ struct NotificationsScreen: View {
                     NotificationCard(
                         notification: notification,
                         onPrimaryAction: {
-                            if notification.id == "coach-rating-reference" {
-                                // Show rating popup for static coach session notification
+                            if notification.id.hasPrefix("review-") {
+                                // Dynamic review prompt for a completed coach session
+                                let activityId = String(notification.id.dropFirst("review-".count))
+                                pendingReviewActivityId = activityId
+                                pendingReviewNotificationId = notification.id
                                 ratingStars = 0
                                 ratingText = ""
                                 showRatingSheet = true

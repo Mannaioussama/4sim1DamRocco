@@ -1,16 +1,14 @@
 import Foundation
 
 enum StravaConfig {
-    // TODO: Replace with your real Strava Client ID from https://www.strava.com/settings/api
-    // Example: static let clientId = "12345"
-    static let clientId: String = "YOUR_REAL_STRAVA_CLIENT_ID"
+ 
+    static let clientId: String = "188930"
     
-    // This must match the URL Scheme registered in your Xcode project Info.plist
-    // and the Redirect URI configured in the Strava developer portal.
-    // According to the iOS guide, we use nexofitness://strava/callback
     static let redirectScheme: String = "nexofitness"
+
+    static let backendRedirectURI: String = "https://apinest-production.up.railway.app/strava/callback"
     
-    static var redirectURI: String {
+    static var appCallbackURL: String {
         return "\(redirectScheme)://strava/callback"
     }
 }

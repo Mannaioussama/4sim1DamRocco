@@ -13,6 +13,8 @@ struct BottomNavView: View {
     var onTabChange: (AppTab) -> Void
     var onAICoachClick: (() -> Void)?
 
+    @EnvironmentObject private var localizationManager: LocalizationManager
+
     // Drive long-running pulse animation safely
     @State private var pulse = false
 
@@ -97,7 +99,7 @@ struct BottomNavView: View {
                     .font(.system(size: 22, weight: .semibold))
                     .scaleEffect(isActive ? 1.15 : 1.0)
 
-                Text(tab.label)
+                Text(localizedLabel(for: tab.id))
                     .font(.system(size: 10, weight: isActive ? .medium : .regular))
                     .foregroundColor(isActive ? Color(hexValue: "#8B5CF6") : Color.black.opacity(0.85))
             }
@@ -107,6 +109,21 @@ struct BottomNavView: View {
         }
         // Prevent color animation states sticking at 0 alpha
         .animation(nil, value: activeTab)
+    }
+
+    private func localizedLabel(for tab: AppTab) -> String {
+        switch tab {
+        case .home:
+            return localizationManager.localized("tab.home")
+        case .map:
+            return localizationManager.localized("tab.sessions")
+        case .chat:
+            return localizationManager.localized("tab.chat")
+        case .profile:
+            return localizationManager.localized("tab.dashboard")
+        default:
+            return ""
+        }
     }
 
     // MARK: - AI Coach Floating Button
